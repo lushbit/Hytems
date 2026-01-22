@@ -221,8 +221,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     /**
      */
-    /**
-     */
     private void renderItems(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
         cmd.clear("#ItemGrid");
 
@@ -305,7 +303,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         updateUI(cmd);
     }
-
 
     /**
      * Updates the UI with current state.

@@ -2,11 +2,10 @@ package de.notjan.hytems.commands;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
-import com.hypixel.hytale.server.core.command.system.AbstractCommand;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
-import com.hypixel.hytale.server.core.command.system.CommandSender;
+import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -14,47 +13,39 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import de.notjan.hytems.gui.HytemsBrowserPage;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
-import java.util.concurrent.CompletableFuture;
 
 /**
- * Command to open the Hytems item browser GUI.
+ * Command to open the Hytems item browser.
  *
  * @author NotJan
  */
-public class HytemsCommand extends AbstractCommand {
+public class HytemsCommand extends AbstractPlayerCommand {
 
     public HytemsCommand() {
-        super("hytems", "Opens the Hytems item browser", false);
-        this.setPermissionGroup(GameMode.Adventure);
+        super("hytems", "Opens the Hytems item browser");
     }
 
-    @Nullable
     @Override
-    protected CompletableFuture<Void> execute(@Nonnull CommandContext context) {
-        CommandSender sender = context.sender();
+    protected boolean canGeneratePermission() {
+        return false;
+    }
 
-        if (!(sender instanceof Player)) {
-            return CompletableFuture.completedFuture(null);
+    @Override
+    protected void execute(
+            @Nonnull CommandContext context,
+            @Nonnull Store<EntityStore> store,
+            @Nonnull Ref<EntityStore> ref,
+            @Nonnull PlayerRef playerRef,
+            @Nonnull World world
+    ) {
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) {
+            context.sendMessage(Message.raw("Error: Could not get player"));
+            return;
         }
 
-        Player player = (Player) sender;
-        Ref<EntityStore> ref = player.getReference();
-
-        if (ref == null || !ref.isValid()) {
-            return CompletableFuture.completedFuture(null);
-        }
-
-        Store<EntityStore> store = ref.getStore();
-        World world = ((EntityStore) store.getExternalData()).getWorld();
-
-        return CompletableFuture.runAsync(() -> {
-            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-
-            if (playerRef != null) {
-                HytemsBrowserPage browserPage = new HytemsBrowserPage(playerRef, CustomPageLifetime.CanDismiss);
-                player.getPageManager().openCustomPage(ref, store, browserPage);
-            }
-        }, world);
+        // Open the item browser
+        HytemsBrowserPage page = new HytemsBrowserPage(playerRef, CustomPageLifetime.CanDismiss);
+        player.getPageManager().openCustomPage(ref, store, page);
     }
 }

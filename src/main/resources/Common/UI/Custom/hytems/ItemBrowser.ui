@@ -2,7 +2,7 @@ $C = "../Common.ui";
 
 $C.@PageOverlay {
   Group #MainContainer {
-    Anchor: (Width: 750, Height: 600);
+    Anchor: (Width: 750, Height: 820);
     LayoutMode: Top;
     Background: #1e1e1e(0.95);
     Padding: (Full: 15);
@@ -33,18 +33,19 @@ $C.@PageOverlay {
       Padding: (Full: 8);
       ScrollbarStyle: $C.@DefaultScrollbarStyle;
 
+      Label #PlaceholderText {
+        Text: "No items to display";
+        Padding: (Top: 60);
+        Visible: false;
+        Style: (
+          FontSize: 13,
+          TextColor: #888888,
+          HorizontalAlignment: Center
+        );
+      }
+
       Group #ItemGrid {
         LayoutMode: Top;
-
-        Label #PlaceholderText {
-          Text: "No items to display";
-          Padding: (Top: 60);
-          Style: (
-            FontSize: 13,
-            TextColor: #888888,
-            HorizontalAlignment: Center
-          );
-        }
       }
     }
 
@@ -67,16 +68,19 @@ $C.@PageOverlay {
     }
 
     Group #PaginationSection {
-      LayoutMode: Left;
       Anchor: (Height: 36);
 
-      $C.@SecondaryTextButton #PrevPageButton {
-        @Text = "Previous";
-        @Anchor = (Width: 100, Height: 36);
+      Group #PrevButtonContainer {
+        Anchor: (Left: 0, Width: 100, Height: 36);
+
+        $C.@SecondaryTextButton #PrevPageButton {
+          @Text = "<";
+          @Anchor = (Width: 100, Height: 36);
+        }
       }
 
       Label #PageLabel {
-        FlexWeight: 1;
+        Anchor: (Width: 550, Height: 36);
         Text: "Page 1 / 1";
         Style: (
           FontSize: 13,
@@ -86,14 +90,18 @@ $C.@PageOverlay {
         );
       }
 
-      $C.@SecondaryTextButton #NextPageButton {
-        @Text = "Next";
-        @Anchor = (Width: 100, Height: 36);
+      Group #NextButtonContainer {
+        Anchor: (Right: 0, Width: 100, Height: 36);
+
+        $C.@SecondaryTextButton #NextPageButton {
+          @Text = ">";
+          @Anchor = (Width: 100, Height: 36);
+        }
       }
     }
 
     Group {
-      Anchor: (Height: 10);
+      Anchor: (Height: 20);
     }
 
     Group #SearchSection {

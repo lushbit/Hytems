@@ -7,14 +7,19 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import de.notjan.hytems.HytemsPlugin;
 
 import javax.annotation.Nonnull;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Main browser page for Hytems plugin.
@@ -30,7 +35,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     private String searchQuery = "";
     private int currentPage = 0;
-    private int totalItems = 0;
+    private List<Map.Entry<String, Item>> filteredItems = new ArrayList<>();
 
     public HytemsBrowserPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime) {
         super(playerRef, lifetime, BrowserData.CODEC);
@@ -81,8 +86,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 false
         );
 
-        // Update UI with current state
-        updateUI(cmd);
+        // Filter and render items
+        filterItems();
+        renderItems(cmd, events);
     }
 
     @Override
@@ -109,7 +115,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         // Handle page navigation
         if (data.pageAction != null) {
             int totalPages = getTotalPages();
-
             if ("prev".equals(data.pageAction) && this.currentPage > 0) {
                 this.currentPage--;
                 needsUpdate = true;
@@ -135,9 +140,113 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 cmd.set("#SearchInput.Value", "");
             }
 
-            updateUI(cmd);
+            filterItems();
+            renderItems(cmd, events);
             this.sendUpdate(cmd, events, false);
         }
+    }
+
+    /**
+     * Filters items based on search query.
+     */
+    private void filterItems() {
+        Map<String, Item> allItems = HytemsPlugin.ITEMS;
+
+        if (searchQuery.isEmpty()) {
+            // Show all items sorted alphabetically by translated name
+            filteredItems = allItems.entrySet().stream()
+                    .sorted((e1, e2) -> {
+                        String name1 = getTranslatedName(e1.getValue(), e1.getKey());
+                        String name2 = getTranslatedName(e2.getValue(), e2.getKey());
+                        return name1.compareToIgnoreCase(name2);
+                    })
+                    .collect(Collectors.toList());
+        } else {
+            // Filter items by search query and sort alphabetically
+            String lowerQuery = searchQuery.toLowerCase(Locale.ENGLISH);
+            filteredItems = allItems.entrySet().stream()
+                    .filter(entry -> {
+                        Item item = entry.getValue();
+                        if (item == null) return false;
+
+                        // Get translated name
+                        String translatedName = getTranslatedName(item, entry.getKey());
+
+                        // Search in both ID and translated name
+                        return entry.getKey().toLowerCase(Locale.ENGLISH).contains(lowerQuery) ||
+                                translatedName.toLowerCase(Locale.ENGLISH).contains(lowerQuery);
+                    })
+                    .sorted((e1, e2) -> {
+                        String name1 = getTranslatedName(e1.getValue(), e1.getKey());
+                        String name2 = getTranslatedName(e2.getValue(), e2.getKey());
+                        return name1.compareToIgnoreCase(name2);
+                    })
+                    .collect(Collectors.toList());
+        }
+    }
+
+    /**
+     * Gets the translated name for an item, falling back to the item ID.
+     */
+    private String getTranslatedName(Item item, String itemId) {
+        if (item == null) return itemId;
+        String translatedName = I18nModule.get()
+                .getMessage(this.playerRef.getLanguage(), item.getTranslationKey());
+        return translatedName != null ? translatedName : itemId;
+    }
+
+    /**
+     * Renders items for the current page.
+     */
+    private void renderItems(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
+        cmd.clear("#ItemGrid");
+
+        int startIndex = currentPage * ITEMS_PER_PAGE;
+        int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredItems.size());
+
+        if (filteredItems.isEmpty()) {
+            cmd.set("#PlaceholderText.Visible", true);
+        } else {
+            cmd.set("#PlaceholderText.Visible", false);
+
+            int itemsRendered = 0;
+
+            for (int i = startIndex; i < endIndex; i++) {
+                Map.Entry<String, Item> entry = filteredItems.get(i);
+                String itemId = entry.getKey();
+                Item item = entry.getValue();
+
+                if (itemsRendered % ITEMS_PER_ROW == 0) {
+                    int rowIndex = itemsRendered / ITEMS_PER_ROW;
+                    cmd.appendInline("#ItemGrid",
+                            "Group #Row" + rowIndex + " {\n" +
+                                    "  Anchor: (Height: 109);\n" +
+                                    "  LayoutMode: Left;\n" +
+                                    "}\n"
+                    );
+                }
+
+                int currentRow = itemsRendered / ITEMS_PER_ROW;
+                String rowSelector = "#Row" + currentRow;
+
+                cmd.append(rowSelector, "hytems/ItemIcon.ui");
+
+                int itemInRow = itemsRendered % ITEMS_PER_ROW;
+                String itemSelector = rowSelector + "[" + itemInRow + "]";
+
+                // Set item data
+                cmd.set(itemSelector + " #ItemIcon.ItemId", itemId);
+                String translatedName = getTranslatedName(item, itemId);
+                cmd.set(itemSelector + " #ItemName.Text", translatedName);
+
+                // TODO: Add click handling later
+                // For now, items are displayed but not clickable
+
+                itemsRendered++;
+            }
+        }
+
+        updateUI(cmd);
     }
 
     /**
@@ -145,7 +254,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
      */
     private void updateUI(@Nonnull UICommandBuilder cmd) {
         // Update item count
-        cmd.set("#ItemCount.Text", totalItems + " items found");
+        cmd.set("#ItemCount.Text", filteredItems.size() + " items found");
 
         // Update pagination
         int totalPages = getTotalPages();
@@ -155,25 +264,19 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         cmd.set("#PageLabel.Text", "Page " + (currentPage + 1) + " / " + totalPages);
 
-        // Show/hide pagination buttons based on available pages
-        // Previous button: only visible if not on first page
+        // Show/hide pagination buttons - label stays centered always
         cmd.set("#PrevPageButton.Visible", currentPage > 0);
-
-        // Next button: only visible if not on last page
         cmd.set("#NextPageButton.Visible", currentPage < totalPages - 1);
     }
-
-
-
 
     /**
      * Calculates total pages based on item count.
      */
     private int getTotalPages() {
-        if (totalItems == 0) {
+        if (filteredItems.isEmpty()) {
             return 1;
         }
-        return (int) Math.ceil((double) totalItems / ITEMS_PER_PAGE);
+        return (int) Math.ceil((double) filteredItems.size() / ITEMS_PER_PAGE);
     }
 
     /**

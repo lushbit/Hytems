@@ -1,51 +1,42 @@
 package de.notjan.hytems;
 
+import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
+import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
-import com.hypixel.hytale.logger.HytaleLogger;
 import de.notjan.hytems.commands.HytemsCommand;
 
 import javax.annotation.Nonnull;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 
-/**
- * Hytems - A Hytale server plugin.
- *
- * @author NotJan
- * @version 1.0.0
- */
 public class HytemsPlugin extends JavaPlugin {
 
-    private static final HytaleLogger LOGGER = HytaleLogger.forEnclosingClass();
-    private static HytemsPlugin instance;
+    // Store all game items
+    public static Map<String, Item> ITEMS = new HashMap<>();
 
     public HytemsPlugin(@Nonnull JavaPluginInit init) {
         super(init);
-        instance = this;
-    }
-
-    public static HytemsPlugin getInstance() {
-        return instance;
     }
 
     @Override
     protected void setup() {
-        LOGGER.at(Level.INFO).log("[Hytems] Setting up...");
+        super.setup();
 
-        // Register commands
+        // Register command
         this.getCommandRegistry().registerCommand(new HytemsCommand());
 
-        LOGGER.at(Level.INFO).log("[Hytems] Setup complete!");
+        // Listen for item assets loading
+        this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, this::onItemAssetLoad);
     }
 
-    @Override
-    protected void start() {
-        LOGGER.at(Level.INFO).log("[Hytems] Started!");
-    }
+    private void onItemAssetLoad(LoadedAssetsEvent<String, Item, DefaultAssetMap<String, Item>> event) {
+        // Store all items from the game
+        ITEMS = event.getAssetMap().getAssetMap();
 
-    @Override
-    protected void shutdown() {
-        LOGGER.at(Level.INFO).log("[Hytems] Shutting down...");
-        instance = null;
+        // Correct logging method for HytaleLogger
+        this.getLogger().at(Level.INFO).log("Loaded %d items for Hytems browser", ITEMS.size());
     }
 }

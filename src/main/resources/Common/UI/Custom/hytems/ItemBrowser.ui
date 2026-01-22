@@ -1,0 +1,145 @@
+$C = "../Common.ui";
+
+$C.@PageOverlay {
+  Group #MainContainer {
+    Anchor: (Width: 750, Height: 600);
+    LayoutMode: Top;
+    Background: #1e1e1e(0.95);
+    Padding: (Full: 15);
+
+    Label #Title {
+      Text: "ITEM BROWSER";
+      Anchor: (Height: 30);
+      Style: (
+        FontSize: 18,
+        TextColor: #66ccff,
+        HorizontalAlignment: Center,
+        RenderBold: true
+      );
+    }
+
+    $C.@ContentSeparator {
+      Anchor: (Height: 1);
+    }
+
+    Group {
+      Anchor: (Height: 8);
+    }
+
+    Group #ScrollContainer {
+      FlexWeight: 1;
+      LayoutMode: TopScrolling;
+      Background: #252525(0.6);
+      Padding: (Full: 8);
+      ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+      Group #ItemGrid {
+        LayoutMode: Top;
+
+        Label #PlaceholderText {
+          Text: "No items to display";
+          Padding: (Top: 60);
+          Style: (
+            FontSize: 13,
+            TextColor: #888888,
+            HorizontalAlignment: Center
+          );
+        }
+      }
+    }
+
+    Group {
+      Anchor: (Height: 8);
+    }
+
+    Label #ItemCount {
+      Text: "0 items found";
+      Anchor: (Height: 22);
+      Style: (
+        FontSize: 12,
+        TextColor: #aaaaaa,
+        HorizontalAlignment: Center
+      );
+    }
+
+    Group {
+      Anchor: (Height: 8);
+    }
+
+    Group #PaginationSection {
+      LayoutMode: Left;
+      Anchor: (Height: 36);
+
+      $C.@SecondaryTextButton #PrevPageButton {
+        @Text = "Previous";
+        @Anchor = (Width: 100, Height: 36);
+      }
+
+      Label #PageLabel {
+        FlexWeight: 1;
+        Text: "Page 1 / 1";
+        Style: (
+          FontSize: 13,
+          TextColor: #cccccc,
+          HorizontalAlignment: Center,
+          VerticalAlignment: Center
+        );
+      }
+
+      $C.@SecondaryTextButton #NextPageButton {
+        @Text = "Next";
+        @Anchor = (Width: 100, Height: 36);
+      }
+    }
+
+    Group {
+      Anchor: (Height: 10);
+    }
+
+    Group #SearchSection {
+      LayoutMode: Left;
+      Anchor: (Height: 38);
+
+      Label #SearchLabel {
+        Text: "Search:";
+        Anchor: (Width: 60);
+        Style: (
+          FontSize: 14,
+          TextColor: #96a9be,
+          VerticalAlignment: Center
+        );
+      }
+
+      Group {
+        Anchor: (Width: 5);
+      }
+
+      Group #SearchInputContainer {
+        FlexWeight: 1;
+        LayoutMode: Top;
+
+        $C.@TextField #SearchInput {
+          @PlaceholderText = "Search items...";
+        }
+      }
+
+      Group {
+        Anchor: (Width: 8);
+      }
+
+      $C.@CancelTextButton #ClearSearchButton {
+        @Text = "X";
+        @Anchor = (Width: 44, Height: 38);
+      }
+    }
+
+    Group {
+      Anchor: (Height: 10);
+    }
+
+    $C.@CancelTextButton #CloseButton {
+      @Text = "Close";
+      @Anchor = (Width: 120, Height: 40);
+    }
+  }
+}

@@ -7,6 +7,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
 
 /**
  * Main browser page for Hytems plugin.
- * Displays a searchable, paginated list of items.
+ * Displays a searchable, paginated list of items with clickable buttons.
  *
  * @author NotJan
  */
@@ -98,6 +99,12 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         boolean needsUpdate = false;
 
+        // Handle item clicks - output to console
+        if (data.selectedItem != null && !data.selectedItem.isEmpty()) {
+            handleItemClick(data.selectedItem);
+            return; // Don't update UI for clicks
+        }
+
         // Handle search query changes
         if (data.searchQuery != null && !data.searchQuery.equals(this.searchQuery)) {
             this.searchQuery = data.searchQuery.trim();
@@ -144,6 +151,23 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             renderItems(cmd, events);
             this.sendUpdate(cmd, events, false);
         }
+    }
+
+    /**
+     * Handles item click events - outputs name to console.
+     * TODO: Later open item detail page here
+     */
+    private void handleItemClick(String itemId) {
+        Item item = HytemsPlugin.ITEMS.get(itemId);
+        String translatedName = getTranslatedName(item, itemId);
+
+        System.out.println("===== ITEM CLICKED =====");
+        System.out.println("Item ID: " + itemId);
+        System.out.println("Item Name: " + translatedName);
+        System.out.println("========================");
+
+        // TODO: Open detail page
+        // new HytemsDetailPage(playerRef, itemId, CustomPageLifetime.CanDismiss).open();
     }
 
     /**
@@ -196,7 +220,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     }
 
     /**
-     * Renders items for the current page.
+     */
+    /**
      */
     private void renderItems(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
         cmd.clear("#ItemGrid");
@@ -209,45 +234,78 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         } else {
             cmd.set("#PlaceholderText.Visible", false);
 
-            int itemsRendered = 0;
+            int row = 0;
+            int col = 0;
 
             for (int i = startIndex; i < endIndex; i++) {
                 Map.Entry<String, Item> entry = filteredItems.get(i);
                 String itemId = entry.getKey();
                 Item item = entry.getValue();
+                String translatedName = getTranslatedName(item, itemId);
 
-                if (itemsRendered % ITEMS_PER_ROW == 0) {
-                    int rowIndex = itemsRendered / ITEMS_PER_ROW;
+                // Create new row if needed
+                if (col == 0) {
                     cmd.appendInline("#ItemGrid",
-                            "Group #Row" + rowIndex + " {\n" +
+                            "Group {\n" +
                                     "  Anchor: (Height: 109);\n" +
                                     "  LayoutMode: Left;\n" +
                                     "}\n"
                     );
                 }
 
-                int currentRow = itemsRendered / ITEMS_PER_ROW;
-                String rowSelector = "#Row" + currentRow;
+                // Append button to current row
+                cmd.appendInline("#ItemGrid[" + row + "]",
+                        "Button {\n" +
+                                "  Anchor: (Width: 92, Height: 102, Right: 7, Bottom: 7);\n" +
+                                "  Background: #2a2a2a(0.7);\n" +
+                                "  Padding: (Full: 6);\n" +
+                                "  LayoutMode: Top;\n" +
+                                "\n" +
+                                "  ItemIcon #ItemIcon {\n" +
+                                "    Anchor: (Width: 76, Height: 76);\n" +
+                                "    Visible: true;\n" +
+                                "  }\n" +
+                                "\n" +
+                                "  Group {\n" +
+                                "    Anchor: (Height: 4);\n" +
+                                "  }\n" +
+                                "\n" +
+                                "  Label #ItemName {\n" +
+                                "    Text: \"\";\n" +
+                                "    Anchor: (Height: 16);\n" +
+                                "    Style: (\n" +
+                                "      FontSize: 11,\n" +
+                                "      TextColor: #ffffff,\n" +
+                                "      HorizontalAlignment: Center\n" +
+                                "    );\n" +
+                                "  }\n" +
+                                "}\n"
+                );
 
-                cmd.append(rowSelector, "hytems/ItemIcon.ui");
+                // Set item data - col is the index within THIS row
+                String selector = "#ItemGrid[" + row + "][" + col + "]";
+                cmd.set(selector + " #ItemIcon.ItemId", itemId);
+                cmd.set(selector + " #ItemName.Text", translatedName);
 
-                int itemInRow = itemsRendered % ITEMS_PER_ROW;
-                String itemSelector = rowSelector + "[" + itemInRow + "]";
+                // Bind click event (THIS WORKS with inline buttons!)
+                events.addEventBinding(
+                        CustomUIEventBindingType.Activating,
+                        selector,
+                        EventData.of("SelectedItem", itemId),
+                        false
+                );
 
-                // Set item data
-                cmd.set(itemSelector + " #ItemIcon.ItemId", itemId);
-                String translatedName = getTranslatedName(item, itemId);
-                cmd.set(itemSelector + " #ItemName.Text", translatedName);
-
-                // TODO: Add click handling later
-                // For now, items are displayed but not clickable
-
-                itemsRendered++;
+                col++;
+                if (col >= ITEMS_PER_ROW) {
+                    col = 0;  // Reset column for new row
+                    row++;
+                }
             }
         }
 
         updateUI(cmd);
     }
+
 
     /**
      * Updates the UI with current state.
@@ -264,7 +322,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         cmd.set("#PageLabel.Text", "Page " + (currentPage + 1) + " / " + totalPages);
 
-        // Show/hide pagination buttons - label stays centered always
+        // Show/hide pagination buttons
         cmd.set("#PrevPageButton.Visible", currentPage > 0);
         cmd.set("#NextPageButton.Visible", currentPage < totalPages - 1);
     }
@@ -307,11 +365,17 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         (data, value) -> data.closeGUI = value,
                         data -> data.closeGUI
                 )
+                .addField(
+                        new KeyedCodec<>("SelectedItem", Codec.STRING),
+                        (data, value) -> data.selectedItem = value,
+                        data -> data.selectedItem
+                )
                 .build();
 
         private String searchQuery;
         private String pageAction;
         private String clearSearch;
         private String closeGUI;
+        private String selectedItem;
     }
 }

@@ -14,11 +14,6 @@ import de.notjan.hytems.gui.HytemsBrowserPage;
 
 import javax.annotation.Nonnull;
 
-/**
- * Command to open the Hytems item browser.
- *
- * @author NotJan
- */
 public class HytemsCommand extends AbstractPlayerCommand {
 
     public HytemsCommand() {
@@ -32,19 +27,15 @@ public class HytemsCommand extends AbstractPlayerCommand {
 
     @Override
     protected void execute(
-            @Nonnull CommandContext context,
-            @Nonnull Store<EntityStore> store,
-            @Nonnull Ref<EntityStore> ref,
-            @Nonnull PlayerRef playerRef,
-            @Nonnull World world
-    ) {
+            @Nonnull CommandContext context, @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref,
+            @Nonnull PlayerRef playerRef, @Nonnull World world) {
+
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) {
             context.sendMessage(Message.raw("Error: Could not get player"));
             return;
         }
 
-        // Open the item browser
         HytemsBrowserPage page = new HytemsBrowserPage(playerRef, CustomPageLifetime.CanDismiss);
         player.getPageManager().openCustomPage(ref, store, page);
     }

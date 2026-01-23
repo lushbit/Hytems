@@ -5,11 +5,14 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -19,23 +22,19 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import de.notjan.hytems.HytemsPlugin;
 
 import javax.annotation.Nonnull;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * Main browser page for Hytems plugin.
- * Displays a searchable, paginated list of items with clickable buttons.
- *
- * @author NotJan
- */
 public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage.BrowserData> {
 
     private static final int ITEMS_PER_ROW = 7;
     private static final int ROWS_PER_PAGE = 8;
-    private static final int ITEMS_PER_PAGE = ITEMS_PER_ROW * ROWS_PER_PAGE; // 56
+    private static final int ITEMS_PER_PAGE = ITEMS_PER_ROW * ROWS_PER_PAGE;
 
     private String searchQuery = "";
     private int currentPage = 0;
+    private String selectedItemId = null;
     private List<Map.Entry<String, Item>> filteredItems = new ArrayList<>();
 
     public HytemsBrowserPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime) {
@@ -45,81 +44,79 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder cmd,
                       @Nonnull UIEventBuilder events, @Nonnull Store<EntityStore> store) {
-        // Load the main UI file
         cmd.append("hytems/ItemBrowser.ui");
-
-        // Set initial search value
         cmd.set("#SearchInput.Value", this.searchQuery);
 
-        // Bind events
         events.addEventBinding(
                 CustomUIEventBindingType.ValueChanged,
                 "#SearchInput",
                 EventData.of("@SearchQuery", "#SearchInput.Value"),
                 false
         );
-
         events.addEventBinding(
                 CustomUIEventBindingType.Activating,
                 "#PrevPageButton",
                 EventData.of("PageAction", "prev"),
                 false
         );
-
         events.addEventBinding(
                 CustomUIEventBindingType.Activating,
                 "#NextPageButton",
                 EventData.of("PageAction", "next"),
                 false
         );
-
         events.addEventBinding(
                 CustomUIEventBindingType.Activating,
                 "#ClearSearchButton",
                 EventData.of("ClearSearch", "true"),
                 false
         );
-
         events.addEventBinding(
                 CustomUIEventBindingType.Activating,
                 "#CloseButton",
                 EventData.of("CloseGUI", "true"),
                 false
         );
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#CloseDetailButton",
+                EventData.of("CloseDetail", "true"),
+                false
+        );
 
-        // Filter and render items
         filterItems();
         renderItems(cmd, events);
+        updateDetailPanel(cmd);
     }
 
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                 @Nonnull BrowserData data) {
         super.handleDataEvent(ref, store, data);
-
         boolean needsUpdate = false;
 
-        // Handle item clicks - output to console
         if (data.selectedItem != null && !data.selectedItem.isEmpty()) {
-            handleItemClick(data.selectedItem);
-            return; // Don't update UI for clicks
-        }
-
-        // Handle search query changes
-        if (data.searchQuery != null && !data.searchQuery.equals(this.searchQuery)) {
-            this.searchQuery = data.searchQuery.trim();
-            this.currentPage = 0; // Reset to first page on new search
+            this.selectedItemId = data.selectedItem;
             needsUpdate = true;
         }
 
-        // Handle clear search
+        if (data.closeDetail != null && "true".equals(data.closeDetail)) {
+            this.selectedItemId = null;
+            needsUpdate = true;
+        }
+
+        if (data.searchQuery != null && !data.searchQuery.equals(this.searchQuery)) {
+            this.searchQuery = data.searchQuery.trim();
+            this.currentPage = 0;
+            needsUpdate = true;
+        }
+
         if (data.clearSearch != null && "true".equals(data.clearSearch)) {
             this.searchQuery = "";
             this.currentPage = 0;
             needsUpdate = true;
         }
 
-        // Handle page navigation
         if (data.pageAction != null) {
             int totalPages = getTotalPages();
             if ("prev".equals(data.pageAction) && this.currentPage > 0) {
@@ -131,53 +128,30 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
         }
 
-        // Handle close
         if (data.closeGUI != null && "true".equals(data.closeGUI)) {
             this.close();
             return;
         }
 
-        // Send UI update if needed
         if (needsUpdate) {
             UICommandBuilder cmd = new UICommandBuilder();
             UIEventBuilder events = new UIEventBuilder();
 
-            // Update search field if cleared
             if (data.clearSearch != null) {
                 cmd.set("#SearchInput.Value", "");
             }
 
             filterItems();
             renderItems(cmd, events);
+            updateDetailPanel(cmd);
             this.sendUpdate(cmd, events, false);
         }
     }
 
-    /**
-     * Handles item click events - outputs name to console.
-     * TODO: Later open item detail page here
-     */
-    private void handleItemClick(String itemId) {
-        Item item = HytemsPlugin.ITEMS.get(itemId);
-        String translatedName = getTranslatedName(item, itemId);
-
-        System.out.println("===== ITEM CLICKED =====");
-        System.out.println("Item ID: " + itemId);
-        System.out.println("Item Name: " + translatedName);
-        System.out.println("========================");
-
-        // TODO: Open detail page
-        // new HytemsDetailPage(playerRef, itemId, CustomPageLifetime.CanDismiss).open();
-    }
-
-    /**
-     * Filters items based on search query.
-     */
     private void filterItems() {
         Map<String, Item> allItems = HytemsPlugin.ITEMS;
 
         if (searchQuery.isEmpty()) {
-            // Show all items sorted alphabetically by translated name
             filteredItems = allItems.entrySet().stream()
                     .sorted((e1, e2) -> {
                         String name1 = getTranslatedName(e1.getValue(), e1.getKey());
@@ -186,17 +160,13 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                     })
                     .collect(Collectors.toList());
         } else {
-            // Filter items by search query and sort alphabetically
             String lowerQuery = searchQuery.toLowerCase(Locale.ENGLISH);
             filteredItems = allItems.entrySet().stream()
                     .filter(entry -> {
                         Item item = entry.getValue();
                         if (item == null) return false;
 
-                        // Get translated name
                         String translatedName = getTranslatedName(item, entry.getKey());
-
-                        // Search in both ID and translated name
                         return entry.getKey().toLowerCase(Locale.ENGLISH).contains(lowerQuery) ||
                                 translatedName.toLowerCase(Locale.ENGLISH).contains(lowerQuery);
                     })
@@ -209,18 +179,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
-    /**
-     * Gets the translated name for an item, falling back to the item ID.
-     */
     private String getTranslatedName(Item item, String itemId) {
         if (item == null) return itemId;
+
         String translatedName = I18nModule.get()
                 .getMessage(this.playerRef.getLanguage(), item.getTranslationKey());
         return translatedName != null ? translatedName : itemId;
     }
 
-    /**
-     */
     private void renderItems(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
         cmd.clear("#ItemGrid");
 
@@ -241,7 +207,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 Item item = entry.getValue();
                 String translatedName = getTranslatedName(item, itemId);
 
-                // Create new row if needed
                 if (col == 0) {
                     cmd.appendInline("#ItemGrid",
                             "Group {\n" +
@@ -251,7 +216,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                     );
                 }
 
-                // Append button to current row
                 cmd.appendInline("#ItemGrid[" + row + "]",
                         "Button {\n" +
                                 "  Anchor: (Width: 92, Height: 102, Right: 7, Bottom: 7);\n" +
@@ -280,12 +244,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                                 "}\n"
                 );
 
-                // Set item data - col is the index within THIS row
                 String selector = "#ItemGrid[" + row + "][" + col + "]";
                 cmd.set(selector + " #ItemIcon.ItemId", itemId);
                 cmd.set(selector + " #ItemName.Text", translatedName);
 
-                // Bind click event (THIS WORKS with inline buttons!)
                 events.addEventBinding(
                         CustomUIEventBindingType.Activating,
                         selector,
@@ -295,7 +257,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
                 col++;
                 if (col >= ITEMS_PER_ROW) {
-                    col = 0;  // Reset column for new row
+                    col = 0;
                     row++;
                 }
             }
@@ -304,29 +266,226 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         updateUI(cmd);
     }
 
-    /**
-     * Updates the UI with current state.
-     */
     private void updateUI(@Nonnull UICommandBuilder cmd) {
-        // Update item count
         cmd.set("#ItemCount.Text", filteredItems.size() + " items found");
 
-        // Update pagination
         int totalPages = getTotalPages();
         if (totalPages == 0) {
             totalPages = 1;
         }
 
         cmd.set("#PageLabel.Text", "Page " + (currentPage + 1) + " / " + totalPages);
-
-        // Show/hide pagination buttons
         cmd.set("#PrevPageButton.Visible", currentPage > 0);
         cmd.set("#NextPageButton.Visible", currentPage < totalPages - 1);
     }
 
-    /**
-     * Calculates total pages based on item count.
-     */
+    private void updateDetailPanel(@Nonnull UICommandBuilder cmd) {
+        if (selectedItemId != null && !selectedItemId.isEmpty()) {
+            Item item = HytemsPlugin.ITEMS.get(selectedItemId);
+            String translatedName = getTranslatedName(item, selectedItemId);
+
+            cmd.set("#DetailPanelContainer.Visible", true);
+            cmd.set("#DetailItemIcon.ItemId", selectedItemId);
+            cmd.set("#DetailItemName.Text", translatedName);
+            cmd.set("#DetailItemId.Text", selectedItemId);
+
+            if (item != null) {
+                int maxStack = item.getMaxStack();
+                cmd.set("#DetailMaxStack.Text", String.valueOf(maxStack));
+
+                double durability = item.getMaxDurability();
+                if (durability > 0) {
+                    cmd.set("#DetailDurability.Text", String.valueOf((int) durability));
+                } else {
+                    cmd.set("#DetailDurability.Text", "N/A");
+                }
+            }
+
+            loadRecipes(cmd, selectedItemId);
+        } else {
+            cmd.set("#DetailPanelContainer.Visible", false);
+        }
+    }
+
+    private void loadRecipes(@Nonnull UICommandBuilder cmd, @Nonnull String itemId) {
+        List<CraftingRecipe> allRecipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
+
+        List<CraftingRecipe> filteredRecipes = new ArrayList<>();
+        for (CraftingRecipe recipe : allRecipes) {
+            BenchRequirement[] benchReqs = recipe.getBenchRequirement();
+            if (benchReqs != null && benchReqs.length > 0) {
+                String stationId = benchReqs[0].id;
+                if (!stationId.toLowerCase().contains("builder") &&
+                        !stationId.toLowerCase().contains("salvage")) {
+                    filteredRecipes.add(recipe);
+                }
+            } else {
+                filteredRecipes.add(recipe);
+            }
+        }
+
+        if (filteredRecipes.isEmpty()) {
+            cmd.set("#NoRecipeContainer.Visible", true);
+            cmd.set("#RecipeContent.Visible", false);
+        } else {
+            cmd.set("#NoRecipeContainer.Visible", false);
+            cmd.set("#RecipeContent.Visible", true);
+            displayRecipe(cmd, filteredRecipes.get(0));
+        }
+    }
+
+
+    private void displayRecipe(@Nonnull UICommandBuilder cmd, @Nonnull CraftingRecipe recipe) {
+        BenchRequirement[] benchReqs = recipe.getBenchRequirement();
+        if (benchReqs != null && benchReqs.length > 0) {
+            BenchRequirement bench = benchReqs[0];
+            String stationId = bench.id;
+            int tier = bench.requiredTierLevel;
+
+            Item stationItem = HytemsPlugin.ITEMS.get(stationId);
+            String stationName = getTranslatedName(stationItem, stationId);
+
+            cmd.set("#StationName.Text", stationName);
+            if (tier > 0) {
+                cmd.set("#StationTier.Text", "Tier " + tier);
+            } else {
+                cmd.set("#StationTier.Text", "Any tier");
+            }
+        }
+
+        List<MaterialQuantity> ingredients = getRecipeInputs(recipe);
+        cmd.clear("#IngredientsList");
+
+        int maxDisplay = Math.min(3, ingredients.size());
+        int remaining = ingredients.size() - maxDisplay;
+
+        for (int i = 0; i < maxDisplay; i++) {
+            MaterialQuantity ingredient = ingredients.get(i);
+            String ingredientId = ingredient.getItemId();
+            int quantity = ingredient.getQuantity();
+
+            cmd.appendInline("#IngredientsList",
+                    "Group {\n" +
+                            "  LayoutMode: Left;\n" +
+                            "  Anchor: (Height: 50);\n" +
+                            "  Padding: (Bottom: 6);\n" +
+                            "  ItemIcon {\n" +
+                            "    Anchor: (Width: 44, Height: 44);\n" +
+                            "    Visible: true;\n" +
+                            "  }\n" +
+                            "  Group {\n" +
+                            "    Anchor: (Width: 8);\n" +
+                            "  }\n" +
+                            "  Label {\n" +
+                            "    Anchor: (Width: 40);\n" +
+                            "    Style: (\n" +
+                            "      FontSize: 12,\n" +
+                            "      TextColor: #ffaa00,\n" +
+                            "      VerticalAlignment: Center,\n" +
+                            "      RenderBold: true\n" +
+                            "    );\n" +
+                            "  }\n" +
+                            "  Label {\n" +
+                            "    FlexWeight: 1;\n" +
+                            "    Style: (\n" +
+                            "      FontSize: 12,\n" +
+                            "      TextColor: #cccccc,\n" +
+                            "      VerticalAlignment: Center\n" +
+                            "    );\n" +
+                            "  }\n" +
+                            "}\n"
+            );
+
+            String rowSelector = "#IngredientsList[" + i + "]";
+            cmd.set(rowSelector + "[0].ItemId", ingredientId);
+            cmd.set(rowSelector + "[0].Visible", true);
+            cmd.set(rowSelector + "[2].Text", "x" + quantity);
+
+            Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
+            String ingredientName = getTranslatedName(ingredientItem, ingredientId);
+            cmd.set(rowSelector + "[3].Text", ingredientName);
+        }
+
+        if (remaining > 0) {
+            cmd.appendInline("#IngredientsList",
+                    "Group {\n" +
+                            "  Anchor: (Height: 30);\n" +
+                            "  Padding: (Top: 4, Left: 8);\n" +
+                            "  Label {\n" +
+                            "    Style: (\n" +
+                            "      FontSize: 11,\n" +
+                            "      TextColor: #888888,\n" +
+                            "      FontStyle: Italic,\n" +
+                            "      VerticalAlignment: Center\n" +
+                            "    );\n" +
+                            "  }\n" +
+                            "}\n"
+            );
+
+            cmd.set("#IngredientsList[" + maxDisplay + "][0].Text", "+ " + remaining + " more ingredient" + (remaining > 1 ? "s" : "") + "...");
+        }
+    }
+
+
+    private List<MaterialQuantity> getRecipeInputs(@Nonnull CraftingRecipe recipe) {
+        List<MaterialQuantity> result = new ArrayList<>();
+        Object inputsObj = null;
+
+        try {
+            Method getInputMethod = CraftingRecipe.class.getMethod("getInput");
+            inputsObj = getInputMethod.invoke(recipe);
+        } catch (Exception e) {
+            String[] methodNames = {"getInputs", "getIngredients", "getMaterials"};
+            for (String methodName : methodNames) {
+                try {
+                    Method method = CraftingRecipe.class.getMethod(methodName);
+                    inputsObj = method.invoke(recipe);
+                    if (inputsObj != null) break;
+                } catch (Exception ex) {
+                    // Continue trying
+                }
+            }
+        }
+
+        if (inputsObj != null) {
+            if (inputsObj instanceof MaterialQuantity) {
+                MaterialQuantity input = (MaterialQuantity) inputsObj;
+                if (input != null && input.getItemId() != null) {
+                    result.add(input);
+                }
+            } else if (inputsObj instanceof List) {
+                List<?> inputs = (List<?>) inputsObj;
+                for (Object obj : inputs) {
+                    if (obj instanceof MaterialQuantity) {
+                        MaterialQuantity input = (MaterialQuantity) obj;
+                        if (input != null && input.getItemId() != null) {
+                            result.add(input);
+                        }
+                    }
+                }
+            } else if (inputsObj instanceof MaterialQuantity[]) {
+                MaterialQuantity[] inputs = (MaterialQuantity[]) inputsObj;
+                for (MaterialQuantity input : inputs) {
+                    if (input != null && input.getItemId() != null) {
+                        result.add(input);
+                    }
+                }
+            } else if (inputsObj instanceof Collection) {
+                Collection<?> inputs = (Collection<?>) inputsObj;
+                for (Object obj : inputs) {
+                    if (obj instanceof MaterialQuantity) {
+                        MaterialQuantity input = (MaterialQuantity) obj;
+                        if (input != null && input.getItemId() != null) {
+                            result.add(input);
+                        }
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
     private int getTotalPages() {
         if (filteredItems.isEmpty()) {
             return 1;
@@ -334,9 +493,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         return (int) Math.ceil((double) filteredItems.size() / ITEMS_PER_PAGE);
     }
 
-    /**
-     * Data class for handling UI events.
-     */
     public static class BrowserData {
         public static final BuilderCodec<BrowserData> CODEC = BuilderCodec.builder(
                         BrowserData.class,
@@ -367,6 +523,11 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         (data, value) -> data.selectedItem = value,
                         data -> data.selectedItem
                 )
+                .addField(
+                        new KeyedCodec<>("CloseDetail", Codec.STRING),
+                        (data, value) -> data.closeDetail = value,
+                        data -> data.closeDetail
+                )
                 .build();
 
         private String searchQuery;
@@ -374,5 +535,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         private String clearSearch;
         private String closeGUI;
         private String selectedItem;
+        private String closeDetail;
     }
 }

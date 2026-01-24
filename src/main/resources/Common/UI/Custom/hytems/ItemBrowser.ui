@@ -1,459 +1,152 @@
 $C = "../Common.ui";
 
 // Item Browser
-$C.@PageOverlay {
-  Group #BrowserContainer {
-    Anchor: (Width: 750, Height: 820);
-    LayoutMode: Top;
-    Background: #1e1e1e(0.95);
-    Padding: (Full: 15);
+Group #BrowserContainer {
+  Anchor: (Width: 750, Height: 820);
+  LayoutMode: Top;
+  Background: #1e1e1e(0.95);
+  Padding: (Full: 15);
 
-    Label #Title {
-      Text: "ITEM BROWSER";
-      Anchor: (Height: 30);
+  Label #Title {
+    Text: "ITEM BROWSER";
+    Anchor: (Height: 30);
+    Style: (
+      FontSize: 18,
+      TextColor: #66ccff,
+      HorizontalAlignment: Center,
+      RenderBold: true
+    );
+  }
+
+  $C.@ContentSeparator {
+    Anchor: (Height: 1);
+  }
+
+  Group {
+    Anchor: (Height: 8);
+  }
+
+  Group #ScrollContainer {
+    FlexWeight: 1;
+    LayoutMode: TopScrolling;
+    Background: #252525(0.8);
+    Padding: (Full: 8);
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+    Label #PlaceholderText {
+      Text: "No items to display";
+      Padding: (Top: 60);
+      Visible: false;
       Style: (
-        FontSize: 18,
-        TextColor: #66ccff,
-        HorizontalAlignment: Center,
-        RenderBold: true
-      );
-    }
-
-    $C.@ContentSeparator {
-      Anchor: (Height: 1);
-    }
-
-    Group {
-      Anchor: (Height: 8);
-    }
-
-    Group #ScrollContainer {
-      FlexWeight: 1;
-      LayoutMode: TopScrolling;
-      Background: #252525(0.8);
-      Padding: (Full: 8);
-      ScrollbarStyle: $C.@DefaultScrollbarStyle;
-
-      Label #PlaceholderText {
-        Text: "No items to display";
-        Padding: (Top: 60);
-        Visible: false;
-        Style: (
-          FontSize: 13,
-          TextColor: #888888,
-          HorizontalAlignment: Center
-        );
-      }
-
-      Group #ItemGrid {
-        LayoutMode: Top;
-      }
-    }
-
-    Group {
-      Anchor: (Height: 8);
-    }
-
-    Label #ItemCount {
-      Text: "0 items found";
-      Anchor: (Height: 22);
-      Style: (
-        FontSize: 12,
-        TextColor: #aaaaaa,
+        FontSize: 13,
+        TextColor: #888888,
         HorizontalAlignment: Center
       );
     }
 
-    Group {
-      Anchor: (Height: 8);
-    }
-
-    Group #PaginationSection {
-      Anchor: (Height: 36);
-
-      Group #PrevButtonContainer {
-        Anchor: (Left: 0, Width: 100, Height: 36);
-
-        $C.@SecondaryTextButton #PrevPageButton {
-          @Text = "<";
-          @Anchor = (Width: 100, Height: 36);
-        }
-      }
-
-      Label #PageLabel {
-        Anchor: (Width: 550, Height: 36);
-        Text: "Page 1 / 1";
-        Style: (
-          FontSize: 16,
-          TextColor: #cccccc,
-          HorizontalAlignment: Center,
-          VerticalAlignment: Center
-        );
-      }
-
-      Group #NextButtonContainer {
-        Anchor: (Right: 0, Width: 100, Height: 36);
-
-        $C.@SecondaryTextButton #NextPageButton {
-          @Text = ">";
-          @Anchor = (Width: 100, Height: 36);
-        }
-      }
-    }
-
-    Group {
-      Anchor: (Height: 20);
-    }
-
-    Group #SearchSection {
-      LayoutMode: Left;
-      Anchor: (Height: 38);
-
-      Label #SearchLabel {
-        Text: "Search:";
-        Anchor: (Width: 60);
-        Style: (
-          FontSize: 14,
-          TextColor: #96a9be,
-          VerticalAlignment: Center
-        );
-      }
-
-      Group {
-        Anchor: (Width: 5);
-      }
-
-      Group #SearchInputContainer {
-        FlexWeight: 1;
-        LayoutMode: Top;
-
-        $C.@TextField #SearchInput {
-          @PlaceholderText = "Search items...";
-        }
-      }
-
-      Group {
-        Anchor: (Width: 8);
-      }
-
-      $C.@CancelTextButton #ClearSearchButton {
-        @Text = "X";
-        @Anchor = (Width: 44, Height: 38);
-      }
-    }
-
-    Group {
-      Anchor: (Height: 10);
-    }
-
-    $C.@CancelTextButton #CloseButton {
-      @Text = "Close";
-      @Anchor = (Width: 120, Height: 40);
+    Group #ItemGrid {
+      LayoutMode: Top;
     }
   }
-}
 
-// Detail Panel
-Group #DetailPanelContainer {
-  Anchor: (
-    Width: 400,
-    Right: 175,
-    Top: 130,
-    Bottom: 130
-  );
-  LayoutMode: TopScrolling;
-  Background: #1e1e1e(0.95);
-  Padding: (Full: 15);
-  Visible: false;
-  ScrollbarStyle: $C.@DefaultScrollbarStyle;
+  Group {
+    Anchor: (Height: 8);
+  }
 
-  Group #DetailContent {
+  Label #ItemCount {
+    Text: "0 items found";
+    Anchor: (Height: 22);
+    Style: (
+      FontSize: 12,
+      TextColor: #aaaaaa,
+      HorizontalAlignment: Center
+    );
+  }
+
+  Group {
+    Anchor: (Height: 8);
+  }
+
+  Group #PaginationSection {
+    Anchor: (Height: 36);
+
+    Group #PrevButtonContainer {
+      Anchor: (Left: 0, Width: 100, Height: 36);
+
+      $C.@SecondaryTextButton #PrevPageButton {
+        @Text = "<";
+        @Anchor = (Width: 100, Height: 36);
+      }
+    }
+
+    Label #PageLabel {
+      Anchor: (Width: 550, Height: 36);
+      Text: "Page 1 / 1";
+      Style: (
+        FontSize: 16,
+        TextColor: #cccccc,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center
+      );
+    }
+
+    Group #NextButtonContainer {
+      Anchor: (Right: 0, Width: 100, Height: 36);
+
+      $C.@SecondaryTextButton #NextPageButton {
+        @Text = ">";
+        @Anchor = (Width: 100, Height: 36);
+      }
+    }
+  }
+
+  Group {
+    Anchor: (Height: 20);
+  }
+
+  Group #SearchSection {
+    LayoutMode: Left;
+    Anchor: (Height: 38);
+
+    Label #SearchLabel {
+      Text: "Search:";
+      Anchor: (Width: 60);
+      Style: (
+        FontSize: 14,
+        TextColor: #96a9be,
+        VerticalAlignment: Center
+      );
+    }
+
+    Group {
+      Anchor: (Width: 5);
+    }
+
+    Group #SearchInputContainer {
+      FlexWeight: 1;
       LayoutMode: Top;
 
-      Group #Header {
-        LayoutMode: Left;
-        Anchor: (Height: 32);
-
-        Label #PanelTitle {
-          FlexWeight: 1;
-          Text: "Item Details";
-          Style: (
-            FontSize: 16,
-            TextColor: #66ccff,
-            RenderBold: true,
-            VerticalAlignment: Center
-          );
-        }
-
-        $C.@CancelTextButton #CloseDetailButton {
-          @Text = "X";
-          @Anchor = (Width: 36, Height: 32);
-        }
-      }
-
-      Group {
-        Anchor: (Height: 8);
-      }
-
-      $C.@ContentSeparator {
-        Anchor: (Height: 1);
-      }
-
-      Group {
-        Anchor: (Height: 10);
-      }
-
-    Group #ItemHeader {
-      LayoutMode: Left;
-      Anchor: (Height: 80);
-      Padding: (Full: 12);
-      Background: #252525(0.8);
-
-      Group #IconBox {
-        Anchor: (Width: 80, Height: 80);
-        LayoutMode: Center;
-        Background: #1e1e1e(0.9);
-
-        ItemIcon #DetailItemIcon {
-          Anchor: (Width: 72, Height: 72);
-          Visible: true;
-        }
-      }
-
-      Group {
-        Anchor: (Width: 12);
-      }
-
-      Group #NameSection {
-        FlexWeight: 1;
-        LayoutMode: Top;
-        Padding: (Top: 10);
-
-        Label #DetailItemName {
-          Text: "";
-          FlexWeight: 1;
-          Style: (
-            FontSize: 17,
-            TextColor: #ffffff,
-            RenderBold: true,
-            VerticalAlignment: Center
-          );
-        }
+      $C.@TextField #SearchInput {
+        @PlaceholderText = "Search items...";
       }
     }
 
     Group {
-      Anchor: (Height: 12);
+      Anchor: (Width: 8);
     }
 
-    Group #RecipeContainer {
-      LayoutMode: Top;
-      Background: #252525(0.8);
-      Padding: (Full: 12);
-
-      Label #RecipeTitle {
-        Text: "Recipes";
-        Anchor: (Height: 24);
-        Style: (
-          FontSize: 16,
-          TextColor: #96a9be,
-          RenderBold: true
-        );
-      }
-
-      Group {
-        Anchor: (Height: 8);
-      }
-
-      Group #NoRecipeContainer {
-        Anchor: (Height: 35);
-        Visible: true;
-
-        Label #NoRecipeLabel {
-          Text: "No recipe found!";
-          Anchor: (Height: 24);
-          Style: (
-            FontSize: 14,
-            TextColor: #ff4444,
-            HorizontalAlignment: Center,
-            RenderBold: true
-          );
-        }
-      }
-
-      Group #RecipeContent {
-        LayoutMode: Top;
-        Visible: false;
-
-        Group #CraftingStationSection {
-          LayoutMode: Top;
-          Padding: (Bottom: 10);
-
-          Label #CraftingStationLabel {
-            Text: "Can be crafted at:";
-            Anchor: (Height: 20);
-            Style: (
-              FontSize: 14,
-              TextColor: #96a9be
-            );
-          }
-
-          Group {
-            Anchor: (Height: 6);
-          }
-
-          Group #StationInfo {
-            LayoutMode: Top;
-            Padding: (Full: 10);
-            Background: #1e1e1e(0.8);
-
-            Label #StationName {
-              Text: "";
-              Anchor: (Height: 22);
-              Style: (
-                FontSize: 15,
-                TextColor: #ffffff,
-                RenderBold: true
-              );
-            }
-
-            Group {
-              Anchor: (Height: 4);
-            }
-
-            Label #StationTier {
-              Text: "";
-              Anchor: (Height: 16);
-              Style: (
-                FontSize: 12,
-                TextColor: #aaaaaa
-              );
-            }
-          }
-        }
-
-        Group {
-          Anchor: (Height: 10);
-        }
-
-        Group #IngredientsSection {
-          LayoutMode: Top;
-
-          Label #IngredientsLabel {
-            Text: "Items needed to craft:";
-            Anchor: (Height: 20);
-            Style: (
-              FontSize: 14,
-              TextColor: #96a9be
-            );
-          }
-
-          Group {
-            Anchor: (Height: 6);
-          }
-
-          Group #IngredientsList {
-            LayoutMode: Top;
-            Background: #1e1e1e(0.8);
-            Padding: (Full: 8);
-          }
-        }
-      }
+    $C.@CancelTextButton #ClearSearchButton {
+      @Text = "X";
+      @Anchor = (Width: 44, Height: 38);
     }
+  }
 
-    Group {
-      Anchor: (Height: 12);
-    }
+  Group {
+    Anchor: (Height: 10);
+  }
 
-    Group #DetailsContainer {
-      LayoutMode: Top;
-      Padding: (Full: 12);
-      Background: #252525(0.8);
-
-      Label #DetailsTitle {
-        Text: "Item Information";
-        Anchor: (Height: 22);
-        Style: (
-          FontSize: 15,
-          TextColor: #96a9be,
-          RenderBold: true
-        );
-      }
-
-      Group {
-        Anchor: (Height: 8);
-      }
-
-      Group #ItemIdRow {
-        LayoutMode: Left;
-        Anchor: (Height: 18);
-        Padding: (Bottom: 4);
-
-        Label {
-          Text: "ID:";
-          Anchor: (Width: 80);
-          Style: (
-            FontSize: 11,
-            TextColor: #888888
-          );
-        }
-
-        Label #DetailItemId {
-          FlexWeight: 1;
-          Text: "";
-          Style: (
-            FontSize: 11,
-            TextColor: #cccccc
-          );
-        }
-      }
-
-      Group #MaxStackRow {
-        LayoutMode: Left;
-        Anchor: (Height: 18);
-        Padding: (Bottom: 4);
-
-        Label {
-          Text: "Max Stack:";
-          Anchor: (Width: 80);
-          Style: (
-            FontSize: 11,
-            TextColor: #888888
-          );
-        }
-
-        Label #DetailMaxStack {
-          FlexWeight: 1;
-          Text: "-";
-          Style: (
-            FontSize: 11,
-            TextColor: #cccccc
-          );
-        }
-      }
-
-      Group #DurabilityRow {
-        LayoutMode: Left;
-        Anchor: (Height: 18);
-
-        Label {
-          Text: "Durability:";
-          Anchor: (Width: 80);
-          Style: (
-            FontSize: 11,
-            TextColor: #888888
-          );
-        }
-
-        Label #DetailDurability {
-          FlexWeight: 1;
-          Text: "-";
-          Style: (
-            FontSize: 11,
-            TextColor: #cccccc
-          );
-        }
-      }
-    }
+  $C.@CancelTextButton #CloseButton {
+    @Text = "Close";
+    @Anchor = (Width: 120, Height: 40);
   }
 }

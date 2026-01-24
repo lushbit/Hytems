@@ -280,175 +280,178 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     }
 
     private void updateDetailPanel(@Nonnull UICommandBuilder cmd) {
-        if (selectedItemId != null && !selectedItemId.isEmpty()) {
-            Item item = HytemsPlugin.ITEMS.get(selectedItemId);
-            String translatedName = getTranslatedName(item, selectedItemId);
+        try {
+            if (selectedItemId != null && !selectedItemId.isEmpty()) {
+                Item item = HytemsPlugin.ITEMS.get(selectedItemId);
+                String translatedName = getTranslatedName(item, selectedItemId);
 
-            cmd.set("#DetailPanelContainer.Visible", true);
-            cmd.set("#DetailItemIcon.ItemId", selectedItemId);
-            cmd.set("#DetailItemName.Text", translatedName);
-            cmd.set("#DetailItemId.Text", selectedItemId);
+                cmd.set("#DetailPanelContainer.Visible", true);
+                cmd.set("#DetailItemIcon.ItemId", selectedItemId);
+                cmd.set("#DetailItemName.Text", translatedName);
+                cmd.set("#DetailItemId.Text", selectedItemId);
 
-            if (item != null) {
-                int maxStack = item.getMaxStack();
-                cmd.set("#DetailMaxStack.Text", String.valueOf(maxStack));
+                if (item != null) {
+                    int maxStack = item.getMaxStack();
+                    cmd.set("#DetailMaxStack.Text", String.valueOf(maxStack));
 
-                double durability = item.getMaxDurability();
-                if (durability > 0) {
-                    cmd.set("#DetailDurability.Text", String.valueOf((int) durability));
-                } else {
-                    cmd.set("#DetailDurability.Text", "N/A");
+                    double durability = item.getMaxDurability();
+                    if (durability > 0) {
+                        cmd.set("#DetailDurability.Text", String.valueOf((int) durability));
+                    } else {
+                        cmd.set("#DetailDurability.Text", "N/A");
+                    }
                 }
-            }
 
-            loadRecipes(cmd, selectedItemId);
-        } else {
-            cmd.set("#DetailPanelContainer.Visible", false);
+                loadRecipes(cmd, selectedItemId);
+            } else {
+                cmd.set("#DetailPanelContainer.Visible", false);
+            }
+        } catch (Exception e) {
+            System.err.println("[Hytems] ERROR: Failed to display item detail for: " + selectedItemId);
+            System.err.println("[Hytems] Error: " + e.getMessage());
+            e.printStackTrace();
+
+            try {
+                cmd.set("#DetailPanelContainer.Visible", true);
+                cmd.set("#NoRecipeContainer.Visible", true);
+                cmd.set("#RecipeContent.Visible", false);
+            } catch (Exception ex) {
+                System.err.println("[Hytems] Critical error in updateDetailPanel: " + ex.getMessage());
+            }
         }
     }
 
     private void loadRecipes(@Nonnull UICommandBuilder cmd, @Nonnull String itemId) {
-        List<CraftingRecipe> allRecipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
+        try {
+            List<CraftingRecipe> allRecipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
 
-        if (allRecipes.isEmpty()) {
+            if (allRecipes == null || allRecipes.isEmpty() || allRecipes.size() > 1) {
+                cmd.set("#NoRecipeContainer.Visible", true);
+                cmd.set("#RecipeContent.Visible", false);
+            } else {
+                cmd.set("#NoRecipeContainer.Visible", false);
+                cmd.set("#RecipeContent.Visible", true);
+                displayRecipes(cmd, allRecipes);
+            }
+        } catch (Exception e) {
+            System.err.println("[Hytems] Error loading recipes for " + itemId + ": " + e.getMessage());
+            e.printStackTrace();
             cmd.set("#NoRecipeContainer.Visible", true);
             cmd.set("#RecipeContent.Visible", false);
-        } else {
-            cmd.set("#NoRecipeContainer.Visible", false);
-            cmd.set("#RecipeContent.Visible", true);
-
-            displayRecipes(cmd, allRecipes);
         }
     }
 
     private void displayRecipes(@Nonnull UICommandBuilder cmd, @Nonnull List<CraftingRecipe> recipes) {
-        if (recipes.isEmpty()) return;
+        try {
+            if (recipes == null || recipes.isEmpty()) return;
 
-        CraftingRecipe firstRecipe = recipes.get(0);
+            CraftingRecipe firstRecipe = recipes.get(0);
 
-        BenchRequirement[] benchReqs = firstRecipe.getBenchRequirement();
-        if (benchReqs != null && benchReqs.length > 0) {
-            BenchRequirement bench = benchReqs[0];
-            int tier = bench.requiredTierLevel;
+            BenchRequirement[] benchReqs = firstRecipe.getBenchRequirement();
+            if (benchReqs != null && benchReqs.length > 0) {
+                BenchRequirement bench = benchReqs[0];
+                int tier = bench.requiredTierLevel;
 
-            Item stationItem = HytemsPlugin.ITEMS.get(bench.id);
-            String stationName = getTranslatedName(stationItem, bench.id);
-            cmd.set("#StationName.Text", stationName);
+                Item stationItem = HytemsPlugin.ITEMS.get(bench.id);
+                String stationName = getTranslatedName(stationItem, bench.id);
+                cmd.set("#StationName.Text", stationName);
 
-            if (tier > 0) {
-                cmd.set("#StationTier.Text", "Tier " + tier);
-            } else {
-                cmd.set("#StationTier.Text", "Any tier");
+                if (tier > 0) {
+                    cmd.set("#StationTier.Text", "Tier " + tier);
+                } else {
+                    cmd.set("#StationTier.Text", "Any tier");
+                }
             }
-        }
 
-        cmd.clear("#IngredientsList");
-
-        if (recipes.size() > 1) {
-            showItemsNotFound(cmd);
-        } else {
+            cmd.clear("#IngredientsList");
             displaySingleRecipe(cmd, firstRecipe);
+        } catch (Exception e) {
+            System.err.println("[Hytems] Error displaying recipes: " + e.getMessage());
+            e.printStackTrace();
+            cmd.set("#NoRecipeContainer.Visible", true);
+            cmd.set("#RecipeContent.Visible", false);
         }
-    }
-
-    private void showItemsNotFound(@Nonnull UICommandBuilder cmd) {
-        cmd.appendInline("#IngredientsList",
-                "Group {\n" +
-                        "  Anchor: (Height: 40);\n" +
-                        "  LayoutMode: Center;\n" +
-                        "  Padding: (Full: 10);\n" +
-                        "  Label {\n" +
-                        "    Text: \"Items not found!\";\n" +
-                        "    Style: (\n" +
-                        "      FontSize: 14,\n" +
-                        "      TextColor: #ff4444,\n" +
-                        "      HorizontalAlignment: Center,\n" +
-                        "      VerticalAlignment: Center,\n" +
-                        "      RenderBold: true\n" +
-                        "    );\n" +
-                        "  }\n" +
-                        "}\n"
-        );
     }
 
     private void displaySingleRecipe(@Nonnull UICommandBuilder cmd, @Nonnull CraftingRecipe recipe) {
-        List<MaterialQuantity> ingredients = getRecipeInputs(recipe);
+        try {
+            List<MaterialQuantity> ingredients = getRecipeInputs(recipe);
 
-        if (ingredients.isEmpty()) {
-            showItemsNotFound(cmd);
-            return;
-        }
+            if (ingredients == null || ingredients.isEmpty()) {
+                cmd.set("#NoRecipeContainer.Visible", true);
+                cmd.set("#RecipeContent.Visible", false);
+                return;
+            }
 
-        int maxDisplay = Math.min(3, ingredients.size());
-        int remaining = ingredients.size() - maxDisplay;
+            if (ingredients.size() > 6) {
+                cmd.set("#NoRecipeContainer.Visible", true);
+                cmd.set("#RecipeContent.Visible", false);
+                return;
+            }
 
-        for (int i = 0; i < maxDisplay; i++) {
-            MaterialQuantity ingredient = ingredients.get(i);
-            String ingredientId = ingredient.getItemId();
-            int quantity = ingredient.getQuantity();
+            for (int i = 0; i < ingredients.size(); i++) {
+                try {
+                    MaterialQuantity ingredient = ingredients.get(i);
+                    if (ingredient == null) continue;
 
-            cmd.appendInline("#IngredientsList",
-                    "Group {\n" +
-                            "  LayoutMode: Left;\n" +
-                            "  Anchor: (Height: 50);\n" +
-                            "  Padding: (Bottom: 6);\n" +
-                            "  ItemIcon {\n" +
-                            "    Anchor: (Width: 44, Height: 44);\n" +
-                            "    Visible: true;\n" +
-                            "  }\n" +
-                            "  Group {\n" +
-                            "    Anchor: (Width: 8);\n" +
-                            "  }\n" +
-                            "  Label {\n" +
-                            "    Anchor: (Width: 40);\n" +
-                            "    Style: (\n" +
-                            "      FontSize: 12,\n" +
-                            "      TextColor: #ffaa00,\n" +
-                            "      VerticalAlignment: Center,\n" +
-                            "      RenderBold: true\n" +
-                            "    );\n" +
-                            "  }\n" +
-                            "  Label {\n" +
-                            "    FlexWeight: 1;\n" +
-                            "    Style: (\n" +
-                            "      FontSize: 12,\n" +
-                            "      TextColor: #cccccc,\n" +
-                            "      VerticalAlignment: Center\n" +
-                            "    );\n" +
-                            "  }\n" +
-                            "}\n"
-            );
+                    String ingredientId = ingredient.getItemId();
+                    if (ingredientId == null) continue;
 
-            String rowSelector = "#IngredientsList[" + i + "]";
-            cmd.set(rowSelector + "[0].ItemId", ingredientId);
-            cmd.set(rowSelector + "[0].Visible", true);
-            cmd.set(rowSelector + "[2].Text", "x" + quantity);
+                    int quantity = ingredient.getQuantity();
 
-            Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
-            String ingredientName = getTranslatedName(ingredientItem, ingredientId);
-            cmd.set(rowSelector + "[3].Text", ingredientName);
-        }
+                    StringBuilder uiBuilder = new StringBuilder();
+                    uiBuilder.append("Group {\n");
+                    uiBuilder.append("  LayoutMode: Left;\n");
+                    uiBuilder.append("  Anchor: (Height: 50);\n");
+                    uiBuilder.append("  Padding: (Bottom: 6);\n");
+                    uiBuilder.append("  ItemIcon {\n");
+                    uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
+                    uiBuilder.append("    Visible: true;\n");
+                    uiBuilder.append("  }\n");
+                    uiBuilder.append("  Group {\n");
+                    uiBuilder.append("    Anchor: (Width: 8);\n");
+                    uiBuilder.append("  }\n");
+                    uiBuilder.append("  Label {\n");
+                    uiBuilder.append("    Anchor: (Width: 40);\n");
+                    uiBuilder.append("    Style: (\n");
+                    uiBuilder.append("      FontSize: 12,\n");
+                    uiBuilder.append("      TextColor: #ffaa00,\n");
+                    uiBuilder.append("      VerticalAlignment: Center,\n");
+                    uiBuilder.append("      RenderBold: true\n");
+                    uiBuilder.append("    );\n");
+                    uiBuilder.append("  }\n");
+                    uiBuilder.append("  Label {\n");
+                    uiBuilder.append("    FlexWeight: 1;\n");
+                    uiBuilder.append("    Style: (\n");
+                    uiBuilder.append("      FontSize: 12,\n");
+                    uiBuilder.append("      TextColor: #cccccc,\n");
+                    uiBuilder.append("      VerticalAlignment: Center\n");
+                    uiBuilder.append("    );\n");
+                    uiBuilder.append("  }\n");
+                    uiBuilder.append("}\n");
 
-        if (remaining > 0) {
-            cmd.appendInline("#IngredientsList",
-                    "Group {\n" +
-                            "  Anchor: (Height: 30);\n" +
-                            "  Padding: (Top: 4, Left: 8);\n" +
-                            "  Label {\n" +
-                            "    Style: (\n" +
-                            "      FontSize: 11,\n" +
-                            "      TextColor: #888888,\n" +
-                            "      FontStyle: Italic,\n" +
-                            "      VerticalAlignment: Center\n" +
-                            "    );\n" +
-                            "  }\n" +
-                            "}\n"
-            );
-            cmd.set("#IngredientsList[" + maxDisplay + "][0].Text",
-                    "+ " + remaining + " more ingredient" + (remaining > 1 ? "s" : "") + "...");
+                    cmd.appendInline("#IngredientsList", uiBuilder.toString());
+
+                    String rowSelector = "#IngredientsList[" + i + "]";
+                    cmd.set(rowSelector + "[0].ItemId", ingredientId);
+                    cmd.set(rowSelector + "[0].Visible", true);
+                    cmd.set(rowSelector + "[2].Text", "x" + quantity);
+
+                    Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
+                    String ingredientName = getTranslatedName(ingredientItem, ingredientId);
+                    cmd.set(rowSelector + "[3].Text", ingredientName);
+                } catch (Exception e) {
+                    System.err.println("[Hytems] Error displaying ingredient " + i + ": " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[Hytems] Error displaying single recipe: " + e.getMessage());
+            e.printStackTrace();
+            cmd.set("#NoRecipeContainer.Visible", true);
+            cmd.set("#RecipeContent.Visible", false);
         }
     }
-
 
 
 
@@ -467,7 +470,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                     inputsObj = method.invoke(recipe);
                     if (inputsObj != null) break;
                 } catch (Exception ex) {
-                    // Continue trying
                 }
             }
         }

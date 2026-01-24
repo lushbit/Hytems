@@ -15,7 +15,6 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 public class ItemDetailHud extends CustomUIHud {
-    private static final String DETAIL_HUD_ID = "hytems_detail_panel";
     private final PlayerRef playerRef;
     private String itemId;
     private boolean visible = true;

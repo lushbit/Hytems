@@ -310,42 +310,31 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private void loadRecipes(@Nonnull UICommandBuilder cmd, @Nonnull String itemId) {
         List<CraftingRecipe> allRecipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
 
-        List<CraftingRecipe> filteredRecipes = new ArrayList<>();
-        for (CraftingRecipe recipe : allRecipes) {
-            BenchRequirement[] benchReqs = recipe.getBenchRequirement();
-            if (benchReqs != null && benchReqs.length > 0) {
-                String stationId = benchReqs[0].id;
-                if (!stationId.toLowerCase().contains("builder") &&
-                        !stationId.toLowerCase().contains("salvage")) {
-                    filteredRecipes.add(recipe);
-                }
-            } else {
-                filteredRecipes.add(recipe);
-            }
-        }
-
-        if (filteredRecipes.isEmpty()) {
+        if (allRecipes.isEmpty()) {
             cmd.set("#NoRecipeContainer.Visible", true);
             cmd.set("#RecipeContent.Visible", false);
         } else {
             cmd.set("#NoRecipeContainer.Visible", false);
             cmd.set("#RecipeContent.Visible", true);
-            displayRecipe(cmd, filteredRecipes.get(0));
+
+            displayRecipes(cmd, allRecipes);
         }
     }
 
+    private void displayRecipes(@Nonnull UICommandBuilder cmd, @Nonnull List<CraftingRecipe> recipes) {
+        if (recipes.isEmpty()) return;
 
-    private void displayRecipe(@Nonnull UICommandBuilder cmd, @Nonnull CraftingRecipe recipe) {
-        BenchRequirement[] benchReqs = recipe.getBenchRequirement();
+        CraftingRecipe firstRecipe = recipes.get(0);
+
+        BenchRequirement[] benchReqs = firstRecipe.getBenchRequirement();
         if (benchReqs != null && benchReqs.length > 0) {
             BenchRequirement bench = benchReqs[0];
-            String stationId = bench.id;
             int tier = bench.requiredTierLevel;
 
-            Item stationItem = HytemsPlugin.ITEMS.get(stationId);
-            String stationName = getTranslatedName(stationItem, stationId);
-
+            Item stationItem = HytemsPlugin.ITEMS.get(bench.id);
+            String stationName = getTranslatedName(stationItem, bench.id);
             cmd.set("#StationName.Text", stationName);
+
             if (tier > 0) {
                 cmd.set("#StationTier.Text", "Tier " + tier);
             } else {
@@ -353,8 +342,42 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
         }
 
-        List<MaterialQuantity> ingredients = getRecipeInputs(recipe);
         cmd.clear("#IngredientsList");
+
+        if (recipes.size() > 1) {
+            showItemsNotFound(cmd);
+        } else {
+            displaySingleRecipe(cmd, firstRecipe);
+        }
+    }
+
+    private void showItemsNotFound(@Nonnull UICommandBuilder cmd) {
+        cmd.appendInline("#IngredientsList",
+                "Group {\n" +
+                        "  Anchor: (Height: 40);\n" +
+                        "  LayoutMode: Center;\n" +
+                        "  Padding: (Full: 10);\n" +
+                        "  Label {\n" +
+                        "    Text: \"Items not found!\";\n" +
+                        "    Style: (\n" +
+                        "      FontSize: 14,\n" +
+                        "      TextColor: #ff4444,\n" +
+                        "      HorizontalAlignment: Center,\n" +
+                        "      VerticalAlignment: Center,\n" +
+                        "      RenderBold: true\n" +
+                        "    );\n" +
+                        "  }\n" +
+                        "}\n"
+        );
+    }
+
+    private void displaySingleRecipe(@Nonnull UICommandBuilder cmd, @Nonnull CraftingRecipe recipe) {
+        List<MaterialQuantity> ingredients = getRecipeInputs(recipe);
+
+        if (ingredients.isEmpty()) {
+            showItemsNotFound(cmd);
+            return;
+        }
 
         int maxDisplay = Math.min(3, ingredients.size());
         int remaining = ingredients.size() - maxDisplay;
@@ -421,10 +444,12 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                             "  }\n" +
                             "}\n"
             );
-
-            cmd.set("#IngredientsList[" + maxDisplay + "][0].Text", "+ " + remaining + " more ingredient" + (remaining > 1 ? "s" : "") + "...");
+            cmd.set("#IngredientsList[" + maxDisplay + "][0].Text",
+                    "+ " + remaining + " more ingredient" + (remaining > 1 ? "s" : "") + "...");
         }
     }
+
+
 
 
     private List<MaterialQuantity> getRecipeInputs(@Nonnull CraftingRecipe recipe) {

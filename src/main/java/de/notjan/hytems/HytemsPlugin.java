@@ -6,7 +6,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
-import de.notjan.hytems.commands.HytemsCommand;
+import de.notjan.hytems.command.HytemsCommand;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;

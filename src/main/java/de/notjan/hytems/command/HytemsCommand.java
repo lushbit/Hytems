@@ -1,4 +1,4 @@
-package de.notjan.hytems.commands;
+package de.notjan.hytems.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;

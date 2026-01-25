@@ -6,5 +6,8 @@
   "Authors": [{"Name": "NotJan"}],
   "Main": "de.notjan.hytems.HytemsPlugin",
   "LoadOrder": "POSTWORLD",
-  "IncludesAssetPack": true
+  "IncludesAssetPack": true,
+  "Dependencies": {
+    "Buuz135:MultipleHUD": ">=1.0.3"
+  }
 }

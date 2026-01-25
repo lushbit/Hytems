@@ -3,6 +3,7 @@ package de.notjan.hytems.gui;
 import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
@@ -164,19 +165,31 @@ public class ItemDetailHud extends CustomUIHud {
                     if (ingredient == null) continue;
 
                     String ingredientId = ingredient.getItemId();
-                    if (ingredientId == null) continue;
-
+                    String resourceTypeId = ingredient.getResourceTypeId();
                     int quantity = ingredient.getQuantity();
+
+                    if (ingredientId == null && resourceTypeId == null) continue;
 
                     StringBuilder uiBuilder = new StringBuilder();
                     uiBuilder.append("Group {\n");
                     uiBuilder.append("  LayoutMode: Left;\n");
                     uiBuilder.append("  Anchor: (Height: 50);\n");
                     uiBuilder.append("  Padding: (Bottom: 6);\n");
-                    uiBuilder.append("  ItemIcon {\n");
-                    uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
-                    uiBuilder.append("    Visible: true;\n");
-                    uiBuilder.append("  }\n");
+
+                    if (ingredientId != null) {
+                        uiBuilder.append("  ItemIcon {\n");
+                        uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
+                        uiBuilder.append("    Visible: true;\n");
+                        uiBuilder.append("  }\n");
+                    }
+
+                    else if (resourceTypeId != null) {
+                        uiBuilder.append("  AssetImage {\n");
+                        uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
+                        uiBuilder.append("    Visible: true;\n");
+                        uiBuilder.append("  }\n");
+                    }
+
                     uiBuilder.append("  Group {\n");
                     uiBuilder.append("    Anchor: (Width: 8);\n");
                     uiBuilder.append("  }\n");
@@ -202,13 +215,34 @@ public class ItemDetailHud extends CustomUIHud {
                     cmd.appendInline("#IngredientsList", uiBuilder.toString());
 
                     String rowSelector = "#IngredientsList[" + i + "]";
-                    cmd.set(rowSelector + "[0].ItemId", ingredientId);
-                    cmd.set(rowSelector + "[0].Visible", true);
-                    cmd.set(rowSelector + "[2].Text", "x" + quantity);
 
-                    Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
-                    String ingredientName = getTranslatedName(ingredientItem, ingredientId);
-                    cmd.set(rowSelector + "[3].Text", ingredientName);
+                    if (ingredientId != null) {
+                        cmd.set(rowSelector + "[0].ItemId", ingredientId);
+                        cmd.set(rowSelector + "[0].Visible", true);
+                        cmd.set(rowSelector + "[2].Text", "x" + quantity);
+
+                        Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
+                        String ingredientName = getTranslatedName(ingredientItem, ingredientId);
+                        cmd.set(rowSelector + "[3].Text", ingredientName);
+                    }
+                    else if (resourceTypeId != null) {
+                        try {
+                            ResourceType resourceType = (ResourceType) ResourceType.getAssetMap().getAsset(resourceTypeId);
+                            if (resourceType != null) {
+                                cmd.set(rowSelector + "[0].AssetPath", resourceType.getIcon());
+                                cmd.set(rowSelector + "[0].Visible", true);
+
+                                String resourceTypeName = formatResourceTypeName(resourceTypeId);
+
+                                cmd.set(rowSelector + "[2].Text", "x" + quantity);
+                                cmd.set(rowSelector + "[3].Text", "Any " + resourceTypeName);
+                            }
+                        } catch (Exception e) {
+                            System.err.println("[Hytems] Error loading resource type: " + resourceTypeId);
+                            e.printStackTrace();
+                        }
+                    }
+
                 } catch (Exception e) {
                     System.err.println("[Hytems] Error displaying ingredient " + i + ": " + e.getMessage());
                     e.printStackTrace();
@@ -220,6 +254,29 @@ public class ItemDetailHud extends CustomUIHud {
             cmd.set("#NoRecipeContainer.Visible", true);
             cmd.set("#RecipeContent.Visible", false);
         }
+    }
+
+    private String formatResourceTypeName(String resourceTypeId) {
+        if (resourceTypeId == null) return "Unknown";
+
+        String name = resourceTypeId;
+        if (name.contains(":")) {
+            name = name.substring(name.indexOf(":") + 1);
+        }
+
+        StringBuilder result = new StringBuilder();
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+            if (i == 0) {
+                result.append(Character.toUpperCase(c));
+            } else if (Character.isUpperCase(c)) {
+                result.append(" ").append(c);
+            } else {
+                result.append(c);
+            }
+        }
+
+        return result.toString();
     }
 
     private List<MaterialQuantity> getRecipeInputs(@Nonnull CraftingRecipe recipe) {
@@ -245,7 +302,7 @@ public class ItemDetailHud extends CustomUIHud {
         if (inputsObj != null) {
             if (inputsObj instanceof MaterialQuantity) {
                 MaterialQuantity input = (MaterialQuantity) inputsObj;
-                if (input != null && input.getItemId() != null) {
+                if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
                     result.add(input);
                 }
             } else if (inputsObj instanceof List) {
@@ -254,7 +311,7 @@ public class ItemDetailHud extends CustomUIHud {
                 for (Object obj : inputs) {
                     if (obj instanceof MaterialQuantity) {
                         MaterialQuantity input = (MaterialQuantity) obj;
-                        if (input != null && input.getItemId() != null) {
+                        if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
                             result.add(input);
                         }
                     }
@@ -262,7 +319,7 @@ public class ItemDetailHud extends CustomUIHud {
             } else if (inputsObj instanceof MaterialQuantity[]) {
                 MaterialQuantity[] inputs = (MaterialQuantity[]) inputsObj;
                 for (MaterialQuantity input : inputs) {
-                    if (input != null && input.getItemId() != null) {
+                    if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
                         result.add(input);
                     }
                 }
@@ -272,7 +329,7 @@ public class ItemDetailHud extends CustomUIHud {
                 for (Object obj : inputs) {
                     if (obj instanceof MaterialQuantity) {
                         MaterialQuantity input = (MaterialQuantity) obj;
-                        if (input != null && input.getItemId() != null) {
+                        if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
                             result.add(input);
                         }
                     }

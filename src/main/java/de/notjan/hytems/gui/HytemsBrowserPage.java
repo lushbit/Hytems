@@ -6,8 +6,10 @@ import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
@@ -20,6 +22,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import de.notjan.hytems.HytemsPlugin;
 
 import javax.annotation.Nonnull;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -45,12 +48,13 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder cmd,
                       @Nonnull UIEventBuilder events, @Nonnull Store<EntityStore> store) {
-
         this.pageRef = ref;
         this.pageStore = store;
 
         cmd.append("hytems/ItemBrowser.ui");
         cmd.set("#SearchInput.Value", this.searchQuery);
+
+        updateSearchInputColor(cmd);
 
         events.addEventBinding(
                 CustomUIEventBindingType.ValueChanged,
@@ -95,7 +99,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store,
                                 @Nonnull BrowserData data) {
         super.handleDataEvent(ref, store, data);
-
         boolean needsUpdate = false;
 
         if (data.selectedItem != null && !data.selectedItem.isEmpty()) {
@@ -144,6 +147,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
             filterItems();
             renderItems(cmd, events);
+            updateSearchInputColor(cmd);
             this.sendUpdate(cmd, events, false);
         }
     }
@@ -166,7 +170,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             detailHud.setItemId(this.selectedItemId);
             detailHud.show();
             MultipleHUD.getInstance().setCustomHud(player, this.playerRef, DETAIL_HUD_ID, detailHud);
-
             System.out.println("[Hytems] Showing detail HUD for: " + this.selectedItemId);
         } catch (Exception e) {
             System.err.println("[Hytems] Error showing detail panel: " + e.getMessage());
@@ -174,11 +177,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
-
     private void hideDetailPanel(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
         try {
             detailHud.hide();
-
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player == null) {
                 System.err.println("[Hytems] hideDetailPanel: Could not get player component");
@@ -186,7 +187,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
 
             MultipleHUD.getInstance().setCustomHud(player, this.playerRef, DETAIL_HUD_ID, detailHud);
-
             System.out.println("[Hytems] HUD hidden successfully");
         } catch (Exception e) {
             System.err.println("[Hytems] Error hiding detail panel: " + e.getMessage());
@@ -197,8 +197,12 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private void filterItems() {
         Map<String, Item> allItems = HytemsPlugin.ITEMS;
 
+        Map<String, Item> nonTodoItems = allItems.entrySet().stream()
+                .filter(entry -> !isFromTodoBench(entry.getKey()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
         if (searchQuery.isEmpty()) {
-            filteredItems = allItems.entrySet().stream()
+            filteredItems = nonTodoItems.entrySet().stream()
                     .sorted((e1, e2) -> {
                         String name1 = getTranslatedName(e1.getValue(), e1.getKey());
                         String name2 = getTranslatedName(e2.getValue(), e2.getKey());
@@ -206,22 +210,260 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                     })
                     .collect(Collectors.toList());
         } else {
-            String lowerQuery = searchQuery.toLowerCase(Locale.ENGLISH);
-            filteredItems = allItems.entrySet().stream()
-                    .filter(entry -> {
-                        Item item = entry.getValue();
-                        if (item == null) return false;
-                        String translatedName = getTranslatedName(item, entry.getKey());
-                        return entry.getKey().toLowerCase(Locale.ENGLISH).contains(lowerQuery) ||
-                                translatedName.toLowerCase(Locale.ENGLISH).contains(lowerQuery);
-                    })
-                    .sorted((e1, e2) -> {
-                        String name1 = getTranslatedName(e1.getValue(), e1.getKey());
-                        String name2 = getTranslatedName(e2.getValue(), e2.getKey());
-                        return name1.compareToIgnoreCase(name2);
-                    })
-                    .collect(Collectors.toList());
+
+            if (searchQuery.startsWith("@")) {
+                String queryAfterAt = searchQuery.substring(1).trim();
+                String category;
+                String additionalSearch = "";
+
+                int spaceIndex = queryAfterAt.indexOf(' ');
+                if (spaceIndex > 0) {
+                    category = queryAfterAt.substring(0, spaceIndex).toLowerCase(Locale.ENGLISH);
+                    additionalSearch = queryAfterAt.substring(spaceIndex + 1).trim().toLowerCase(Locale.ENGLISH);
+                } else {
+                    category = queryAfterAt.toLowerCase(Locale.ENGLISH);
+                }
+
+                final String finalAdditionalSearch = additionalSearch;
+
+                filteredItems = nonTodoItems.entrySet().stream()
+                        .filter(entry -> {
+                            if (!matchesCategory(entry.getValue(), entry.getKey(), category)) {
+                                return false;
+                            }
+
+                            if (!finalAdditionalSearch.isEmpty()) {
+                                Item item = entry.getValue();
+                                if (item == null) return false;
+                                String translatedName = getTranslatedName(item, entry.getKey());
+                                return entry.getKey().toLowerCase(Locale.ENGLISH).contains(finalAdditionalSearch) ||
+                                        translatedName.toLowerCase(Locale.ENGLISH).contains(finalAdditionalSearch);
+                            }
+
+                            return true;
+                        })
+                        .sorted((e1, e2) -> {
+                            String name1 = getTranslatedName(e1.getValue(), e1.getKey());
+                            String name2 = getTranslatedName(e2.getValue(), e2.getKey());
+                            return name1.compareToIgnoreCase(name2);
+                        })
+                        .collect(Collectors.toList());
+            } else {
+                String lowerQuery = searchQuery.toLowerCase(Locale.ENGLISH);
+                filteredItems = nonTodoItems.entrySet().stream()
+                        .filter(entry -> {
+                            Item item = entry.getValue();
+                            if (item == null) return false;
+                            String translatedName = getTranslatedName(item, entry.getKey());
+                            return entry.getKey().toLowerCase(Locale.ENGLISH).contains(lowerQuery) ||
+                                    translatedName.toLowerCase(Locale.ENGLISH).contains(lowerQuery);
+                        })
+                        .sorted((e1, e2) -> {
+                            String name1 = getTranslatedName(e1.getValue(), e1.getKey());
+                            String name2 = getTranslatedName(e2.getValue(), e2.getKey());
+                            return name1.compareToIgnoreCase(name2);
+                        })
+                        .collect(Collectors.toList());
+            }
         }
+    }
+
+    private boolean isFromTodoBench(String itemId) {
+        try {
+            List<CraftingRecipe> recipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
+            if (recipes == null || recipes.isEmpty()) {
+                return false;
+            }
+
+            for (CraftingRecipe recipe : recipes) {
+                BenchRequirement[] benchReqs = recipe.getBenchRequirement();
+                if (benchReqs != null) {
+                    for (BenchRequirement bench : benchReqs) {
+                        if (bench != null && bench.id != null &&
+                                bench.id.toLowerCase(Locale.ENGLISH).contains("todo")) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+
+        }
+        return false;
+    }
+
+    private void updateSearchInputColor(@Nonnull UICommandBuilder cmd) {
+        if (searchQuery.startsWith("@") && searchQuery.length() > 1) {
+            String queryAfterAt = searchQuery.substring(1).trim();
+            String category;
+
+            int spaceIndex = queryAfterAt.indexOf(' ');
+            if (spaceIndex > 0) {
+                category = queryAfterAt.substring(0, spaceIndex).toLowerCase(Locale.ENGLISH);
+            } else {
+                category = queryAfterAt.toLowerCase(Locale.ENGLISH);
+            }
+
+            boolean isValid = isValidCategory(category);
+
+            if (isValid) {
+                cmd.set("#SearchInput.Style.TextColor", "#00cc00");
+            } else {
+                cmd.set("#SearchInput.Style.TextColor", "#cc0000");
+            }
+        } else {
+            cmd.set("#SearchInput.Style.TextColor", "#ffffff");
+        }
+    }
+
+    private boolean isValidCategory(String category) {
+        Set<String> validCategories = new HashSet<>(Arrays.asList(
+                "weapon", "weapons", "tool", "tools", "armor", "armour",
+                "block", "blocks", "food", "consumable", "consumables",
+                "material", "materials", "resource", "resources",
+                "furniture", "craftable", "ingredient", "ingredients"
+        ));
+        return validCategories.contains(category);
+    }
+
+    private boolean matchesCategory(Item item, String itemId, String category) {
+        if (item == null) return false;
+
+        try {
+            switch (category) {
+                case "weapon":
+                case "weapons":
+                    return hasComponent(item, "Weapon") || itemId.contains("Sword") ||
+                            itemId.contains("Bow") || itemId.contains("Staff") ||
+                            itemId.contains("Axe") || itemId.contains("Dagger");
+
+                case "tool":
+                case "tools":
+                    return hasComponent(item, "Tool") || itemId.contains("Pickaxe") ||
+                            itemId.contains("Hoe") || itemId.contains("Shovel");
+
+                case "armor":
+                case "armour":
+                    return hasComponent(item, "Armor") || itemId.contains("Helmet") ||
+                            itemId.contains("Chestplate") || itemId.contains("Leggings") ||
+                            itemId.contains("Boots");
+
+                case "block":
+                case "blocks":
+                    return hasComponent(item, "Block") || isBlock(item);
+
+                case "food":
+                case "consumable":
+                case "consumables":
+                    return hasComponent(item, "Consumable") || itemId.contains("Food") ||
+                            itemId.contains("Potion") || itemId.contains("Ingredient");
+
+                case "material":
+                case "materials":
+                case "resource":
+                case "resources":
+                    return itemId.contains("Ingot") || itemId.contains("Ore") ||
+                            itemId.contains("Wood") || itemId.contains("Stone") ||
+                            itemId.contains("Plank") || itemId.contains("Bar");
+
+                case "furniture":
+                    return itemId.contains("Chair") || itemId.contains("Table") ||
+                            itemId.contains("Bed") || itemId.contains("Torch");
+
+                case "craftable":
+                    return HytemsPlugin.recipeManager.getCraftingRecipes(itemId) != null &&
+                            !HytemsPlugin.recipeManager.getCraftingRecipes(itemId).isEmpty() &&
+                            !isFromTodoBench(itemId);
+
+                case "ingredient":
+                case "ingredients":
+                    return itemId.contains("Ingredient");
+
+                default:
+                    return itemId.toLowerCase(Locale.ENGLISH).contains(category) ||
+                            hasComponent(item, category);
+            }
+        } catch (Exception e) {
+            System.err.println("[Hytems] Error checking category for " + itemId + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    private boolean isBlock(Item item) {
+        try {
+            Method getItemTypeMethod = Item.class.getMethod("getItemType");
+            Object itemType = getItemTypeMethod.invoke(item);
+            if (itemType != null) {
+                String typeName = itemType.toString().toLowerCase(Locale.ENGLISH);
+                return typeName.contains("block");
+            }
+        } catch (Exception e) {
+
+        }
+        return false;
+    }
+
+    private boolean hasComponent(Item item, String componentName) {
+        if (item == null || componentName == null || componentName.isEmpty()) {
+            return false;
+        }
+
+        try {
+            if (componentName.equalsIgnoreCase("Weapon")) {
+                Method method = Item.class.getMethod("getWeapon");
+                Object result = method.invoke(item);
+                if (result != null) return true;
+            }
+
+            if (componentName.equalsIgnoreCase("Tool")) {
+                Method method = Item.class.getMethod("getTool");
+                Object result = method.invoke(item);
+                if (result != null) return true;
+            }
+
+            if (componentName.equalsIgnoreCase("Armor")) {
+                Method method = Item.class.getMethod("getArmor");
+                Object result = method.invoke(item);
+                if (result != null) return true;
+            }
+
+            if (componentName.equalsIgnoreCase("Consumable")) {
+                Method method = Item.class.getMethod("getConsumable");
+                Object result = method.invoke(item);
+                if (result != null) return true;
+            }
+
+            if (componentName.equalsIgnoreCase("Block")) {
+                Method method = Item.class.getMethod("getBlock");
+                Object result = method.invoke(item);
+                if (result != null) return true;
+            }
+
+            Method hasComponentMethod = Item.class.getMethod("hasComponent", String.class);
+            Object result = hasComponentMethod.invoke(item, componentName);
+            if (result instanceof Boolean && (Boolean) result) {
+                return true;
+            }
+
+            Method getComponentMethod = Item.class.getMethod("getComponent", String.class);
+            Object component = getComponentMethod.invoke(item, componentName);
+            if (component != null) {
+                return true;
+            }
+
+            Method getItemTypeMethod = Item.class.getMethod("getItemType");
+            Object itemType = getItemTypeMethod.invoke(item);
+            if (itemType != null) {
+                String typeStr = itemType.toString().toLowerCase(Locale.ENGLISH);
+                if (typeStr.contains(componentName.toLowerCase(Locale.ENGLISH))) {
+                    return true;
+                }
+            }
+
+        } catch (Exception e) {
+        }
+
+        return false;
     }
 
     private String getTranslatedName(Item item, String itemId) {
@@ -233,7 +475,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     private void renderItems(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
         cmd.clear("#ItemGrid");
-
         int startIndex = currentPage * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredItems.size());
 

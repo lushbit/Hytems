@@ -18,6 +18,7 @@ public class HytemsCommand extends AbstractPlayerCommand {
 
     public HytemsCommand() {
         super("hytems", "Opens the Hytems item browser");
+        this.addAliases("h");
     }
 
     @Override

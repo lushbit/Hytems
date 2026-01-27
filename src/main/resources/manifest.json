@@ -8,6 +8,6 @@
   "LoadOrder": "POSTWORLD",
   "IncludesAssetPack": true,
   "Dependencies": {
-    "Buuz135:MultipleHUD": ">=1.0.3"
+    "Buuz135:MultipleHUD": ">=1.0.4"
   }
 }

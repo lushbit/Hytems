@@ -179,15 +179,15 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     private void hideDetailPanel(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
         try {
-            detailHud.hide();
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player == null) {
                 System.err.println("[Hytems] hideDetailPanel: Could not get player component");
                 return;
             }
 
-            MultipleHUD.getInstance().setCustomHud(player, this.playerRef, DETAIL_HUD_ID, detailHud);
+            MultipleHUD.getInstance().hideCustomHud(player, DETAIL_HUD_ID);
             System.out.println("[Hytems] HUD hidden successfully");
+
         } catch (Exception e) {
             System.err.println("[Hytems] Error hiding detail panel: " + e.getMessage());
             e.printStackTrace();

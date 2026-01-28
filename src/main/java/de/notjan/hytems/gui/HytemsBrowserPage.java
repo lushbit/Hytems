@@ -507,6 +507,11 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                                 "  Background: #2a2a2a(0.7);\n" +
                                 "  Padding: (Full: 6);\n" +
                                 "  LayoutMode: Top;\n" +
+                                "  Style: ButtonStyle(\n" +
+                                "    Default: (Background: #2a2a2a(0.7)),\n" +
+                                "    Hovered: (Background: #3a3a3a(0.85)),\n" +
+                                "    Pressed: (Background: #4a4a4a(0.9))\n" +
+                                "  );\n" +
                                 "\n" +
                                 "  ItemIcon #ItemIcon {\n" +
                                 "    Anchor: (Width: 76, Height: 76);\n" +
@@ -528,6 +533,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                                 "  }\n" +
                                 "}\n"
                 );
+
 
                 String selector = "#ItemGrid[" + row + "][" + col + "]";
                 cmd.set(selector + " #ItemIcon.ItemId", itemId);

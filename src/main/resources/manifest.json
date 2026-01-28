@@ -1,7 +1,7 @@
 {
   "Group": "de.notjan",
   "Name": "Hytems",
-  "Version": "1.2.1",
+  "Version": "1.2.2",
   "Description": "View items and their recipes in Hytale just like in JEI!",
   "Authors": [{"Name": "NotJan"}],
   "Main": "de.notjan.hytems.HytemsPlugin",

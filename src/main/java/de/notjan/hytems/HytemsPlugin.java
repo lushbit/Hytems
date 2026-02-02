@@ -4,6 +4,7 @@ import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import de.notjan.hytems.command.HytemsCommand;
@@ -17,6 +18,7 @@ public class HytemsPlugin extends JavaPlugin {
 
     public static Map<String, Item> ITEMS = new HashMap<>();
     public static final RecipeManager recipeManager = new RecipeManager();
+    public static final DropListRegistry dropListRegistry = new DropListRegistry();
 
     public HytemsPlugin(@Nonnull JavaPluginInit init) {
         super(init);
@@ -29,6 +31,7 @@ public class HytemsPlugin extends JavaPlugin {
         this.getCommandRegistry().registerCommand(new HytemsCommand());
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, this::onItemAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, this::onRecipeAssetLoad);
+        this.getEventRegistry().register(LoadedAssetsEvent.class, ItemDropList.class, this::onDropListAssetLoad);
     }
 
     private void onItemAssetLoad(LoadedAssetsEvent<String, Item, DefaultAssetMap<String, Item>> event) {
@@ -42,5 +45,15 @@ public class HytemsPlugin extends JavaPlugin {
         recipeManager.initialize(recipes);
 
         this.getLogger().at(Level.INFO).log("Loaded %d recipes for Hytems browser", recipeManager.getTotalRecipeCount());
+    }
+
+    private void onDropListAssetLoad(LoadedAssetsEvent<String, ItemDropList, DefaultAssetMap<String, ItemDropList>> event) {
+        Map<String, ItemDropList> dropLists = event.getAssetMap().getAssetMap();
+        if (dropLists != null && !dropLists.isEmpty()) {
+            dropListRegistry.reload(dropLists);
+            this.getLogger().at(Level.INFO).log("Loaded %d drop lists for Hytems browser", dropListRegistry.size());
+        } else {
+            this.getLogger().at(Level.WARNING).log("[Hytems] No drop lists in LoadedAssetsEvent");
+        }
     }
 }

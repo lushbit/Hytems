@@ -150,3 +150,196 @@ Group #BrowserContainer {
     @Anchor = (Width: 120, Height: 40);
   }
 }
+
+// Drops Panel
+Group #DropPanelContainer {
+  Anchor: (Width: 400, Right: 175, Top: 130, Bottom: 130);
+  LayoutMode: Top;
+  Background: #1e1e1e(0.95);
+  Padding: (Full: 15);
+  Visible: false;
+
+  Group #DropPanelScroll {
+    FlexWeight: 1;
+    LayoutMode: TopScrolling;
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+    Group #DropContent {
+      LayoutMode: Top;
+
+      Group #Header {
+        LayoutMode: Left;
+        Anchor: (Height: 32);
+
+        Label #PanelTitle {
+          FlexWeight: 1;
+          Text: "Item Drops";
+          Style: (
+            FontSize: 16,
+            TextColor: #ffdd66,
+            RenderBold: true,
+            VerticalAlignment: Center
+          );
+        }
+      }
+
+      Group {
+        Anchor: (Height: 8);
+      }
+
+      $C.@ContentSeparator {
+        Anchor: (Height: 1);
+      }
+
+      Group {
+        Anchor: (Height: 10);
+      }
+
+      Group #ItemHeader {
+        LayoutMode: Left;
+        Anchor: (Height: 80);
+        Padding: (Full: 12);
+        Background: #252525(0.8);
+
+        Group #IconBox {
+          Anchor: (Width: 80, Height: 80);
+          LayoutMode: Center;
+          Background: #1e1e1e(0.9);
+
+          ItemIcon #DropDetailItemIcon {
+            Anchor: (Width: 72, Height: 72);
+            Visible: true;
+          }
+        }
+
+        Group {
+          Anchor: (Width: 12);
+        }
+
+        Group #NameSection {
+          FlexWeight: 1;
+          LayoutMode: Top;
+          Padding: (Top: 10);
+
+          Label #DropDetailItemName {
+            Text: "";
+            FlexWeight: 1;
+            Style: (
+              FontSize: 17,
+              TextColor: #ffffff,
+              RenderBold: true,
+              VerticalAlignment: Center
+            );
+          }
+        }
+      }
+
+      Group {
+        Anchor: (Height: 12);
+      }
+
+      Group #DropsContainer {
+        LayoutMode: Top;
+        Background: #252525(0.8);
+        Padding: (Full: 12);
+
+        Label #DropsTitle {
+          Text: "Obtained From";
+          Anchor: (Height: 24);
+          Style: (
+            FontSize: 16,
+            TextColor: #96a9be,
+            RenderBold: true
+          );
+        }
+
+        Group {
+          Anchor: (Height: 8);
+        }
+
+        Group #NoDropsContainer {
+          Anchor: (Height: 35);
+          Visible: true;
+
+          Label #NoDropsLabel {
+            Text: "No drop sources found!";
+            Anchor: (Height: 24);
+            Style: (
+              FontSize: 14,
+              TextColor: #ff4444,
+              HorizontalAlignment: Center,
+              RenderBold: true
+            );
+          }
+        }
+
+        Group #DropsContent {
+          LayoutMode: Top;
+          Visible: false;
+
+          Group #DropsSection {
+            LayoutMode: Top;
+
+            Group {
+              Anchor: (Height: 6);
+            }
+
+            Group #DropSourcesList {
+              LayoutMode: Top;
+              Background: #1e1e1e(0.8);
+              Padding: (Full: 8);
+            }
+          }
+        }
+      }
+
+      Group {
+        Anchor: (Height: 12);
+      }
+
+      Group #DetailsContainer {
+        LayoutMode: Top;
+        Padding: (Full: 12);
+        Background: #252525(0.8);
+
+        Label #DetailsTitle {
+          Text: "Item Information";
+          Anchor: (Height: 22);
+          Style: (
+            FontSize: 15,
+            TextColor: #96a9be,
+            RenderBold: true
+          );
+        }
+
+        Group {
+          Anchor: (Height: 8);
+        }
+
+        Group #ItemIdRow {
+          LayoutMode: Left;
+          Anchor: (Height: 18);
+          Padding: (Bottom: 4);
+
+          Label {
+            Text: "ID:";
+            Anchor: (Width: 80);
+            Style: (
+              FontSize: 11,
+              TextColor: #888888
+            );
+          }
+
+          Label #DropDetailItemId {
+            FlexWeight: 1;
+            Text: "";
+            Style: (
+              FontSize: 11,
+              TextColor: #cccccc
+            );
+          }
+        }
+      }
+    }
+  }
+}

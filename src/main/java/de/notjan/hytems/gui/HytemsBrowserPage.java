@@ -232,6 +232,21 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             cmd.set("#DropDetailItemName.Text", translatedName);
             cmd.set("#DropDetailItemId.Text", dropsItemId);
 
+            if (item != null) {
+                int maxStack = item.getMaxStack();
+                cmd.set("#DropDetailMaxStack.Text", String.valueOf(maxStack));
+
+                double durability = item.getMaxDurability();
+                if (durability > 0) {
+                    cmd.set("#DropDetailDurability.Text", String.valueOf((int) durability));
+                } else {
+                    cmd.set("#DropDetailDurability.Text", "N/A");
+                }
+            } else {
+                cmd.set("#DropDetailMaxStack.Text", "N/A");
+                cmd.set("#DropDetailDurability.Text", "N/A");
+            }
+
             List<String> dropSources = HytemsPlugin.dropListRegistry.getDropSourcesForItem(dropsItemId);
 
             if (dropSources == null || dropSources.isEmpty()) {
@@ -250,6 +265,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             cmd.set("#DropsContent.Visible", false);
         }
     }
+
 
     private void displayDropSources(@Nonnull UICommandBuilder cmd, @Nonnull List<String> dropSources) {
         try {

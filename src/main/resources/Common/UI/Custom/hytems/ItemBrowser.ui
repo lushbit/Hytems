@@ -338,6 +338,53 @@ Group #DropPanelContainer {
             );
           }
         }
+
+        Group #MaxStackRow {
+          LayoutMode: Left;
+          Anchor: (Height: 18);
+          Padding: (Bottom: 4);
+
+          Label {
+            Text: "Max Stack:";
+            Anchor: (Width: 80);
+            Style: (
+              FontSize: 11,
+              TextColor: #888888
+            );
+          }
+
+          Label #DropDetailMaxStack {
+            FlexWeight: 1;
+            Text: "";
+            Style: (
+              FontSize: 11,
+              TextColor: #cccccc
+            );
+          }
+        }
+
+        Group #DurabilityRow {
+          LayoutMode: Left;
+          Anchor: (Height: 18);
+
+          Label {
+            Text: "Durability:";
+            Anchor: (Width: 80);
+            Style: (
+              FontSize: 11,
+              TextColor: #888888
+            );
+          }
+
+          Label #DropDetailDurability {
+            FlexWeight: 1;
+            Text: "";
+            Style: (
+              FontSize: 11,
+              TextColor: #cccccc
+            );
+          }
+        }
       }
     }
   }

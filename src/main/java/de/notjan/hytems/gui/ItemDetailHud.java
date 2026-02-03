@@ -260,16 +260,21 @@ public class ItemDetailHud extends CustomUIHud {
         if (resourceTypeId == null) return "Unknown";
 
         String name = resourceTypeId;
+
         if (name.contains(":")) {
             name = name.substring(name.indexOf(":") + 1);
         }
 
+        name = name.replace("_", " ");
+
         StringBuilder result = new StringBuilder();
+
         for (int i = 0; i < name.length(); i++) {
             char c = name.charAt(i);
+
             if (i == 0) {
                 result.append(Character.toUpperCase(c));
-            } else if (Character.isUpperCase(c)) {
+            } else if (Character.isUpperCase(c) && i > 0 && name.charAt(i - 1) != ' ') {
                 result.append(" ").append(c);
             } else {
                 result.append(c);
@@ -278,6 +283,7 @@ public class ItemDetailHud extends CustomUIHud {
 
         return result.toString();
     }
+
 
     private List<MaterialQuantity> getRecipeInputs(@Nonnull CraftingRecipe recipe) {
         List<MaterialQuantity> result = new ArrayList<>();

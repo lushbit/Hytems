@@ -292,20 +292,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
             for (Map.Entry<String, Map<String, List<String>>> cropEntry : cropGrouping.entrySet()) {
                 String cropType = cropEntry.getKey();
-                Map<String, List<String>> zoneData = cropEntry.getValue();
                 String displayName = formatCropName(cropType);
 
-                if (zoneData.size() >= 2) {
-                    index = addCropSourceRowMultiZone(cmd, index, displayName, zoneData);
-                } else {
-                    String zoneInfo = formatCropZoneInfo(zoneData);
-                    index = addDropSourceRow(cmd, index, displayName, zoneInfo);
-                }
+                index = addCropSourceRow(cmd, index, displayName);
             }
 
             for (String source : otherSources) {
                 String displayName = formatDropSourceName(source);
-                index = addDropSourceRow(cmd, index, displayName, "");
+                index = addSimpleDropSourceRow(cmd, index, displayName);
             }
 
         } catch (Exception e) {
@@ -314,65 +308,53 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
+    private String getZoneColor(String zone) {
+        if (zone == null) return "#888888";
+
+        String zoneNumber = zone.replaceAll("[^0-9]", "");
+        if (zoneNumber.isEmpty()) return "#888888";
+
+        int zoneNum = Integer.parseInt(zoneNumber);
+        switch (zoneNum) {
+            case 1: return "#4CAF50";
+            case 2: return "#FFC107";
+            case 3: return "#FF9800";
+            case 4: return "#F44336";
+            default: return "#888888";
+        }
+    }
+
+
     private int addDropSourceRow(UICommandBuilder cmd, int index, String displayName, String zoneInfo) {
-        StringBuilder uiBuilder = new StringBuilder();
-        uiBuilder.append("Group {\n");
-        uiBuilder.append("  LayoutMode: Top;\n");
-        uiBuilder.append("  Anchor: (Height: ").append(zoneInfo.isEmpty() ? "40" : "55").append(");\n");
-        uiBuilder.append("  Padding: (Bottom: 8, Full: 10);\n");
-        uiBuilder.append("  Background: #1e1e1e(0.8);\n");
-
-        uiBuilder.append("  Label {\n");
-        uiBuilder.append("    Text: \"\";\n");
-        uiBuilder.append("    Anchor: (Height: 24);\n");
-        uiBuilder.append("    Style: (\n");
-        uiBuilder.append("      FontSize: 14,\n");
-        uiBuilder.append("      TextColor: #ffffff,\n");
-        uiBuilder.append("      VerticalAlignment: Center,\n");
-        uiBuilder.append("      RenderBold: true\n");
-        uiBuilder.append("    );\n");
-        uiBuilder.append("  }\n");
-
+        Map<String, List<Integer>> zoneData = new LinkedHashMap<>();
         if (!zoneInfo.isEmpty()) {
-            uiBuilder.append("  Label {\n");
-            uiBuilder.append("    Text: \"\";\n");
-            uiBuilder.append("    Anchor: (Height: 18);\n");
-            uiBuilder.append("    Style: (\n");
-            uiBuilder.append("      FontSize: 11,\n");
-            uiBuilder.append("      TextColor: #888888,\n");
-            uiBuilder.append("      VerticalAlignment: Center\n");
-            uiBuilder.append("    );\n");
-            uiBuilder.append("  }\n");
+            String[] parts = zoneInfo.split(":");
+            if (parts.length > 0) {
+                String zonePart = parts[0].trim();
+                zoneData.put(zonePart, new ArrayList<>());
+            }
         }
 
-        uiBuilder.append("}\n");
-
-        cmd.appendInline("#DropSourcesList", uiBuilder.toString());
-
-        String rowSelector = "#DropSourcesList[" + index + "]";
-        cmd.set(rowSelector + "[0].Text", displayName);
-
-        if (!zoneInfo.isEmpty()) {
-            cmd.set(rowSelector + "[1].Text", zoneInfo);
-        }
-
-        return index + 1;
+        return addDropSourceRowWithZoneBoxes(cmd, index, displayName, zoneData);
     }
 
     private int addDropSourceRowMultiZone(UICommandBuilder cmd, int index, String displayName, Map<String, List<Integer>> zoneData) {
-        int numZones = zoneData.size();
-        int height = 30 + (numZones * 18);
+        return addDropSourceRowWithZoneBoxes(cmd, index, displayName, zoneData);
+    }
 
+    private int addDropSourceRowWithZoneBoxes(UICommandBuilder cmd, int index, String displayName, Map<String, List<Integer>> zoneData) {
         StringBuilder uiBuilder = new StringBuilder();
+
         uiBuilder.append("Group {\n");
-        uiBuilder.append("  LayoutMode: Top;\n");
-        uiBuilder.append("  Anchor: (Height: ").append(height).append(");\n");
-        uiBuilder.append("  Padding: (Bottom: 8, Full: 10);\n");
+        uiBuilder.append("  LayoutMode: Left;\n");
+        uiBuilder.append("  Anchor: (Height: 40);\n");
+        uiBuilder.append("  Padding: (Bottom: 8, Top: 8);\n");
         uiBuilder.append("  Background: #1e1e1e(0.8);\n");
 
         uiBuilder.append("  Label {\n");
-        uiBuilder.append("    Text: \"\";\n");
-        uiBuilder.append("    Anchor: (Height: 24);\n");
+        uiBuilder.append("    Text: \"").append(displayName).append("\";\n");
+        uiBuilder.append("    Anchor: (Width: 150);\n");
+        uiBuilder.append("    Padding: (Left: 8);\n");
         uiBuilder.append("    Style: (\n");
         uiBuilder.append("      FontSize: 14,\n");
         uiBuilder.append("      TextColor: #ffffff,\n");
@@ -380,58 +362,66 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         uiBuilder.append("      RenderBold: true\n");
         uiBuilder.append("    );\n");
         uiBuilder.append("  }\n");
+        uiBuilder.append("  Group { Anchor: (Width: 8); }\n");
 
-        for (int i = 0; i < numZones; i++) {
-            uiBuilder.append("  Label {\n");
-            uiBuilder.append("    Text: \"\";\n");
-            uiBuilder.append("    Anchor: (Height: 16);\n");
-            uiBuilder.append("    Padding: (Left: 10);\n");
-            uiBuilder.append("    Style: (\n");
-            uiBuilder.append("      FontSize: 11,\n");
-            uiBuilder.append("      TextColor: #888888,\n");
-            uiBuilder.append("      VerticalAlignment: Center\n");
-            uiBuilder.append("    );\n");
-            uiBuilder.append("  }\n");
+        uiBuilder.append("  Group {\n");
+        uiBuilder.append("    LayoutMode: Left;\n");
+        uiBuilder.append("    FlexWeight: 1;\n");
+
+        List<Map.Entry<String, List<Integer>>> sortedZones = new ArrayList<>(zoneData.entrySet());
+        sortedZones.sort((a, b) -> {
+            String numA = a.getKey().replaceAll("[^0-9]", "");
+            String numB = b.getKey().replaceAll("[^0-9]", "");
+            if (numA.isEmpty()) return 1;
+            if (numB.isEmpty()) return -1;
+            return Integer.compare(Integer.parseInt(numA), Integer.parseInt(numB));
+        });
+
+        for (Map.Entry<String, List<Integer>> entry : sortedZones) {
+            String zone = entry.getKey();
+            String zoneNumber = zone.replaceAll("[^0-9]", "");
+            String color = getZoneColor(zone);
+
+            uiBuilder.append("    Group {\n");
+            uiBuilder.append("      Anchor: (Width: 32, Height: 24);\n");
+            uiBuilder.append("      Background: ").append(color).append("(0.9);\n");
+            uiBuilder.append("      LayoutMode: Center;\n");
+            uiBuilder.append("      Label {\n");
+            uiBuilder.append("        Text: \"Z").append(zoneNumber).append("\";\n");
+            uiBuilder.append("        Style: (\n");
+            uiBuilder.append("          FontSize: 11,\n");
+            uiBuilder.append("          TextColor: #ffffff,\n");
+            uiBuilder.append("          HorizontalAlignment: Center,\n");
+            uiBuilder.append("          VerticalAlignment: Center,\n");
+            uiBuilder.append("          RenderBold: true\n");
+            uiBuilder.append("        );\n");
+            uiBuilder.append("      }\n");
+            uiBuilder.append("    }\n");
+
+            uiBuilder.append("    Group { Anchor: (Width: 4); }\n");
         }
 
+        uiBuilder.append("  }\n");
         uiBuilder.append("}\n");
 
         cmd.appendInline("#DropSourcesList", uiBuilder.toString());
-
-        String rowSelector = "#DropSourcesList[" + index + "]";
-        cmd.set(rowSelector + "[0].Text", displayName);
-
-        int labelIndex = 1;
-        for (Map.Entry<String, List<Integer>> entry : zoneData.entrySet()) {
-            String zone = entry.getKey();
-            List<Integer> tiers = entry.getValue();
-            Collections.sort(tiers);
-
-            String zoneName = formatZoneName(zone);
-            String tierRange = formatTierRange(tiers);
-
-            String zoneText = !tierRange.isEmpty() ? zoneName + ": " + tierRange : zoneName;
-            cmd.set(rowSelector + "[" + labelIndex + "].Text", zoneText);
-            labelIndex++;
-        }
 
         return index + 1;
     }
 
-    private int addCropSourceRowMultiZone(UICommandBuilder cmd, int index, String displayName, Map<String, List<String>> zoneData) {
-        int numZones = zoneData.size();
-        int height = 30 + (numZones * 18);
-
+    private int addSimpleDropSourceRow(UICommandBuilder cmd, int index, String displayName) {
         StringBuilder uiBuilder = new StringBuilder();
+
         uiBuilder.append("Group {\n");
         uiBuilder.append("  LayoutMode: Top;\n");
-        uiBuilder.append("  Anchor: (Height: ").append(height).append(");\n");
-        uiBuilder.append("  Padding: (Bottom: 8, Full: 10);\n");
+        uiBuilder.append("  Anchor: (Height: 40);\n");
+        uiBuilder.append("  Padding: (Bottom: 8, Top: 8);\n");
         uiBuilder.append("  Background: #1e1e1e(0.8);\n");
 
         uiBuilder.append("  Label {\n");
-        uiBuilder.append("    Text: \"\";\n");
+        uiBuilder.append("    Text: \"").append(displayName).append("\";\n");
         uiBuilder.append("    Anchor: (Height: 24);\n");
+        uiBuilder.append("    Padding: (Left: 8);\n");
         uiBuilder.append("    Style: (\n");
         uiBuilder.append("      FontSize: 14,\n");
         uiBuilder.append("      TextColor: #ffffff,\n");
@@ -440,40 +430,16 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         uiBuilder.append("    );\n");
         uiBuilder.append("  }\n");
 
-        for (int i = 0; i < numZones; i++) {
-            uiBuilder.append("  Label {\n");
-            uiBuilder.append("    Text: \"\";\n");
-            uiBuilder.append("    Anchor: (Height: 16);\n");
-            uiBuilder.append("    Padding: (Left: 10);\n");
-            uiBuilder.append("    Style: (\n");
-            uiBuilder.append("      FontSize: 11,\n");
-            uiBuilder.append("      TextColor: #888888,\n");
-            uiBuilder.append("      VerticalAlignment: Center\n");
-            uiBuilder.append("    );\n");
-            uiBuilder.append("  }\n");
-        }
-
         uiBuilder.append("}\n");
 
         cmd.appendInline("#DropSourcesList", uiBuilder.toString());
 
-        String rowSelector = "#DropSourcesList[" + index + "]";
-        cmd.set(rowSelector + "[0].Text", displayName);
-
-        int labelIndex = 1;
-        for (Map.Entry<String, List<String>> entry : zoneData.entrySet()) {
-            String zone = entry.getKey();
-            List<String> stages = entry.getValue();
-
-            String zoneName = zone.equals("Unknown") ? "Unknown" : zone;
-            String stageInfo = formatStageInfo(stages);
-
-            String zoneText = !stageInfo.isEmpty() ? zoneName + ": " + stageInfo : zoneName;
-            cmd.set(rowSelector + "[" + labelIndex + "].Text", zoneText);
-            labelIndex++;
-        }
-
         return index + 1;
+    }
+
+
+    private int addCropSourceRow(UICommandBuilder cmd, int index, String displayName) {
+        return addSimpleDropSourceRow(cmd, index, displayName);
     }
 
     private static class ParsedDropSource {
@@ -545,20 +511,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         return String.join(", ", zoneParts);
     }
 
-    private String formatCropZoneInfo(Map<String, List<String>> zoneData) {
-        List<String> zoneParts = new ArrayList<>();
-
-        for (Map.Entry<String, List<String>> entry : zoneData.entrySet()) {
-            String zone = entry.getKey();
-            List<String> stages = entry.getValue();
-
-            String stageInfo = formatStageInfo(stages);
-            zoneParts.add(zone + ": " + stageInfo);
-        }
-
-        return String.join(", ", zoneParts);
-    }
-
     private String formatStageInfo(List<String> stages) {
         if (stages == null || stages.isEmpty()) return "";
 
@@ -622,7 +574,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
         }
 
-        return result.toString();
+        return result.toString().trim();
     }
 
     private String formatCropName(String cropType) {
@@ -645,7 +597,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
         }
 
-        return result.toString() + " Crop";
+        return result.toString().trim() + " Crop";
     }
 
     private String formatDropSourceName(String dropSourceId) {
@@ -656,12 +608,15 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             name = name.substring(name.indexOf(":") + 1);
         }
 
+        if (name.toLowerCase(Locale.ENGLISH).startsWith("drop_")) {
+            name = name.substring(5);
+        }
+
         StringBuilder result = new StringBuilder();
         boolean capitalizeNext = true;
 
         for (int i = 0; i < name.length(); i++) {
             char c = name.charAt(i);
-
             if (c == '_' || c == '-') {
                 result.append(' ');
                 capitalizeNext = true;
@@ -675,8 +630,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
         }
 
-        return result.toString();
+        return result.toString().trim();
     }
+
 
     private void filterItems() {
         Map<String, Item> allItems = HytemsPlugin.ITEMS;

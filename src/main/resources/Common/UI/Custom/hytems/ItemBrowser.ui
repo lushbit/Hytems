@@ -284,11 +284,10 @@ Group #DropPanelContainer {
               Anchor: (Height: 6);
             }
 
-            Group #DropSourcesList {
-              LayoutMode: Top;
-              Background: #1e1e1e(0.8);
-              Padding: (Full: 8);
-            }
+           Group #DropSourcesList {
+             LayoutMode: Top;
+             Background: #1e1e1e(0.8);
+           }
           }
         }
       }

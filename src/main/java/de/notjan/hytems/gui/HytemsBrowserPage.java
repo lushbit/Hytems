@@ -11,8 +11,10 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -33,20 +35,34 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private static final int ITEMS_PER_ROW = 7;
     private static final int ROWS_PER_PAGE = 8;
     private static final int ITEMS_PER_PAGE = ITEMS_PER_ROW * ROWS_PER_PAGE;
-    private static final String DETAIL_HUD_ID = "hytems_detail_panel";
 
     private String searchQuery = "";
     private int currentPage = 0;
     private String selectedItemId = null;
     private String dropsItemId = null;
     private List<Map.Entry<String, Item>> filteredItems = new ArrayList<>();
-    private ItemDetailHud detailHud;
     private Ref<EntityStore> pageRef;
     private Store<EntityStore> pageStore;
+    private PlayerRef playerRef;
 
     public HytemsBrowserPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime) {
         super(playerRef, lifetime, BrowserData.CODEC);
-        this.detailHud = new ItemDetailHud(playerRef);
+        this.playerRef = playerRef;
+    }
+
+    private void updatePinnedItemsHud() {
+        try {
+            if (this.pageStore != null && this.pageRef != null) {
+                Player player = this.pageStore.getComponent(this.pageRef, Player.getComponentType());
+                if (player != null) {
+                    PinnedItemsHud pinnedHud = new PinnedItemsHud(this.playerRef, HytemsPlugin.pinnedItemsManager);
+                    MultipleHUD.getInstance().setCustomHud(player, this.playerRef, "hytems_pinned_items", pinnedHud);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[Hytems] Failed to update pinned items HUD: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -59,6 +75,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         cmd.set("#SearchInput.Value", this.searchQuery);
         updateSearchInputColor(cmd);
         cmd.set("#DropPanelContainer.Visible", false);
+        cmd.set("#DetailPanelContainer.Visible", false);
 
         events.addEventBinding(
                 CustomUIEventBindingType.ValueChanged,
@@ -106,15 +123,30 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         boolean needsUpdate = false;
 
         if (data.showDrops != null && !data.showDrops.isEmpty()) {
-            hideDetailPanel(ref, store);
             this.selectedItemId = null;
             this.dropsItemId = data.showDrops;
             needsUpdate = true;
         }
 
         if (data.selectedItem != null && !data.selectedItem.isEmpty()) {
+            this.dropsItemId = null;
             this.selectedItemId = data.selectedItem;
-            showDetailPanel(ref, store);
+            needsUpdate = true;
+        }
+
+        if (data.closeDetail != null && "true".equals(data.closeDetail)) {
+            this.selectedItemId = null;
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#DetailPanelContainer.Visible", false);
+            this.sendUpdate(cmd, new UIEventBuilder(), false);
+            return;
+        }
+
+        if (data.closeDropPanel != null && "true".equals(data.closeDropPanel)) {
+            this.dropsItemId = null;
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#DropPanelContainer.Visible", false);
+            this.sendUpdate(cmd, new UIEventBuilder(), false);
             return;
         }
 
@@ -142,9 +174,17 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
 
         if (data.closeGUI != null && "true".equals(data.closeGUI)) {
-            System.out.println("[Hytems] Close button pressed - hiding HUD");
-            hideDetailPanel(ref, store);
             this.close();
+            return;
+        }
+
+        if (data.pinItem != null && !data.pinItem.isEmpty()) {
+            updatePinnedItemsHud();
+            
+            UICommandBuilder cmd = new UICommandBuilder();
+            UIEventBuilder events = new UIEventBuilder();
+            renderDetailPanel(cmd, events);
+            this.sendUpdate(cmd, events, false);
             return;
         }
 
@@ -161,9 +201,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             updateSearchInputColor(cmd);
 
             if (this.dropsItemId != null) {
-                renderDropsPanel(cmd);
+                renderDropsPanel(cmd, events);
+                cmd.set("#DetailPanelContainer.Visible", false);
+            } else if (this.selectedItemId != null) {
+                renderDetailPanel(cmd, events);
+                cmd.set("#DropPanelContainer.Visible", false);
             } else {
                 cmd.set("#DropPanelContainer.Visible", false);
+                cmd.set("#DetailPanelContainer.Visible", false);
             }
 
             this.sendUpdate(cmd, events, false);
@@ -172,57 +217,346 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     @Override
     public void onDismiss(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-        System.out.println("[Hytems] onDismiss called - hiding HUD");
-        hideDetailPanel(ref, store);
+        this.selectedItemId = null;
+        this.dropsItemId = null;
         super.onDismiss(ref, store);
     }
 
-    private void showDetailPanel(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+    private void renderDetailPanel(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
+        if (selectedItemId == null || selectedItemId.isEmpty()) {
+            cmd.set("#DetailPanelContainer.Visible", false);
+            return;
+        }
+
+        cmd.set("#DetailPanelContainer.Visible", true);
+        cmd.clear("#DetailPanelContainer");
+        cmd.append("#DetailPanelContainer", "hytems/ItemDetail.ui");
+
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#CloseDetailButton",
+                EventData.of("CloseDetail", "true"),
+                false
+        );
+
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#PinItemButton",
+                EventData.of("PinItem", selectedItemId),
+                false
+        );
+
         try {
-            Player player = (Player) store.getComponent(ref, Player.getComponentType());
-            if (player == null) {
-                System.err.println("[Hytems] Error: Could not get player component");
-                return;
+            Item item = HytemsPlugin.ITEMS.get(selectedItemId);
+            String translatedName = getTranslatedName(item, selectedItemId);
+
+            cmd.set("#DetailItemIcon.ItemId", selectedItemId);
+            cmd.set("#DetailItemName.Text", translatedName);
+            cmd.set("#DetailItemId.Text", selectedItemId);
+
+            boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, selectedItemId);
+            cmd.set("#PinItemButton.Text", isPinned ? "Pin" : "Unpin");
+
+            if (item != null) {
+                int maxStack = item.getMaxStack();
+                cmd.set("#DetailMaxStack.Text", String.valueOf(maxStack));
+
+                double durability = item.getMaxDurability();
+                if (durability > 0) {
+                    cmd.set("#DetailDurability.Text", String.valueOf((int) durability));
+                } else {
+                    cmd.set("#DetailDurability.Text", "N/A");
+                }
+
+                loadRecipes(cmd, selectedItemId);
             }
-
-            this.dropsItemId = null;
-            UICommandBuilder cmd = new UICommandBuilder();
-            cmd.set("#DropPanelContainer.Visible", false);
-            this.sendUpdate(cmd, new UIEventBuilder(), false);
-
-            detailHud.setItemId(this.selectedItemId);
-            detailHud.show();
-            MultipleHUD.getInstance().setCustomHud(player, this.playerRef, DETAIL_HUD_ID, detailHud);
-            System.out.println("[Hytems] Showing detail HUD for: " + this.selectedItemId);
         } catch (Exception e) {
-            System.err.println("[Hytems] Error showing detail panel: " + e.getMessage());
+            System.err.println("[Hytems] ERROR: Failed to display item detail for: " + selectedItemId);
+            System.err.println("[Hytems] Error: " + e.getMessage());
             e.printStackTrace();
+            try {
+                cmd.set("#NoRecipeContainer.Visible", true);
+                cmd.set("#RecipeContent.Visible", false);
+            } catch (Exception ex) {
+                System.err.println("[Hytems] Critical error in renderDetailPanel: " + ex.getMessage());
+            }
         }
     }
 
-    private void hideDetailPanel(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+    private void loadRecipes(@Nonnull UICommandBuilder cmd, @Nonnull String itemId) {
         try {
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player == null) {
-                System.err.println("[Hytems] hideDetailPanel: Could not get player component");
-                return;
-            }
+            List<CraftingRecipe> allRecipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
 
-            MultipleHUD.getInstance().hideCustomHud(player, DETAIL_HUD_ID);
-            System.out.println("[Hytems] HUD hidden successfully");
+            if (allRecipes == null || allRecipes.isEmpty() || allRecipes.size() > 1) {
+                cmd.set("#NoRecipeContainer.Visible", true);
+                cmd.set("#RecipeContent.Visible", false);
+            } else {
+                cmd.set("#NoRecipeContainer.Visible", false);
+                cmd.set("#RecipeContent.Visible", true);
+                displayRecipes(cmd, allRecipes);
+            }
         } catch (Exception e) {
-            System.err.println("[Hytems] Error hiding detail panel: " + e.getMessage());
+            System.err.println("[Hytems] Error loading recipes for " + itemId + ": " + e.getMessage());
             e.printStackTrace();
+            cmd.set("#NoRecipeContainer.Visible", true);
+            cmd.set("#RecipeContent.Visible", false);
         }
     }
 
-    private void renderDropsPanel(@Nonnull UICommandBuilder cmd) {
+    private void displayRecipes(@Nonnull UICommandBuilder cmd, @Nonnull List<CraftingRecipe> recipes) {
+        try {
+            if (recipes == null || recipes.isEmpty()) return;
+
+            CraftingRecipe firstRecipe = recipes.get(0);
+            BenchRequirement[] benchReqs = firstRecipe.getBenchRequirement();
+
+            if (benchReqs != null && benchReqs.length > 0) {
+                BenchRequirement bench = benchReqs[0];
+                int tier = bench.requiredTierLevel;
+                Item stationItem = HytemsPlugin.ITEMS.get(bench.id);
+                String stationName = getTranslatedName(stationItem, bench.id);
+
+                cmd.set("#StationName.Text", stationName);
+                if (tier > 0) {
+                    cmd.set("#StationTier.Text", "Tier " + tier);
+                } else {
+                    cmd.set("#StationTier.Text", "Any tier");
+                }
+            }
+
+            cmd.clear("#IngredientsList");
+            displaySingleRecipe(cmd, firstRecipe);
+        } catch (Exception e) {
+            System.err.println("[Hytems] Error displaying recipes: " + e.getMessage());
+            e.printStackTrace();
+            cmd.set("#NoRecipeContainer.Visible", true);
+            cmd.set("#RecipeContent.Visible", false);
+        }
+    }
+
+    private void displaySingleRecipe(@Nonnull UICommandBuilder cmd, @Nonnull CraftingRecipe recipe) {
+        try {
+            List<MaterialQuantity> ingredients = getRecipeInputs(recipe);
+
+            if (ingredients == null || ingredients.isEmpty()) {
+                cmd.set("#NoRecipeContainer.Visible", true);
+                cmd.set("#RecipeContent.Visible", false);
+                return;
+            }
+
+            if (ingredients.size() > 6) {
+                cmd.set("#NoRecipeContainer.Visible", true);
+                cmd.set("#RecipeContent.Visible", false);
+                return;
+            }
+
+            for (int i = 0; i < ingredients.size(); i++) {
+                try {
+                    MaterialQuantity ingredient = ingredients.get(i);
+                    if (ingredient == null) continue;
+
+                    String ingredientId = ingredient.getItemId();
+                    String resourceTypeId = ingredient.getResourceTypeId();
+                    int quantity = ingredient.getQuantity();
+
+                    if (ingredientId == null && resourceTypeId == null) continue;
+
+                    StringBuilder uiBuilder = new StringBuilder();
+                    uiBuilder.append("Group {\n");
+                    uiBuilder.append("  LayoutMode: Left;\n");
+                    uiBuilder.append("  Anchor: (Height: 50);\n");
+                    uiBuilder.append("  Padding: (Bottom: 6);\n");
+
+                    if (ingredientId != null) {
+                        uiBuilder.append("  ItemIcon {\n");
+                        uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
+                        uiBuilder.append("    Visible: true;\n");
+                        uiBuilder.append("  }\n");
+                    }
+
+                    else if (resourceTypeId != null) {
+                        uiBuilder.append("  AssetImage {\n");
+                        uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
+                        uiBuilder.append("    Visible: true;\n");
+                        uiBuilder.append("  }\n");
+                    }
+
+                    uiBuilder.append("  Group {\n");
+                    uiBuilder.append("    Anchor: (Width: 8);\n");
+                    uiBuilder.append("  }\n");
+                    uiBuilder.append("  Label {\n");
+                    uiBuilder.append("    Anchor: (Width: 40);\n");
+                    uiBuilder.append("    Style: (\n");
+                    uiBuilder.append("      FontSize: 12,\n");
+                    uiBuilder.append("      TextColor: #ffaa00,\n");
+                    uiBuilder.append("      VerticalAlignment: Center,\n");
+                    uiBuilder.append("      RenderBold: true\n");
+                    uiBuilder.append("    );\n");
+                    uiBuilder.append("  }\n");
+                    uiBuilder.append("  Label {\n");
+                    uiBuilder.append("    FlexWeight: 1;\n");
+                    uiBuilder.append("    Style: (\n");
+                    uiBuilder.append("      FontSize: 12,\n");
+                    uiBuilder.append("      TextColor: #cccccc,\n");
+                    uiBuilder.append("      VerticalAlignment: Center\n");
+                    uiBuilder.append("    );\n");
+                    uiBuilder.append("  }\n");
+                    uiBuilder.append("}\n");
+
+                    cmd.appendInline("#IngredientsList", uiBuilder.toString());
+
+                    String rowSelector = "#IngredientsList[" + i + "]";
+
+                    if (ingredientId != null) {
+                        cmd.set(rowSelector + "[0].ItemId", ingredientId);
+                        cmd.set(rowSelector + "[0].Visible", true);
+                        cmd.set(rowSelector + "[2].Text", "x" + quantity);
+
+                        Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
+                        String ingredientName = getTranslatedName(ingredientItem, ingredientId);
+                        cmd.set(rowSelector + "[3].Text", ingredientName);
+                    }
+                    else if (resourceTypeId != null) {
+                        try {
+                            ResourceType resourceType = (ResourceType) ResourceType.getAssetMap().getAsset(resourceTypeId);
+                            if (resourceType != null) {
+                                cmd.set(rowSelector + "[0].AssetPath", resourceType.getIcon());
+                                cmd.set(rowSelector + "[0].Visible", true);
+
+                                String resourceTypeName = formatResourceTypeName(resourceTypeId);
+
+                                cmd.set(rowSelector + "[2].Text", "x" + quantity);
+                                cmd.set(rowSelector + "[3].Text", "Any " + resourceTypeName);
+                            }
+                        } catch (Exception e) {
+                            System.err.println("[Hytems] Error loading resource type: " + resourceTypeId);
+                            e.printStackTrace();
+                        }
+                    }
+
+                } catch (Exception e) {
+                    System.err.println("[Hytems] Error displaying ingredient " + i + ": " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[Hytems] Error displaying single recipe: " + e.getMessage());
+            e.printStackTrace();
+            cmd.set("#NoRecipeContainer.Visible", true);
+            cmd.set("#RecipeContent.Visible", false);
+        }
+    }
+
+    private String formatResourceTypeName(String resourceTypeId) {
+        if (resourceTypeId == null) return "Unknown";
+
+        String name = resourceTypeId;
+
+        if (name.contains(":")) {
+            name = name.substring(name.indexOf(":") + 1);
+        }
+
+        name = name.replace("_", " ");
+
+        StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < name.length(); i++) {
+            char c = name.charAt(i);
+
+            if (i == 0) {
+                result.append(Character.toUpperCase(c));
+            } else if (Character.isUpperCase(c) && i > 0 && name.charAt(i - 1) != ' ') {
+                result.append(" ").append(c);
+            } else {
+                result.append(c);
+            }
+        }
+
+        return result.toString();
+    }
+
+    private List<MaterialQuantity> getRecipeInputs(@Nonnull CraftingRecipe recipe) {
+        List<MaterialQuantity> result = new ArrayList<>();
+        Object inputsObj = null;
+
+        try {
+            Method getInputMethod = CraftingRecipe.class.getMethod("getInput");
+            inputsObj = getInputMethod.invoke(recipe);
+        } catch (Exception e) {
+            String[] methodNames = {"getInputs", "getIngredients", "getMaterials"};
+            for (String methodName : methodNames) {
+                try {
+                    Method method = CraftingRecipe.class.getMethod(methodName);
+                    inputsObj = method.invoke(recipe);
+                    if (inputsObj != null) break;
+                } catch (Exception ex) {
+                    // Continue trying other methods
+                }
+            }
+        }
+
+        if (inputsObj != null) {
+            if (inputsObj instanceof MaterialQuantity) {
+                MaterialQuantity input = (MaterialQuantity) inputsObj;
+                if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
+                    result.add(input);
+                }
+            } else if (inputsObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Object> inputs = (List<Object>) inputsObj;
+                for (Object obj : inputs) {
+                    if (obj instanceof MaterialQuantity) {
+                        MaterialQuantity input = (MaterialQuantity) obj;
+                        if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
+                            result.add(input);
+                        }
+                    }
+                }
+            } else if (inputsObj instanceof MaterialQuantity[]) {
+                MaterialQuantity[] inputs = (MaterialQuantity[]) inputsObj;
+                for (MaterialQuantity input : inputs) {
+                    if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
+                        result.add(input);
+                    }
+                }
+            } else if (inputsObj instanceof Collection) {
+                @SuppressWarnings("unchecked")
+                Collection<Object> inputs = (Collection<Object>) inputsObj;
+                for (Object obj : inputs) {
+                    if (obj instanceof MaterialQuantity) {
+                        MaterialQuantity input = (MaterialQuantity) obj;
+                        if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
+                            result.add(input);
+                        }
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    private void renderDropsPanel(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
         if (dropsItemId == null || dropsItemId.isEmpty()) {
             cmd.set("#DropPanelContainer.Visible", false);
             return;
         }
 
         cmd.set("#DropPanelContainer.Visible", true);
+
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#CloseDropButton",
+                EventData.of("CloseDropPanel", "true"),
+                false
+        );
+
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#PinDropItemButton",
+                EventData.of("PinItem", dropsItemId),
+                false
+        );
 
         try {
             Item item = HytemsPlugin.ITEMS.get(dropsItemId);
@@ -231,6 +565,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             cmd.set("#DropDetailItemIcon.ItemId", dropsItemId);
             cmd.set("#DropDetailItemName.Text", translatedName);
             cmd.set("#DropDetailItemId.Text", dropsItemId);
+
+            boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, dropsItemId);
+            cmd.set("#PinDropItemButton.Text", isPinned ? "📍" : "📌");
 
             if (item != null) {
                 int maxStack = item.getMaxStack();
@@ -1068,13 +1405,32 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         new KeyedCodec<>("ShowDrops", Codec.STRING),
                         (data, value) -> data.showDrops = value,
                         data -> data.showDrops
+                )
+                .addField(
+                        new KeyedCodec<>("CloseDetail", Codec.STRING),
+                        (data, value) -> data.closeDetail = value,
+                        data -> data.closeDetail
+                )
+                .addField(
+                        new KeyedCodec<>("CloseDropPanel", Codec.STRING),
+                        (data, value) -> data.closeDropPanel = value,
+                        data -> data.closeDropPanel
+                )
+                .addField(
+                        new KeyedCodec<>("PinItem", Codec.STRING),
+                        (data, value) -> data.pinItem = value,
+                        data -> data.pinItem
                 ).build();
 
+        
         private String searchQuery;
         private String pageAction;
         private String clearSearch;
         private String closeGUI;
         private String selectedItem;
         private String showDrops;
+        private String closeDetail;
+        private String closeDropPanel;
+        private String pinItem;
     }
 }

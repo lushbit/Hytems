@@ -1,299 +1,300 @@
 $C = "../Common.ui";
 
-// Detail Panel
-Group #DetailPanelContainer {
-  Anchor: (
-    Width: 400,
-    Right: 175,
-    Top: 130,
-    Bottom: 130
-  );
-  LayoutMode: TopScrolling;
-  Background: #1e1e1e(0.95);
-  Padding: (Full: 15);
-  ScrollbarStyle: $C.@DefaultScrollbarStyle;
+// Detail Content
+Group #DetailContent {
+  LayoutMode: Top;
 
-  Group #DetailContent {
+  Group #Header {
+    LayoutMode: Left;
+    Anchor: (Height: 32);
+
+    Label #PanelTitle {
+      FlexWeight: 1;
+      Text: "Item Details";
+      Style: (
+        FontSize: 16,
+        TextColor: #66ccff,
+        RenderBold: true,
+        VerticalAlignment: Center
+      );
+    }
+
+    $C.@SecondaryTextButton #PinItemButton {
+      @Text = "📌";
+      @Anchor = (Width: 32, Height: 32);
+    }
+
+    Group {
+      Anchor: (Width: 4);
+    }
+
+    $C.@CancelTextButton #CloseDetailButton {
+      @Text = "X";
+      @Anchor = (Width: 32, Height: 32);
+    }
+  }
+
+  Group {
+    Anchor: (Height: 8);
+  }
+
+  $C.@ContentSeparator {
+    Anchor: (Height: 1);
+  }
+
+  Group {
+    Anchor: (Height: 10);
+  }
+
+  Group #ItemHeader {
+    LayoutMode: Left;
+    Anchor: (Height: 80);
+    Padding: (Full: 12);
+    Background: #252525(0.8);
+
+    Group #IconBox {
+      Anchor: (Width: 80, Height: 80);
+      LayoutMode: Center;
+      Background: #1e1e1e(0.9);
+
+      ItemIcon #DetailItemIcon {
+        Anchor: (Width: 72, Height: 72);
+        Visible: true;
+      }
+    }
+
+    Group {
+      Anchor: (Width: 12);
+    }
+
+    Group #NameSection {
+      FlexWeight: 1;
       LayoutMode: Top;
+      Padding: (Top: 10);
 
-      Group #Header {
-        LayoutMode: Left;
-        Anchor: (Height: 32);
+      Label #DetailItemName {
+        Text: "";
+        FlexWeight: 1;
+        Style: (
+          FontSize: 17,
+          TextColor: #ffffff,
+          RenderBold: true,
+          VerticalAlignment: Center
+        );
+      }
+    }
+  }
 
-        Label #PanelTitle {
-          FlexWeight: 1;
-          Text: "Item Details";
+  Group {
+    Anchor: (Height: 12);
+  }
+
+  Group #RecipeContainer {
+    LayoutMode: Top;
+    Background: #252525(0.8);
+    Padding: (Full: 12);
+
+    Label #RecipeTitle {
+      Text: "Recipes";
+      Anchor: (Height: 24);
+      Style: (
+        FontSize: 16,
+        TextColor: #96a9be,
+        RenderBold: true
+      );
+    }
+
+    Group {
+      Anchor: (Height: 8);
+    }
+
+    Group #NoRecipeContainer {
+      Anchor: (Height: 35);
+      Visible: true;
+
+      Label #NoRecipeLabel {
+        Text: "No recipe found!";
+        Anchor: (Height: 24);
+        Style: (
+          FontSize: 14,
+          TextColor: #ff4444,
+          HorizontalAlignment: Center,
+          RenderBold: true
+        );
+      }
+    }
+
+    Group #RecipeContent {
+      LayoutMode: Top;
+      Visible: false;
+
+      Group #CraftingStationSection {
+        LayoutMode: Top;
+        Padding: (Bottom: 10);
+
+        Label #CraftingStationLabel {
+          Text: "Can be crafted at:";
+          Anchor: (Height: 20);
           Style: (
-            FontSize: 16,
-            TextColor: #66ccff,
-            RenderBold: true,
-            VerticalAlignment: Center
+            FontSize: 14,
+            TextColor: #96a9be
           );
         }
-      }
 
-      Group {
-        Anchor: (Height: 8);
-      }
+        Group {
+          Anchor: (Height: 6);
+        }
 
-      $C.@ContentSeparator {
-        Anchor: (Height: 1);
+        Group #StationInfo {
+          LayoutMode: Top;
+          Padding: (Full: 10);
+          Background: #1e1e1e(0.8);
+
+          Label #StationName {
+            Text: "";
+            Anchor: (Height: 22);
+            Style: (
+              FontSize: 15,
+              TextColor: #ffffff,
+              RenderBold: true
+            );
+          }
+
+          Group {
+            Anchor: (Height: 4);
+          }
+
+          Label #StationTier {
+            Text: "";
+            Anchor: (Height: 16);
+            Style: (
+              FontSize: 12,
+              TextColor: #aaaaaa
+            );
+          }
+        }
       }
 
       Group {
         Anchor: (Height: 10);
       }
 
-    Group #ItemHeader {
-      LayoutMode: Left;
-      Anchor: (Height: 80);
-      Padding: (Full: 12);
-      Background: #252525(0.8);
-
-      Group #IconBox {
-        Anchor: (Width: 80, Height: 80);
-        LayoutMode: Center;
-        Background: #1e1e1e(0.9);
-
-        ItemIcon #DetailItemIcon {
-          Anchor: (Width: 72, Height: 72);
-          Visible: true;
-        }
-      }
-
-      Group {
-        Anchor: (Width: 12);
-      }
-
-      Group #NameSection {
-        FlexWeight: 1;
+      Group #IngredientsSection {
         LayoutMode: Top;
-        Padding: (Top: 10);
 
-        Label #DetailItemName {
-          Text: "";
-          FlexWeight: 1;
-          Style: (
-            FontSize: 17,
-            TextColor: #ffffff,
-            RenderBold: true,
-            VerticalAlignment: Center
-          );
-        }
-      }
-    }
-
-    Group {
-      Anchor: (Height: 12);
-    }
-
-    Group #RecipeContainer {
-      LayoutMode: Top;
-      Background: #252525(0.8);
-      Padding: (Full: 12);
-
-      Label #RecipeTitle {
-        Text: "Recipes";
-        Anchor: (Height: 24);
-        Style: (
-          FontSize: 16,
-          TextColor: #96a9be,
-          RenderBold: true
-        );
-      }
-
-      Group {
-        Anchor: (Height: 8);
-      }
-
-      Group #NoRecipeContainer {
-        Anchor: (Height: 35);
-        Visible: true;
-
-        Label #NoRecipeLabel {
-          Text: "No recipe found!";
-          Anchor: (Height: 24);
+        Label #IngredientsLabel {
+          Text: "Items needed to craft:";
+          Anchor: (Height: 20);
           Style: (
             FontSize: 14,
-            TextColor: #ff4444,
-            HorizontalAlignment: Center,
-            RenderBold: true
+            TextColor: #96a9be
           );
-        }
-      }
-
-      Group #RecipeContent {
-        LayoutMode: Top;
-        Visible: false;
-
-        Group #CraftingStationSection {
-          LayoutMode: Top;
-          Padding: (Bottom: 10);
-
-          Label #CraftingStationLabel {
-            Text: "Can be crafted at:";
-            Anchor: (Height: 20);
-            Style: (
-              FontSize: 14,
-              TextColor: #96a9be
-            );
-          }
-
-          Group {
-            Anchor: (Height: 6);
-          }
-
-          Group #StationInfo {
-            LayoutMode: Top;
-            Padding: (Full: 10);
-            Background: #1e1e1e(0.8);
-
-            Label #StationName {
-              Text: "";
-              Anchor: (Height: 22);
-              Style: (
-                FontSize: 15,
-                TextColor: #ffffff,
-                RenderBold: true
-              );
-            }
-
-            Group {
-              Anchor: (Height: 4);
-            }
-
-            Label #StationTier {
-              Text: "";
-              Anchor: (Height: 16);
-              Style: (
-                FontSize: 12,
-                TextColor: #aaaaaa
-              );
-            }
-          }
         }
 
         Group {
-          Anchor: (Height: 10);
+          Anchor: (Height: 6);
         }
 
-        Group #IngredientsSection {
+        Group #IngredientsList {
           LayoutMode: Top;
-
-          Label #IngredientsLabel {
-            Text: "Items needed to craft:";
-            Anchor: (Height: 20);
-            Style: (
-              FontSize: 14,
-              TextColor: #96a9be
-            );
-          }
-
-          Group {
-            Anchor: (Height: 6);
-          }
-
-          Group #IngredientsList {
-            LayoutMode: Top;
-            Background: #1e1e1e(0.8);
-            Padding: (Full: 8);
-          }
+          Background: #1e1e1e(0.8);
+          Padding: (Full: 8);
         }
       }
+    }
+  }
+
+  Group {
+    Anchor: (Height: 12);
+  }
+
+  Group #DetailsContainer {
+    LayoutMode: Top;
+    Padding: (Full: 12);
+    Background: #252525(0.8);
+
+    Label #DetailsTitle {
+      Text: "Item Information";
+      Anchor: (Height: 22);
+      Style: (
+        FontSize: 15,
+        TextColor: #96a9be,
+        RenderBold: true
+      );
     }
 
     Group {
-      Anchor: (Height: 12);
+      Anchor: (Height: 8);
     }
 
-    Group #DetailsContainer {
-      LayoutMode: Top;
-      Padding: (Full: 12);
-      Background: #252525(0.8);
+    Group #ItemIdRow {
+      LayoutMode: Left;
+      Anchor: (Height: 18);
+      Padding: (Bottom: 4);
 
-      Label #DetailsTitle {
-        Text: "Item Information";
-        Anchor: (Height: 22);
+      Label {
+        Text: "ID:";
+        Anchor: (Width: 80);
         Style: (
-          FontSize: 15,
-          TextColor: #96a9be,
-          RenderBold: true
+          FontSize: 11,
+          TextColor: #888888
         );
       }
 
-      Group {
-        Anchor: (Height: 8);
+      Label #DetailItemId {
+        FlexWeight: 1;
+        Text: "";
+        Style: (
+          FontSize: 11,
+          TextColor: #cccccc
+        );
+      }
+    }
+
+    Group #MaxStackRow {
+      LayoutMode: Left;
+      Anchor: (Height: 18);
+      Padding: (Bottom: 4);
+
+      Label {
+        Text: "Max Stack:";
+        Anchor: (Width: 80);
+        Style: (
+          FontSize: 11,
+          TextColor: #888888
+        );
       }
 
-      Group #ItemIdRow {
-        LayoutMode: Left;
-        Anchor: (Height: 18);
-        Padding: (Bottom: 4);
+      Label #DetailMaxStack {
+        FlexWeight: 1;
+        Text: "-";
+        Style: (
+          FontSize: 11,
+          TextColor: #cccccc
+        );
+      }
+    }
 
-        Label {
-          Text: "ID:";
-          Anchor: (Width: 80);
-          Style: (
-            FontSize: 11,
-            TextColor: #888888
-          );
-        }
+    Group #DurabilityRow {
+      LayoutMode: Left;
+      Anchor: (Height: 18);
 
-        Label #DetailItemId {
-          FlexWeight: 1;
-          Text: "";
-          Style: (
-            FontSize: 11,
-            TextColor: #cccccc
-          );
-        }
+      Label {
+        Text: "Durability:";
+        Anchor: (Width: 80);
+        Style: (
+          FontSize: 11,
+          TextColor: #888888
+        );
       }
 
-      Group #MaxStackRow {
-        LayoutMode: Left;
-        Anchor: (Height: 18);
-        Padding: (Bottom: 4);
-
-        Label {
-          Text: "Max Stack:";
-          Anchor: (Width: 80);
-          Style: (
-            FontSize: 11,
-            TextColor: #888888
-          );
-        }
-
-        Label #DetailMaxStack {
-          FlexWeight: 1;
-          Text: "-";
-          Style: (
-            FontSize: 11,
-            TextColor: #cccccc
-          );
-        }
-      }
-
-      Group #DurabilityRow {
-        LayoutMode: Left;
-        Anchor: (Height: 18);
-
-        Label {
-          Text: "Durability:";
-          Anchor: (Width: 80);
-          Style: (
-            FontSize: 11,
-            TextColor: #888888
-          );
-        }
-
-        Label #DetailDurability {
-          FlexWeight: 1;
-          Text: "-";
-          Style: (
-            FontSize: 11,
-            TextColor: #cccccc
-          );
-        }
+      Label #DetailDurability {
+        FlexWeight: 1;
+        Text: "-";
+        Style: (
+          FontSize: 11,
+          TextColor: #cccccc
+        );
       }
     }
   }

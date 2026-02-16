@@ -8,6 +8,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import de.notjan.hytems.command.HytemsCommand;
+import de.notjan.hytems.gui.PinnedItemsManager;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -19,6 +20,7 @@ public class HytemsPlugin extends JavaPlugin {
     public static Map<String, Item> ITEMS = new HashMap<>();
     public static final RecipeManager recipeManager = new RecipeManager();
     public static final DropListRegistry dropListRegistry = new DropListRegistry();
+    public static final PinnedItemsManager pinnedItemsManager = new PinnedItemsManager();
 
     public HytemsPlugin(@Nonnull JavaPluginInit init) {
         super(init);

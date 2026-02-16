@@ -1,0 +1,11 @@
+$C = "../Common.ui";
+
+// Pinned Items HUD
+Group #PinnedItemsContainer {
+  Anchor: (Right: 20, Top: 20, Width: 300);
+  LayoutMode: Top;
+
+  Group #PinnedItemsList {
+    LayoutMode: Top;
+  }
+}

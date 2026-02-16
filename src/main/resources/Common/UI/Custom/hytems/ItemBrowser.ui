@@ -151,6 +151,16 @@ Group #BrowserContainer {
   }
 }
 
+// Detail Panel Container
+Group #DetailPanelContainer {
+  Anchor: (Width: 400, Right: 175, Top: 130, Bottom: 130);
+  LayoutMode: TopScrolling;
+  Background: #1e1e1e(0.95);
+  Padding: (Full: 15);
+  ScrollbarStyle: $C.@DefaultScrollbarStyle;
+  Visible: false;
+}
+
 // Drops Panel
 Group #DropPanelContainer {
   Anchor: (Width: 400, Right: 175, Top: 130, Bottom: 130);
@@ -180,6 +190,20 @@ Group #DropPanelContainer {
             RenderBold: true,
             VerticalAlignment: Center
           );
+        }
+
+        $C.@SecondaryTextButton #PinDropItemButton {
+          @Text = "📌";
+          @Anchor = (Width: 32, Height: 32);
+        }
+
+        Group {
+          Anchor: (Width: 4);
+        }
+
+        $C.@CancelTextButton #CloseDropButton {
+          @Text = "X";
+          @Anchor = (Width: 32, Height: 32);
         }
       }
 

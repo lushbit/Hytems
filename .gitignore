@@ -18,3 +18,4 @@ libs/
 server/
 logs/
 server/Assets.zip
+docs/*

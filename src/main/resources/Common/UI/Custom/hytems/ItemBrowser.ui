@@ -192,13 +192,13 @@ Group #DropPanelContainer {
           );
         }
 
-        $C.@SecondaryTextButton #PinDropItemButton {
-          @Text = "📌";
-          @Anchor = (Width: 32, Height: 32);
+        $C.@SmallSecondaryTextButton #PinDropItemButton {
+          @Text = "Pin";
+          @Anchor = (Width: 80, Height: 32);
         }
 
         Group {
-          Anchor: (Width: 4);
+          Anchor: (Width: 8);
         }
 
         $C.@CancelTextButton #CloseDropButton {

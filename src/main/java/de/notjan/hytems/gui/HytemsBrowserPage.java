@@ -179,11 +179,18 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
 
         if (data.pinItem != null && !data.pinItem.isEmpty()) {
+            HytemsPlugin.pinnedItemsManager.togglePin(this.playerRef, data.pinItem);
             updatePinnedItemsHud();
             
             UICommandBuilder cmd = new UICommandBuilder();
             UIEventBuilder events = new UIEventBuilder();
-            renderDetailPanel(cmd, events);
+
+            if (this.selectedItemId != null && this.selectedItemId.equals(data.pinItem)) {
+                renderDetailPanel(cmd, events);
+            } else if (this.dropsItemId != null && this.dropsItemId.equals(data.pinItem)) {
+                renderDropsPanel(cmd, events);
+            }
+            
             this.sendUpdate(cmd, events, false);
             return;
         }
@@ -255,7 +262,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             cmd.set("#DetailItemId.Text", selectedItemId);
 
             boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, selectedItemId);
-            cmd.set("#PinItemButton.Text", isPinned ? "Pin" : "Unpin");
+            cmd.set("#PinItemButton.Text", isPinned ? "Unpin" : "Pin");
 
             if (item != null) {
                 int maxStack = item.getMaxStack();
@@ -567,7 +574,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             cmd.set("#DropDetailItemId.Text", dropsItemId);
 
             boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, dropsItemId);
-            cmd.set("#PinDropItemButton.Text", isPinned ? "📍" : "📌");
+            cmd.set("#PinDropItemButton.Text", isPinned ? "Unpin" : "Pin");
 
             if (item != null) {
                 int maxStack = item.getMaxStack();

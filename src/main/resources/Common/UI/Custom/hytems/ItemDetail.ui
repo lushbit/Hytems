@@ -19,13 +19,13 @@ Group #DetailContent {
       );
     }
 
-    $C.@SecondaryTextButton #PinItemButton {
-      @Text = "📌";
-      @Anchor = (Width: 32, Height: 32);
+    $C.@SmallSecondaryTextButton #PinItemButton {
+      @Text = "Pin";
+      @Anchor = (Width: 80, Height: 32);
     }
 
     Group {
-      Anchor: (Width: 4);
+      Anchor: (Width: 8);
     }
 
     $C.@CancelTextButton #CloseDetailButton {

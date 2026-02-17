@@ -5,11 +5,13 @@ import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
+import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import de.notjan.hytems.command.HytemsCommand;
-import de.notjan.hytems.gui.PinnedItemsHudManager;
-import de.notjan.hytems.gui.PinnedItemsManager;
+import de.notjan.hytems.gui.PinnedItemsInventoryTracker;
+import de.notjan.hytems.util.PinnedItemsHudManager;
+import de.notjan.hytems.util.PinnedItemsManager;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -36,6 +38,7 @@ public class HytemsPlugin extends JavaPlugin {
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, this::onItemAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, this::onRecipeAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, ItemDropList.class, this::onDropListAssetLoad);
+        this.getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, PinnedItemsInventoryTracker::onInventoryChange);
     }
 
     private void onItemAssetLoad(LoadedAssetsEvent<String, Item, DefaultAssetMap<String, Item>> event) {

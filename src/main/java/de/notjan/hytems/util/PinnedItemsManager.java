@@ -1,4 +1,4 @@
-package de.notjan.hytems.gui;
+package de.notjan.hytems.util;
 
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 

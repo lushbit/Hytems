@@ -5,6 +5,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
@@ -12,6 +13,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import de.notjan.hytems.HytemsPlugin;
+import de.notjan.hytems.util.PinnedItemsManager;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Method;
@@ -72,7 +74,7 @@ public class PinnedItemsHud extends CustomUIHud {
         uiBuilder.append("Group #PinnedItem").append(index).append(" {\n");
         uiBuilder.append("  LayoutMode: Top;\n");
         uiBuilder.append("  Anchor: (Width: 280);\n");
-        uiBuilder.append("  Background: #1e1e1e(0.9);\n");
+        uiBuilder.append("  Background: #1e1e1e(0.7);\n");
         uiBuilder.append("  Padding: (Full: 8);\n");
         uiBuilder.append("\n");
         
@@ -101,32 +103,34 @@ public class PinnedItemsHud extends CustomUIHud {
         if (hasRecipe) {
             uiBuilder.append("  Label {\n");
             uiBuilder.append("    Text: \"Recipe:\";\n");
-            uiBuilder.append("    Anchor: (Height: 18);\n");
-            uiBuilder.append("    Padding: (Top: 4, Bottom: 6);\n");
+            uiBuilder.append("    Anchor: (Height: 20);\n");
+            uiBuilder.append("    Padding: (Top: 4, Bottom: 4);\n");
             uiBuilder.append("    Style: (\n");
-            uiBuilder.append("      FontSize: 11,\n");
+            uiBuilder.append("      FontSize: 13,\n");
             uiBuilder.append("      TextColor: #66ccff,\n");
             uiBuilder.append("      RenderBold: true\n");
             uiBuilder.append("    );\n");
             uiBuilder.append("  }\n");
             uiBuilder.append("  Group #IngredientsList {\n");
             uiBuilder.append("    LayoutMode: Top;\n");
+            uiBuilder.append("    Padding: (Top: 8);\n");
             uiBuilder.append("  }\n");
         }
         
         if (hasDrops) {
             uiBuilder.append("  Label {\n");
             uiBuilder.append("    Text: \"Drops from:\";\n");
-            uiBuilder.append("    Anchor: (Height: 18);\n");
-            uiBuilder.append("    Padding: (Top: 6, Bottom: 6);\n");
+            uiBuilder.append("    Anchor: (Height: 20);\n");
+            uiBuilder.append("    Padding: (Top: 6, Bottom: 4);\n");
             uiBuilder.append("    Style: (\n");
-            uiBuilder.append("      FontSize: 11,\n");
+            uiBuilder.append("      FontSize: 13,\n");
             uiBuilder.append("      TextColor: #66ccff,\n");
             uiBuilder.append("      RenderBold: true\n");
             uiBuilder.append("    );\n");
             uiBuilder.append("  }\n");
             uiBuilder.append("  Group #DropsList {\n");
             uiBuilder.append("    LayoutMode: Top;\n");
+            uiBuilder.append("    Padding: (Top: 8);\n");
             uiBuilder.append("  }\n");
             uiBuilder.append("  Label {\n");
             uiBuilder.append("    Text: \"For other drop variants, check the browser using /h!\";\n");
@@ -177,6 +181,9 @@ public class PinnedItemsHud extends CustomUIHud {
                 return;
             }
             
+            Player player = store.getComponent(ref, Player.getComponentType());
+            Map<String, Integer> playerInventory = player != null ? PinnedItemsInventoryTracker.scanPlayerInventory(player) : new HashMap<>();
+            
             for (int i = 0; i < ingredients.size(); i++) {
                 MaterialQuantity ingredient = ingredients.get(i);
                 if (ingredient == null) continue;
@@ -194,7 +201,11 @@ public class PinnedItemsHud extends CustomUIHud {
                 uiBuilder.append("  Padding: (Bottom: 5);\n");
                 
                 int inventoryCount = 0;
-                String countColor = "#F44336";
+                if (ingredientId != null) {
+                    inventoryCount = playerInventory.getOrDefault(ingredientId, 0);
+                }
+                
+                String countColor = inventoryCount >= quantity ? "#4CAF50" : "#F44336";
                 
                 uiBuilder.append("  Group {\n");
                 uiBuilder.append("    LayoutMode: Left;\n");
@@ -218,7 +229,7 @@ public class PinnedItemsHud extends CustomUIHud {
                 uiBuilder.append("    Label {\n");
                 uiBuilder.append("      FlexWeight: 1;\n");
                 uiBuilder.append("      Style: (\n");
-                uiBuilder.append("        FontSize: 11,\n");
+                uiBuilder.append("        FontSize: 12,\n");
                 uiBuilder.append("        TextColor: #cccccc,\n");
                 uiBuilder.append("        VerticalAlignment: Center\n");
                 uiBuilder.append("      );\n");
@@ -229,7 +240,7 @@ public class PinnedItemsHud extends CustomUIHud {
                 uiBuilder.append("    Anchor: (Height: 14);\n");
                 uiBuilder.append("    Padding: (Left: 28);\n");
                 uiBuilder.append("    Style: (\n");
-                uiBuilder.append("      FontSize: 10,\n");
+                uiBuilder.append("      FontSize: 11,\n");
                 uiBuilder.append("      TextColor: ").append(countColor).append(",\n");
                 uiBuilder.append("      RenderBold: true\n");
                 uiBuilder.append("    );\n");
@@ -278,7 +289,8 @@ public class PinnedItemsHud extends CustomUIHud {
     private void displayDrops(@Nonnull UICommandBuilder cmd, @Nonnull String listSelector, @Nonnull List<String> dropSources) {
         try {
             Map<String, Map<String, List<Integer>>> mobGrouping = new LinkedHashMap<>();
-            int totalDropSources = dropSources.size();
+            Map<String, Map<String, List<String>>> cropGrouping = new LinkedHashMap<>();
+            int otherSourcesCount = 0;
             
             for (String dropSourceId : dropSources) {
                 ParsedDropSource parsed = parseDropSource(dropSourceId);
@@ -287,12 +299,17 @@ public class PinnedItemsHud extends CustomUIHud {
                     mobGrouping.computeIfAbsent(parsed.mobType, k -> new LinkedHashMap<>())
                             .computeIfAbsent(parsed.zone != null ? parsed.zone : "Unknown", k -> new ArrayList<>())
                             .add(parsed.tier);
+                } else if (parsed.cropType != null) {
+                    cropGrouping.computeIfAbsent(parsed.cropType, k -> new LinkedHashMap<>())
+                            .computeIfAbsent(parsed.cropZone != null ? parsed.cropZone : "Unknown", k -> new ArrayList<>())
+                            .add(parsed.cropStage);
+                } else {
+                    otherSourcesCount++;
                 }
             }
             
             int dropIndex = 0;
             int maxDrops = 3;
-            int otherDrops = totalDropSources - mobGrouping.size();
             
             for (Map.Entry<String, Map<String, List<Integer>>> mobEntry : mobGrouping.entrySet()) {
                 if (dropIndex >= maxDrops) break;
@@ -309,9 +326,9 @@ public class PinnedItemsHud extends CustomUIHud {
                 
                 uiBuilder.append("  Label {\n");
                 uiBuilder.append("    Text: \"").append(displayName).append("\";\n");
-                uiBuilder.append("    Anchor: (Width: 150);\n");
+                uiBuilder.append("    Anchor: (Width: 135);\n");
                 uiBuilder.append("    Style: (\n");
-                uiBuilder.append("      FontSize: 11,\n");
+                uiBuilder.append("      FontSize: 12,\n");
                 uiBuilder.append("      TextColor: #ffffff,\n");
                 uiBuilder.append("      VerticalAlignment: Center,\n");
                 uiBuilder.append("      RenderBold: true\n");
@@ -341,7 +358,7 @@ public class PinnedItemsHud extends CustomUIHud {
                     String color = getZoneColor(zone);
                     
                     uiBuilder.append("    Group {\n");
-                    uiBuilder.append("      Anchor: (Width: 30, Height: 24);\n");
+                    uiBuilder.append("      Anchor: (Width: 28, Height: 24);\n");
                     uiBuilder.append("      Background: ").append(color).append("(0.9);\n");
                     uiBuilder.append("      LayoutMode: Center;\n");
                     uiBuilder.append("      Label {\n");
@@ -356,7 +373,7 @@ public class PinnedItemsHud extends CustomUIHud {
                     uiBuilder.append("      }\n");
                     uiBuilder.append("    }\n");
                     
-                    uiBuilder.append("    Group { Anchor: (Width: 3); }\n");
+                    uiBuilder.append("    Group { Anchor: (Width: 2); }\n");
                 }
                 
                 uiBuilder.append("  }\n");
@@ -366,22 +383,21 @@ public class PinnedItemsHud extends CustomUIHud {
                 dropIndex++;
             }
             
-            int remainingMobs = mobGrouping.size() - maxDrops;
+            int totalDropSources = mobGrouping.size() + cropGrouping.size() + otherSourcesCount;
+            int remainingDrops = totalDropSources - dropIndex;
             
-            if (remainingMobs > 0 || otherDrops > 0) {
-                int totalRemaining = (remainingMobs > 0 ? remainingMobs : 0) + otherDrops;
-                
+            if (remainingDrops > 0) {
                 StringBuilder moreBuilder = new StringBuilder();
                 moreBuilder.append("Label {\n");
-                moreBuilder.append("  Text: \"...and ").append(totalRemaining).append(" other drop");
-                if (totalRemaining != 1) {
+                moreBuilder.append("  Text: \"... and ").append(remainingDrops).append(" other drop");
+                if (remainingDrops != 1) {
                     moreBuilder.append("s");
                 }
-                moreBuilder.append("\";\n");
+                moreBuilder.append(" (/h)\";\n");
                 moreBuilder.append("  Anchor: (Height: 16);\n");
                 moreBuilder.append("  Padding: (Top: 4);\n");
                 moreBuilder.append("  Style: (\n");
-                moreBuilder.append("    FontSize: 9,\n");
+                moreBuilder.append("    FontSize: 12,\n");
                 moreBuilder.append("    TextColor: #888888\n");
                 moreBuilder.append("  );\n");
                 moreBuilder.append("}\n");
@@ -414,6 +430,9 @@ public class PinnedItemsHud extends CustomUIHud {
         String mobType;
         String zone;
         Integer tier;
+        String cropType;
+        String cropZone;
+        String cropStage;
     }
     
     private ParsedDropSource parseDropSource(String dropSourceId) {
@@ -423,6 +442,16 @@ public class PinnedItemsHud extends CustomUIHud {
         String name = dropSourceId;
         if (name.contains(":")) {
             name = name.substring(name.indexOf(":") + 1);
+        }
+        
+        Pattern cropPattern = Pattern.compile("(?i)drops?_?plant_?crop_(.+?)_(eternal_)?stage(.+)", Pattern.CASE_INSENSITIVE);
+        Matcher cropMatcher = cropPattern.matcher(name);
+        
+        if (cropMatcher.find()) {
+            result.cropType = cropMatcher.group(1);
+            result.cropStage = cropMatcher.group(3);
+            result.cropZone = "Eternal";
+            return result;
         }
         
         Pattern zonePattern = Pattern.compile("(?i)(zone\\d+)\\s*(.+?)\\s*tier(\\d+)", Pattern.CASE_INSENSITIVE);

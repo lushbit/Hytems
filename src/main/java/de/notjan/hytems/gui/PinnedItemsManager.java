@@ -5,7 +5,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import java.util.*;
 
 public class PinnedItemsManager {
-    private static final int MAX_PINNED_ITEMS = 5;
+    private static final int MAX_PINNED_ITEMS = 3;
     
     private final Map<PlayerRef, LinkedHashSet<String>> playerPinnedItems = new HashMap<>();
     

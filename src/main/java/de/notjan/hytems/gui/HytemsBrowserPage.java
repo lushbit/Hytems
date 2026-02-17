@@ -53,11 +53,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private void updatePinnedItemsHud() {
         try {
             if (this.pageStore != null && this.pageRef != null) {
-                Player player = this.pageStore.getComponent(this.pageRef, Player.getComponentType());
-                if (player != null) {
-                    PinnedItemsHud pinnedHud = new PinnedItemsHud(this.playerRef, HytemsPlugin.pinnedItemsManager);
-                    MultipleHUD.getInstance().setCustomHud(player, this.playerRef, "hytems_pinned_items", pinnedHud);
-                }
+                HytemsPlugin.pinnedItemsHudManager.registerPlayer(this.playerRef, this.pageStore, this.pageRef);
             }
         } catch (Exception e) {
             System.err.println("[Hytems] Failed to update pinned items HUD: " + e.getMessage());

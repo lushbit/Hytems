@@ -42,4 +42,51 @@ public class PinnedItemsManager {
     public boolean canPin(PlayerRef playerRef) {
         return getPinnedCount(playerRef) < MAX_PINNED_ITEMS;
     }
+    
+    public boolean removePin(PlayerRef playerRef, String itemId) {
+        LinkedHashSet<String> pinnedItems = playerPinnedItems.get(playerRef);
+        if (pinnedItems != null && pinnedItems.contains(itemId)) {
+            pinnedItems.remove(itemId);
+            return true;
+        }
+        return false;
+    }
+    
+    public boolean movePinUp(PlayerRef playerRef, String itemId) {
+        LinkedHashSet<String> pinnedItems = playerPinnedItems.get(playerRef);
+        if (pinnedItems == null || !pinnedItems.contains(itemId)) {
+            return false;
+        }
+        
+        List<String> itemList = new ArrayList<>(pinnedItems);
+        int index = itemList.indexOf(itemId);
+        
+        if (index <= 0) {
+            return false;
+        }
+        
+        Collections.swap(itemList, index, index - 1);
+        pinnedItems.clear();
+        pinnedItems.addAll(itemList);
+        return true;
+    }
+    
+    public boolean movePinDown(PlayerRef playerRef, String itemId) {
+        LinkedHashSet<String> pinnedItems = playerPinnedItems.get(playerRef);
+        if (pinnedItems == null || !pinnedItems.contains(itemId)) {
+            return false;
+        }
+        
+        List<String> itemList = new ArrayList<>(pinnedItems);
+        int index = itemList.indexOf(itemId);
+        
+        if (index < 0 || index >= itemList.size() - 1) {
+            return false;
+        }
+        
+        Collections.swap(itemList, index, index + 1);
+        pinnedItems.clear();
+        pinnedItems.addAll(itemList);
+        return true;
+    }
 }

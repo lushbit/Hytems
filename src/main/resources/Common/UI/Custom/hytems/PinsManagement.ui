@@ -1,0 +1,139 @@
+$C = "../Common.ui";
+
+Group {
+  Anchor: (Width: 920, Height: 440);
+  LayoutMode: Top;
+
+  Group #MainContainer {
+    Anchor: (Width: 920, Height: 440);
+    LayoutMode: Top;
+    Padding: (Full: 20);
+    Background: (TexturePath: "../Common/ContainerFullPatch.png", Border: 23);
+
+    Label #Title {
+      Text: "PINNED ITEMS MANAGER";
+      Anchor: (Height: 36);
+      Style: (
+        FontSize: 20,
+        TextColor: #66ccff,
+        HorizontalAlignment: Center,
+        RenderBold: true,
+        VerticalAlignment: Center
+      );
+    }
+
+    Group {
+      Anchor: (Height: 8);
+    }
+
+    $C.@ContentSeparator {
+      Anchor: (Height: 1);
+    }
+
+    Group {
+      Anchor: (Height: 12);
+    }
+
+    Label #SubtitleText {
+      Text: "Manage the order and visibility of your pinned items";
+      Anchor: (Height: 20);
+      Style: (
+        FontSize: 13,
+        TextColor: #96a9be,
+        HorizontalAlignment: Center
+      );
+    }
+
+    Group {
+      Anchor: (Height: 20);
+    }
+
+    Group #ContentArea {
+      FlexWeight: 1;
+      LayoutMode: Center;
+
+      Group #EmptyState {
+        LayoutMode: Top;
+        Visible: true;
+
+        Label #EmptyIcon {
+          Text: "✕";
+          Anchor: (Height: 48);
+          Style: (
+            FontSize: 40,
+            TextColor: #555555,
+            HorizontalAlignment: Center
+          );
+        }
+
+        Group {
+          Anchor: (Height: 12);
+        }
+
+        Label #EmptyText {
+          Text: "No items pinned";
+          Anchor: (Height: 24);
+          Style: (
+            FontSize: 16,
+            TextColor: #888888,
+            HorizontalAlignment: Center
+          );
+        }
+
+        Group {
+          Anchor: (Height: 8);
+        }
+
+        Label #EmptyHint {
+          Text: "Pin items from the browser (/h) to see them here";
+          Anchor: (Height: 20);
+          Style: (
+            FontSize: 12,
+            TextColor: #666666,
+            HorizontalAlignment: Center
+          );
+        }
+      }
+
+      Group #PinnedItemsContainer {
+        LayoutMode: Center;
+        Visible: false;
+        Padding: (Full: 10);
+
+        Group #PinnedItemsList {
+          LayoutMode: Left;
+        }
+      }
+    }
+
+    Group {
+      Anchor: (Height: 12);
+    }
+
+    $C.@ContentSeparator {
+      Anchor: (Height: 1);
+    }
+
+    Group {
+      Anchor: (Height: 12);
+    }
+
+    Group #ButtonContainer {
+      LayoutMode: Left;
+      Anchor: (Height: 44);
+
+      Group {
+        FlexWeight: 1;
+      }
+
+      $C.@SecondaryTextButton #CloseButton {
+        @Text = "Close";
+        @Anchor = (Width: 140, Height: 44);
+      }
+
+      Group {
+        FlexWeight: 1;
+      }
+    }
+  }
+}

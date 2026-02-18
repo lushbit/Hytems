@@ -4,11 +4,11 @@
   "Version": "1.4.0",
   "Description": "View items and their recipes in Hytale just like in JEI!",
   "Authors": [{"Name": "NotJan"}],
-  "ServerVersion": "2026.02.17-255364b8e",
+  "ServerVersion": "2026.02.18-f3b8fff95",
   "Main": "de.notjan.hytems.HytemsPlugin",
   "LoadOrder": "POSTWORLD",
   "IncludesAssetPack": true,
   "Dependencies": {
-    "Buuz135:MultipleHUD": ">=1.0.5"
+    "Buuz135:MultipleHUD": ">=1.0.6"
   }
 }

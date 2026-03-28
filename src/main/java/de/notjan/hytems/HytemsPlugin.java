@@ -2,12 +2,19 @@ package de.notjan.hytems;
 
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.component.ArchetypeChunk;
+import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.component.query.Query;
+import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
-import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
+import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.InventoryChangeEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import de.notjan.hytems.command.HytemsCommand;
 import de.notjan.hytems.gui.PinnedItemsInventoryTracker;
 import de.notjan.hytems.util.PinnedItemsHudManager;
@@ -38,7 +45,18 @@ public class HytemsPlugin extends JavaPlugin {
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, this::onItemAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, this::onRecipeAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, ItemDropList.class, this::onDropListAssetLoad);
-        this.getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, PinnedItemsInventoryTracker::onInventoryChange);
+        
+        this.getEntityStoreRegistry().registerSystem(new EntityEventSystem<EntityStore, InventoryChangeEvent>(InventoryChangeEvent.class) {
+            @Override
+            public void handle(int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store, CommandBuffer<EntityStore> buffer, InventoryChangeEvent event) {
+                PinnedItemsInventoryTracker.onInventoryChange(entityId, chunk, store, buffer, event);
+            }
+
+            @Override
+            public Query<EntityStore> getQuery() {
+                return Player.getComponentType();
+            }
+        });
     }
 
     private void onItemAssetLoad(LoadedAssetsEvent<String, Item, DefaultAssetMap<String, Item>> event) {

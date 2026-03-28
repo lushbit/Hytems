@@ -181,8 +181,7 @@ public class PinnedItemsHud extends CustomUIHud {
                 return;
             }
             
-            Player player = store.getComponent(ref, Player.getComponentType());
-            Map<String, Integer> playerInventory = player != null ? PinnedItemsInventoryTracker.scanPlayerInventory(player) : new HashMap<>();
+            Map<String, Integer> playerInventory = PinnedItemsInventoryTracker.scanPlayerInventory(store, ref);
             
             for (int i = 0; i < ingredients.size(); i++) {
                 MaterialQuantity ingredient = ingredients.get(i);

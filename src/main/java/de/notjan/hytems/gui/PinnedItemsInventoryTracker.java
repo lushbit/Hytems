@@ -1,11 +1,13 @@
 package de.notjan.hytems.gui;
 
 import com.buuz135.mhud.MultipleHUD;
+import com.hypixel.hytale.component.ArchetypeChunk;
+import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
-import com.hypixel.hytale.server.core.inventory.Inventory;
+import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.InventoryChangeEvent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import de.notjan.hytems.HytemsPlugin;
@@ -22,11 +24,10 @@ public class PinnedItemsInventoryTracker {
     private static final Map<UUID, Long> updateTimestamps = new ConcurrentHashMap<>();
     private static final Map<UUID, Map<String, Integer>> cachedInventories = new ConcurrentHashMap<>();
     
-    public static void onInventoryChange(LivingEntityInventoryChangeEvent event) {
-        Ref<EntityStore> ref = event.getEntity().getReference();
+    public static void onInventoryChange(int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store, CommandBuffer<EntityStore> buffer, InventoryChangeEvent event) {
+        Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
         if (ref == null || !ref.isValid()) return;
         
-        Store<EntityStore> store = ref.getStore();
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         
@@ -36,7 +37,7 @@ public class PinnedItemsInventoryTracker {
         UUID playerId = playerRef.getUuid();
         if (!shouldUpdate(playerId)) return;
         
-        Map<String, Integer> current = scanPlayerInventory(player);
+        Map<String, Integer> current = scanPlayerInventory(store, ref);
         Map<String, Integer> cached = cachedInventories.get(playerId);
         
         if (cached == null || !current.equals(cached)) {
@@ -51,17 +52,14 @@ public class PinnedItemsInventoryTracker {
         return lastUpdate == null || (System.currentTimeMillis() - lastUpdate) >= UPDATE_THROTTLE;
     }
     
-    public static Map<String, Integer> scanPlayerInventory(@Nonnull Player player) {
+    public static Map<String, Integer> scanPlayerInventory(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
         Map<String, Integer> items = new HashMap<>();
-        Inventory inv = player.getInventory();
         
-        if (inv != null) {
-            inv.getCombinedEverything().forEach((slot, stack) -> {
-                if (stack != null && stack.getItemId() != null) {
-                    items.merge(stack.getItemId(), stack.getQuantity(), Integer::sum);
-                }
-            });
-        }
+        InventoryComponent.getCombined(store, ref, InventoryComponent.EVERYTHING).forEach((slot, stack) -> {
+            if (stack != null && stack.getItemId() != null) {
+                items.merge(stack.getItemId(), stack.getQuantity(), Integer::sum);
+            }
+        });
         
         return items;
     }

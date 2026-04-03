@@ -11,7 +11,7 @@ Group {
     Background: (TexturePath: "../Common/ContainerFullPatch.png", Border: 23);
 
     Label #Title {
-      Text: "PINNED ITEMS MANAGER";
+      Text: "PINNED ITEMS";
       Anchor: (Height: 36);
       Style: (
         FontSize: 20,

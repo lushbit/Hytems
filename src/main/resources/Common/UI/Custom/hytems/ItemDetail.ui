@@ -19,9 +19,16 @@ Group #DetailContent {
       );
     }
 
-    $C.@SmallSecondaryTextButton #PinItemButton {
-      @Text = "Pin";
-      @Anchor = (Width: 80, Height: 32);
+    Group #FavoriteButtonContainer {
+      Anchor: (Width: 32, Height: 32);
+    }
+
+    Group {
+      Anchor: (Width: 8);
+    }
+
+    Group #PinButtonContainer {
+      Anchor: (Width: 32, Height: 32);
     }
 
     Group {

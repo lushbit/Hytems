@@ -1,6 +1,5 @@
 package de.notjan.hytems.gui;
 
-import com.buuz135.mhud.MultipleHUD;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -12,7 +11,6 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
@@ -41,6 +39,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private String selectedItemId = null;
     private String dropsItemId = null;
     private List<Map.Entry<String, Item>> filteredItems = new ArrayList<>();
+    private Set<String> favoriteItems = new LinkedHashSet<>();
+    private boolean favoritesExpanded = false;
+    private String lastHoveredSelector = null;
     private Ref<EntityStore> pageRef;
     private Store<EntityStore> pageStore;
     private PlayerRef playerRef;
@@ -48,6 +49,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     public HytemsBrowserPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime) {
         super(playerRef, lifetime, BrowserData.CODEC);
         this.playerRef = playerRef;
+        this.favoriteItems = new LinkedHashSet<>(HytemsPlugin.pinnedItemsManager.getFavoriteItems(playerRef));
     }
 
     private void updatePinnedItemsHud() {
@@ -108,6 +110,13 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 false
         );
 
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#ToggleFavoritesButton",
+                EventData.of("ToggleFavoritesCollapse", "true"),
+                false
+        );
+
         filterItems();
         renderItems(cmd, events);
     }
@@ -117,6 +126,26 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                                 @Nonnull BrowserData data) {
         super.handleDataEvent(ref, store, data);
         boolean needsUpdate = false;
+
+        if (data.toggleFavoritesCollapse != null) {
+            this.favoritesExpanded = !this.favoritesExpanded;
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#FavoritesGrid.Visible", this.favoritesExpanded);
+            cmd.set("#ToggleIndicator.Text", this.favoritesExpanded ? "^" : "v");
+            this.sendUpdate(cmd, new UIEventBuilder(), false);
+            return;
+        }
+
+        if (data.toggleFavorite != null && !data.toggleFavorite.isEmpty()) {
+            HytemsPlugin.pinnedItemsManager.toggleFavorite(this.playerRef, data.toggleFavorite);
+            this.favoriteItems = new LinkedHashSet<>(HytemsPlugin.pinnedItemsManager.getFavoriteItems(this.playerRef));
+
+            if (favoriteItems.isEmpty()) {
+                this.favoritesExpanded = false;
+            }
+            
+            needsUpdate = true;
+        }
 
         if (data.showDrops != null && !data.showDrops.isEmpty()) {
             this.selectedItemId = null;
@@ -177,18 +206,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         if (data.pinItem != null && !data.pinItem.isEmpty()) {
             HytemsPlugin.pinnedItemsManager.togglePin(this.playerRef, data.pinItem);
             updatePinnedItemsHud();
-            
-            UICommandBuilder cmd = new UICommandBuilder();
-            UIEventBuilder events = new UIEventBuilder();
-
-            if (this.selectedItemId != null && this.selectedItemId.equals(data.pinItem)) {
-                renderDetailPanel(cmd, events);
-            } else if (this.dropsItemId != null && this.dropsItemId.equals(data.pinItem)) {
-                renderDropsPanel(cmd, events);
-            }
-            
-            this.sendUpdate(cmd, events, false);
-            return;
+            needsUpdate = true;
         }
 
         if (needsUpdate) {
@@ -244,7 +262,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         events.addEventBinding(
                 CustomUIEventBindingType.Activating,
-                "#PinItemButton",
+                "#FavoriteButtonContainer[0]",
+                EventData.of("ToggleFavorite", selectedItemId),
+                false
+        );
+
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#PinButtonContainer[0]",
                 EventData.of("PinItem", selectedItemId),
                 false
         );
@@ -258,7 +283,30 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             cmd.set("#DetailItemId.Text", selectedItemId);
 
             boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, selectedItemId);
-            cmd.set("#PinItemButton.Text", isPinned ? "Unpin" : "Pin");
+            String pinIcon = isPinned ? "\"hytems/textures/pinned.png\"" : "\"hytems/textures/unpinned.png\"";
+            cmd.appendInline("#PinButtonContainer",
+                    "Button #PinItemButton {\n" +
+                    "  Anchor: (Width: 32, Height: 32);\n" +
+                    "  Style: ButtonStyle(\n" +
+                    "    Default: (Background: " + pinIcon + "),\n" +
+                    "    Hovered: (Background: " + pinIcon + "),\n" +
+                    "    Pressed: (Background: " + pinIcon + ")\n" +
+                    "  );\n" +
+                    "}"
+            );
+
+            boolean isFav = favoriteItems.contains(selectedItemId);
+            String favIcon = isFav ? "\"hytems/textures/star_filled.png\"" : "\"hytems/textures/star.png\"";
+            cmd.appendInline("#FavoriteButtonContainer",
+                    "Button #FavoriteItemButton {\n" +
+                    "  Anchor: (Width: 32, Height: 32);\n" +
+                    "  Style: ButtonStyle(\n" +
+                    "    Default: (Background: " + favIcon + "),\n" +
+                    "    Hovered: (Background: " + favIcon + "),\n" +
+                    "    Pressed: (Background: " + favIcon + ")\n" +
+                    "  );\n" +
+                    "}"
+            );
 
             if (item != null) {
                 int maxStack = item.getMaxStack();
@@ -556,7 +604,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         events.addEventBinding(
                 CustomUIEventBindingType.Activating,
-                "#PinDropItemButton",
+                "#FavoriteDropButtonContainer[0]",
+                EventData.of("ToggleFavorite", dropsItemId),
+                false
+        );
+
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#PinDropButtonContainer[0]",
                 EventData.of("PinItem", dropsItemId),
                 false
         );
@@ -570,7 +625,32 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             cmd.set("#DropDetailItemId.Text", dropsItemId);
 
             boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, dropsItemId);
-            cmd.set("#PinDropItemButton.Text", isPinned ? "Unpin" : "Pin");
+            String pinIcon = isPinned ? "\"hytems/textures/pinned.png\"" : "\"hytems/textures/unpinned.png\"";
+            cmd.clear("#PinDropButtonContainer");
+            cmd.appendInline("#PinDropButtonContainer",
+                    "Button #PinDropItemButton {\n" +
+                    "  Anchor: (Width: 32, Height: 32);\n" +
+                    "  Style: ButtonStyle(\n" +
+                    "    Default: (Background: " + pinIcon + "),\n" +
+                    "    Hovered: (Background: " + pinIcon + "),\n" +
+                    "    Pressed: (Background: " + pinIcon + ")\n" +
+                    "  );\n" +
+                    "}"
+            );
+
+            boolean isFav = favoriteItems.contains(dropsItemId);
+            String favIcon = isFav ? "\"hytems/textures/star_filled.png\"" : "\"hytems/textures/star.png\"";
+            cmd.clear("#FavoriteDropButtonContainer");
+            cmd.appendInline("#FavoriteDropButtonContainer",
+                    "Button #FavoriteDropItemButton {\n" +
+                    "  Anchor: (Width: 32, Height: 32);\n" +
+                    "  Style: ButtonStyle(\n" +
+                    "    Default: (Background: " + favIcon + "),\n" +
+                    "    Hovered: (Background: " + favIcon + "),\n" +
+                    "    Pressed: (Background: " + favIcon + ")\n" +
+                    "  );\n" +
+                    "}"
+            );
 
             if (item != null) {
                 int maxStack = item.getMaxStack();
@@ -1264,6 +1344,26 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     }
 
     private void renderItems(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
+        boolean hasFavorites = !favoriteItems.isEmpty();
+        cmd.set("#FavoritesSection.Visible", hasFavorites);
+        
+        cmd.clear("#FavoritesGrid");
+        if (hasFavorites) {
+            int col = 0;
+            for (String favId : favoriteItems) {
+                Item item = HytemsPlugin.ITEMS.get(favId);
+                String translatedName = getTranslatedName(item, favId);
+                String selector = "#FavoritesGrid[" + col + "]";
+                
+                renderItemButton(cmd, events, selector, favId, translatedName, true);
+                col++;
+                if (col >= 7) break;
+            }
+        }
+        
+        cmd.set("#FavoritesGrid.Visible", this.favoritesExpanded && hasFavorites);
+        cmd.set("#ToggleIndicator.Text", this.favoritesExpanded ? "^" : "v");
+
         cmd.clear("#ItemGrid");
         int startIndex = currentPage * ITEMS_PER_PAGE;
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredItems.size());
@@ -1291,56 +1391,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                     );
                 }
 
-                cmd.appendInline("#ItemGrid[" + row + "]",
-                        "Button {\n" +
-                                "  Anchor: (Width: 92, Height: 102, Right: 7, Bottom: 7);\n" +
-                                "  Background: #2a2a2a(0.7);\n" +
-                                "  Padding: (Full: 6);\n" +
-                                "  LayoutMode: Top;\n" +
-                                "  Style: ButtonStyle(\n" +
-                                "    Default: (Background: #2a2a2a(0.7)),\n" +
-                                "    Hovered: (Background: #3a3a3a(0.85)),\n" +
-                                "    Pressed: (Background: #4a4a4a(0.9))\n" +
-                                "  );\n" +
-                                "\n" +
-                                "  ItemIcon #ItemIcon {\n" +
-                                "    Anchor: (Width: 76, Height: 76);\n" +
-                                "    Visible: true;\n" +
-                                "  }\n" +
-                                "\n" +
-                                "  Group {\n" +
-                                "    Anchor: (Height: 4);\n" +
-                                "  }\n" +
-                                "\n" +
-                                "  Label #ItemName {\n" +
-                                "    Text: \"\";\n" +
-                                "    Anchor: (Height: 16);\n" +
-                                "    Style: (\n" +
-                                "      FontSize: 11,\n" +
-                                "      TextColor: #ffffff,\n" +
-                                "      HorizontalAlignment: Center\n" +
-                                "    );\n" +
-                                "  }\n" +
-                                "}\n"
-                );
-
                 String selector = "#ItemGrid[" + row + "][" + col + "]";
-                cmd.set(selector + " #ItemIcon.ItemId", itemId);
-                cmd.set(selector + " #ItemName.Text", translatedName);
-
-                events.addEventBinding(
-                        CustomUIEventBindingType.Activating,
-                        selector,
-                        EventData.of("SelectedItem", itemId),
-                        false
-                );
-
-                events.addEventBinding(
-                        CustomUIEventBindingType.RightClicking,
-                        selector,
-                        EventData.of("ShowDrops", itemId),
-                        false
-                );
+                renderItemButton(cmd, events, selector, itemId, translatedName, false);
 
                 col++;
                 if (col >= ITEMS_PER_ROW) {
@@ -1353,6 +1405,104 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         updateUI(cmd);
     }
 
+    private void renderItemButton(UICommandBuilder cmd, UIEventBuilder events, String selector, String itemId, String translatedName, boolean isFavoriteSection) {
+        String parentSelector = selector.substring(0, selector.lastIndexOf("["));
+        boolean isFav = favoriteItems.contains(itemId);
+        String favDefaultBg = isFav ? "\"hytems/textures/star_filled.png\"" : "#ffffff(0.01)";
+        String favHoveredBg = isFav ? "\"hytems/textures/star_filled.png\"" : "\"hytems/textures/star.png\"";
+
+        boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, itemId);
+        String pinDefaultBg = isPinned ? "\"hytems/textures/pinned.png\"" : "#ffffff(0.01)";
+        String pinHoveredBg = isPinned ? "\"hytems/textures/pinned.png\"" : "\"hytems/textures/unpinned.png\"";
+
+        cmd.appendInline(parentSelector,
+                "Button {\n" +
+                        "  Anchor: (Width: 92, Height: 102, Right: 7, Bottom: 7);\n" +
+                        "  Background: #2a2a2a(0.7);\n" +
+                        "  Padding: (Full: 6);\n" +
+                        "  Style: ButtonStyle(\n" +
+                        "    Default: (Background: #2a2a2a(0.7)),\n" +
+                        "    Hovered: (Background: #3a3a3a(0.85)),\n" +
+                        "    Pressed: (Background: #4a4a4a(0.9))\n" +
+                        "  );\n" +
+                        "\n" +
+                        "  Group {\n" +
+                        "    LayoutMode: Top;\n" +
+                        "    Anchor: (Width: 80, Height: 90);\n" +
+                        "    \n" +
+                        "    ItemIcon #ItemIcon {\n" +
+                        "      Anchor: (Width: 76, Height: 76);\n" +
+                        "      Visible: true;\n" +
+                        "    }\n" +
+                        "\n" +
+                        "    Group {\n" +
+                        "      Anchor: (Height: 4);\n" +
+                        "    }\n" +
+                        "\n" +
+                        "    Label #ItemName {\n" +
+                        "      Text: \"\";\n" +
+                        "      Anchor: (Height: 16);\n" +
+                        "      Style: (\n" +
+                        "        FontSize: 11,\n" +
+                        "        TextColor: #ffffff,\n" +
+                        "        HorizontalAlignment: Center\n" +
+                        "      );\n" +
+                        "    }\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  Button #FavoriteButton {\n" +
+                        "    Anchor: (Width: 24, Height: 24, Right: 2, Top: 2);\n" +
+                        "    Style: ButtonStyle(\n" +
+                        "      Default: (Background: " + favDefaultBg + "),\n" +
+                        "      Hovered: (Background: " + favHoveredBg + "),\n" +
+                        "      Pressed: (Background: " + favHoveredBg + ")\n" +
+                        "    );\n" +
+                        "    Visible: true;\n" +
+                        "  }\n" +
+                        "\n" +
+                        "  Button #PinButton {\n" +
+                        "    Anchor: (Width: 24, Height: 24, Left: 2, Top: 2);\n" +
+                        "    Style: ButtonStyle(\n" +
+                        "      Default: (Background: " + pinDefaultBg + "),\n" +
+                        "      Hovered: (Background: " + pinHoveredBg + "),\n" +
+                        "      Pressed: (Background: " + pinHoveredBg + ")\n" +
+                        "    );\n" +
+                        "    Visible: true;\n" +
+                        "  }\n" +
+                        "}\n"
+        );
+
+        cmd.set(selector + " #ItemIcon.ItemId", itemId);
+        cmd.set(selector + " #ItemName.Text", translatedName);
+
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector,
+                EventData.of("SelectedItem", itemId),
+                false
+        );
+
+        events.addEventBinding(
+                CustomUIEventBindingType.RightClicking,
+                selector,
+                EventData.of("ShowDrops", itemId),
+                false
+        );
+
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector + " #FavoriteButton",
+                EventData.of("ToggleFavorite", itemId).append("FavSelector", selector),
+                false
+        );
+
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector + " #PinButton",
+                EventData.of("PinItem", itemId),
+                false
+        );
+    }
     private void updateUI(@Nonnull UICommandBuilder cmd) {
         cmd.set("#ItemCount.Text", filteredItems.size() + " items found");
 
@@ -1423,6 +1573,46 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         new KeyedCodec<>("PinItem", Codec.STRING),
                         (data, value) -> data.pinItem = value,
                         data -> data.pinItem
+                )
+                .addField(
+                        new KeyedCodec<>("HoverItem", Codec.STRING),
+                        (data, value) -> data.hoverItem = value,
+                        data -> data.hoverItem
+                )
+                .addField(
+                        new KeyedCodec<>("HoverSelector", Codec.STRING),
+                        (data, value) -> data.hoverItemSelector = value,
+                        data -> data.hoverItemSelector
+                )
+                .addField(
+                        new KeyedCodec<>("UnhoverItem", Codec.STRING),
+                        (data, value) -> data.unhoverItem = value,
+                        data -> data.unhoverItem
+                )
+                .addField(
+                        new KeyedCodec<>("UnhoverSelector", Codec.STRING),
+                        (data, value) -> data.unhoverItemSelector = value,
+                        data -> data.unhoverItemSelector
+                )
+                .addField(
+                        new KeyedCodec<>("ToggleFavorite", Codec.STRING),
+                        (data, value) -> data.toggleFavorite = value,
+                        data -> data.toggleFavorite
+                )
+                .addField(
+                        new KeyedCodec<>("FavSelector", Codec.STRING),
+                        (data, value) -> data.toggleFavoriteSelector = value,
+                        data -> data.toggleFavoriteSelector
+                )
+                .addField(
+                        new KeyedCodec<>("ToggleFavoritesCollapse", Codec.STRING),
+                        (data, value) -> data.toggleFavoritesCollapse = value,
+                        data -> data.toggleFavoritesCollapse
+                )
+                .addField(
+                        new KeyedCodec<>("IsFavSection", Codec.STRING),
+                        (data, value) -> data.isFavSectionStr = value,
+                        data -> data.isFavSectionStr
                 ).build();
 
         
@@ -1435,5 +1625,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         private String closeDetail;
         private String closeDropPanel;
         private String pinItem;
+        private String hoverItem;
+        private String hoverItemSelector;
+        private String unhoverItem;
+        private String unhoverItemSelector;
+        private String toggleFavorite;
+        private String toggleFavoriteSelector;
+        private String toggleFavoritesCollapse;
+        private String isFavSectionStr;
     }
 }
+

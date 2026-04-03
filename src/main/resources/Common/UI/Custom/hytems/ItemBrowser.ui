@@ -26,26 +26,96 @@ Group #BrowserContainer {
     Anchor: (Height: 8);
   }
 
-  Group #ScrollContainer {
-    FlexWeight: 1;
-    LayoutMode: TopScrolling;
-    Background: #252525(0.8);
-    Padding: (Full: 8);
-    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+  Group #FavoritesSection {
+    Anchor: (Width: 720);
+    LayoutMode: Top;
 
-    Label #PlaceholderText {
-      Text: "No items to display";
-      Padding: (Top: 60);
-      Visible: false;
-      Style: (
-        FontSize: 13,
-        TextColor: #888888,
-        HorizontalAlignment: Center
-      );
+    Button #ToggleFavoritesButton {
+      Anchor: (Width: 720, Height: 32);
+      LayoutMode: Left;
+      Background: #66ccff(0.15);
+      Padding: (Left: 12, Right: 12);
+      
+      Label #FavoritesTitle {
+        Text: "FAVORITES";
+        FlexWeight: 1;
+        Style: (
+          FontSize: 14,
+          TextColor: #66ccff,
+          VerticalAlignment: Center,
+          RenderBold: true
+        );
+      }
+
+      Label #ToggleIndicator {
+        Text: "v";
+        Anchor: (Width: 20);
+        Style: (
+          FontSize: 14,
+          TextColor: #66ccff,
+          HorizontalAlignment: Center,
+          VerticalAlignment: Center
+        );
+      }
     }
 
-    Group #ItemGrid {
-      LayoutMode: Top;
+    Group #FavoritesGrid {
+      Anchor: (Width: 720, Height: 125);
+      LayoutMode: Left;
+      Background: #252525(0.8);
+      Visible: false;
+      Padding: (Full: 8);
+    }
+  }
+
+  Group {
+    Anchor: (Height: 8);
+  }
+
+  Group #BrowserSection {
+    Anchor: (Width: 720);
+    FlexWeight: 1;
+    LayoutMode: Top;
+
+    Group #BrowserHeader {
+      Anchor: (Width: 720, Height: 32);
+      LayoutMode: Left;
+      Background: #66ccff(0.15);
+      Padding: (Left: 12, Right: 12);
+      
+      Label {
+        Text: "ITEM LIST";
+        FlexWeight: 1;
+        Style: (
+          FontSize: 14,
+          TextColor: #66ccff,
+          VerticalAlignment: Center,
+          RenderBold: true
+        );
+      }
+    }
+
+    Group #ScrollContainer {
+      FlexWeight: 1;
+      LayoutMode: TopScrolling;
+      Background: #252525(0.8);
+      Padding: (Full: 8);
+      ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+      Label #PlaceholderText {
+        Text: "No items to display";
+        Padding: (Top: 60);
+        Visible: false;
+        Style: (
+          FontSize: 13,
+          TextColor: #888888,
+          HorizontalAlignment: Center
+        );
+      }
+
+      Group #ItemGrid {
+        LayoutMode: Top;
+      }
     }
   }
 
@@ -192,9 +262,16 @@ Group #DropPanelContainer {
           );
         }
 
-        $C.@SmallSecondaryTextButton #PinDropItemButton {
-          @Text = "Pin";
-          @Anchor = (Width: 80, Height: 32);
+        Group #FavoriteDropButtonContainer {
+          Anchor: (Width: 32, Height: 32);
+        }
+
+        Group {
+          Anchor: (Width: 8);
+        }
+
+        Group #PinDropButtonContainer {
+          Anchor: (Width: 32, Height: 32);
         }
 
         Group {

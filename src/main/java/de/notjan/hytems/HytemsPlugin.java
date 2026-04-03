@@ -11,6 +11,8 @@ import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryChangeEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -41,11 +43,21 @@ public class HytemsPlugin extends JavaPlugin {
     protected void setup() {
         super.setup();
 
+        pinnedItemsManager.setDataDirectory(this.getDataDirectory());
+
         this.getCommandRegistry().registerCommand(new HytemsCommand());
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, this::onItemAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, this::onRecipeAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, ItemDropList.class, this::onDropListAssetLoad);
-        
+
+        this.getEventRegistry().register(PlayerConnectEvent.class, event -> {
+            pinnedItemsManager.loadData(event.getPlayerRef());
+        });
+
+        this.getEventRegistry().register(PlayerDisconnectEvent.class, event -> {
+            pinnedItemsManager.cleanup(event.getPlayerRef());
+        });
+
         this.getEntityStoreRegistry().registerSystem(new EntityEventSystem<EntityStore, InventoryChangeEvent>(InventoryChangeEvent.class) {
             @Override
             public void handle(int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store, CommandBuffer<EntityStore> buffer, InventoryChangeEvent event) {
@@ -57,6 +69,12 @@ public class HytemsPlugin extends JavaPlugin {
                 return Player.getComponentType();
             }
         });
+    }
+
+    @Override
+    protected void shutdown() {
+        pinnedItemsManager.saveAll();
+        super.shutdown();
     }
 
     private void onItemAssetLoad(LoadedAssetsEvent<String, Item, DefaultAssetMap<String, Item>> event) {

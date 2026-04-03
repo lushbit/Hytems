@@ -4,6 +4,7 @@ import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.EntityEventSystem;
@@ -13,9 +14,11 @@ import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryChangeEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import de.notjan.hytems.command.HytemsCommand;
 import de.notjan.hytems.gui.PinnedItemsInventoryTracker;
@@ -56,6 +59,23 @@ public class HytemsPlugin extends JavaPlugin {
 
         this.getEventRegistry().register(PlayerDisconnectEvent.class, event -> {
             pinnedItemsManager.cleanup(event.getPlayerRef());
+        });
+
+        this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
+            Player player = event.getPlayer();
+            if (player == null) return;
+
+            Ref<EntityStore> ref = event.getPlayerRef();
+            if (ref == null) return;
+
+            Store<EntityStore> store = ref.getStore();
+            if (store == null) return;
+
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+
+            if (playerRef != null && pinnedItemsManager.getPinnedCount(playerRef) > 0) {
+                pinnedItemsHudManager.registerPlayer(playerRef, store, ref);
+            }
         });
 
         this.getEntityStoreRegistry().registerSystem(new EntityEventSystem<EntityStore, InventoryChangeEvent>(InventoryChangeEvent.class) {

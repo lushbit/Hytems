@@ -69,12 +69,17 @@ public class PinnedItemsManager {
         LinkedHashSet<String> pinned = playerPinnedItems.get(uuid);
         LinkedHashSet<String> favorites = playerFavoriteItems.get(uuid);
 
+        Path playerFile = dataDirectory.resolve("players").resolve(uuid.toString() + ".json");
+
         if ((pinned == null || pinned.isEmpty()) && (favorites == null || favorites.isEmpty())) {
+            try {
+                Files.deleteIfExists(playerFile);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
             return;
         }
 
-        Path playerFile = dataDirectory.resolve("players").resolve(uuid.toString() + ".json");
-        
         PlayerData data = new PlayerData();
         data.pinnedItems = pinned != null ? new ArrayList<>(pinned) : new ArrayList<>();
         data.favoriteItems = favorites != null ? new ArrayList<>(favorites) : new ArrayList<>();
@@ -235,6 +240,7 @@ public class PinnedItemsManager {
         playerPinnedItems.remove(uuid);
         playerFavoriteItems.remove(uuid);
         loadedPlayers.remove(uuid);
+        de.notjan.hytems.gui.PinnedItemsInventoryTracker.clearCache(uuid);
     }
 
     private static class PlayerData {

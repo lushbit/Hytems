@@ -1,7 +1,7 @@
 {
   "Group": "de.notjan",
   "Name": "Hytems",
-  "Version": "1.4.2",
+  "Version": "1.5.0",
   "Description": "View items and their recipes in Hytale just like in JEI!",
   "Authors": [{"Name": "NotJan"}],
   "ServerVersion": "2026.03.26-89796e57b",

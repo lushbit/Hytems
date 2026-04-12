@@ -11,6 +11,8 @@ import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
+import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
@@ -33,6 +35,7 @@ import java.util.logging.Level;
 public class HytemsPlugin extends JavaPlugin {
 
     public static Map<String, Item> ITEMS = new HashMap<>();
+    public static Map<String, ItemQuality> QUALITIES = new HashMap<>();
     public static final RecipeManager recipeManager = new RecipeManager();
     public static final DropListRegistry dropListRegistry = new DropListRegistry();
     public static final PinnedItemsManager pinnedItemsManager = new PinnedItemsManager();
@@ -50,6 +53,7 @@ public class HytemsPlugin extends JavaPlugin {
 
         this.getCommandRegistry().registerCommand(new HytemsCommand());
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, this::onItemAssetLoad);
+        this.getEventRegistry().register(LoadedAssetsEvent.class, ItemQuality.class, this::onQualityAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, this::onRecipeAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, ItemDropList.class, this::onDropListAssetLoad);
 
@@ -118,5 +122,10 @@ public class HytemsPlugin extends JavaPlugin {
         } else {
             this.getLogger().at(Level.WARNING).log("[Hytems] No drop lists in LoadedAssetsEvent");
         }
+    }
+
+    private void onQualityAssetLoad(LoadedAssetsEvent<String, ItemQuality, IndexedLookupTableAssetMap<String, ItemQuality>> event) {
+        QUALITIES = event.getAssetMap().getAssetMap();
+        this.getLogger().at(Level.INFO).log("Loaded %d item qualities for Hytems browser", QUALITIES.size());
     }
 }

@@ -1,5 +1,7 @@
 package de.notjan.hytems.gui;
 
+import com.hypixel.hytale.protocol.Color;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -27,6 +29,40 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
     public PinsManagementPage(@Nonnull PlayerRef playerRef) {
         super(playerRef, CustomPageLifetime.CanDismiss, PinsEventData.CODEC);
         this.playerRef = playerRef;
+    }
+
+    private ItemQuality getItemQuality(Item item) {
+        if (item == null) return null;
+        try {
+            int qualityIndex = item.getQualityIndex();
+            return ItemQuality.getAssetMap().getAsset(qualityIndex);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String getRarityBackground(Item item) {
+        ItemQuality quality = getItemQuality(item);
+        if (quality != null) {
+            String texture = quality.getSlotTexture();
+            if (texture != null) {
+                if (texture.contains("SlotCommon")) return "hytems/textures/rarity_common.png";
+                if (texture.contains("SlotUncommon")) return "hytems/textures/rarity_uncommon.png";
+                if (texture.contains("SlotRare")) return "hytems/textures/rarity_rare.png";
+                if (texture.contains("SlotEpic")) return "hytems/textures/rarity_epic.png";
+                if (texture.contains("SlotLegendary")) return "hytems/textures/rarity_legendary.png";
+            }
+        }
+        return "hytems/textures/rarity_default.png";
+    }
+
+    private String getRarityColor(Item item) {
+        ItemQuality quality = getItemQuality(item);
+        if (quality != null && quality.getTextColor() != null) {
+            Color color = quality.getTextColor();
+            return String.format("#%02x%02x%02x", color.red & 0xFF, color.green & 0xFF, color.blue & 0xFF);
+        }
+        return "#ffffff";
     }
 
     @Override
@@ -67,6 +103,10 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
     private void buildPinnedItemCard(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events,
                                      @Nonnull String itemId, @Nonnull String translatedName,
                                      int index, int totalItems) {
+        Item item = HytemsPlugin.ITEMS.get(itemId);
+        String rarityBg = getRarityBackground(item);
+        String rarityColor = getRarityColor(item);
+
         boolean isFirst = (index == 0);
         boolean isLast = (index == totalItems - 1);
 
@@ -84,9 +124,10 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
         
         uiBuilder.append("  Group {\n");
         uiBuilder.append("    LayoutMode: Center;\n");
-        uiBuilder.append("    Anchor: (Height: 80);\n");
+        uiBuilder.append("    Anchor: (Width: 80, Height: 80);\n");
+        uiBuilder.append("    Background: \"").append(rarityBg).append("\";\n");
         uiBuilder.append("    ItemIcon #ItemIcon {\n");
-        uiBuilder.append("      Anchor: (Width: 80, Height: 80);\n");
+        uiBuilder.append("      Anchor: (Width: 72, Height: 72);\n");
         uiBuilder.append("      Visible: true;\n");
         uiBuilder.append("    }\n");
         uiBuilder.append("  }\n");
@@ -101,7 +142,7 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
         uiBuilder.append("    Anchor: (Height: 20);\n");
         uiBuilder.append("    Style: (\n");
         uiBuilder.append("      FontSize: 15,\n");
-        uiBuilder.append("      TextColor: #ffffff,\n");
+        uiBuilder.append("      TextColor: ").append(rarityColor).append(",\n");
         uiBuilder.append("      HorizontalAlignment: Center,\n");
         uiBuilder.append("      RenderBold: true\n");
         uiBuilder.append("    );\n");

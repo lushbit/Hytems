@@ -2,6 +2,8 @@ package de.notjan.hytems.gui;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.Color;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
@@ -36,6 +38,40 @@ public class PinnedItemsHud extends CustomUIHud {
         this.store = store;
         this.ref = ref;
     }
+
+    private ItemQuality getItemQuality(Item item) {
+        if (item == null) return null;
+        try {
+            int qualityIndex = item.getQualityIndex();
+            return ItemQuality.getAssetMap().getAsset(qualityIndex);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String getRarityBackground(Item item) {
+        ItemQuality quality = getItemQuality(item);
+        if (quality != null) {
+            String texture = quality.getSlotTexture();
+            if (texture != null) {
+                if (texture.contains("SlotCommon")) return "hytems/textures/rarity_common.png";
+                if (texture.contains("SlotUncommon")) return "hytems/textures/rarity_uncommon.png";
+                if (texture.contains("SlotRare")) return "hytems/textures/rarity_rare.png";
+                if (texture.contains("SlotEpic")) return "hytems/textures/rarity_epic.png";
+                if (texture.contains("SlotLegendary")) return "hytems/textures/rarity_legendary.png";
+            }
+        }
+        return "hytems/textures/rarity_default.png";
+    }
+
+    private String getRarityColor(Item item) {
+        ItemQuality quality = getItemQuality(item);
+        if (quality != null && quality.getTextColor() != null) {
+            Color color = quality.getTextColor();
+            return String.format("#%02x%02x%02x", color.red & 0xFF, color.green & 0xFF, color.blue & 0xFF);
+        }
+        return "#ffffff";
+    }
     
     @Override
     protected void build(@Nonnull UICommandBuilder cmd) {
@@ -64,6 +100,9 @@ public class PinnedItemsHud extends CustomUIHud {
         Item item = HytemsPlugin.ITEMS.get(itemId);
         String translatedName = getTranslatedName(item, itemId);
         
+        String rarityBg = getRarityBackground(item);
+        String rarityColor = getRarityColor(item);
+
         List<CraftingRecipe> recipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
         List<String> dropSources = HytemsPlugin.dropListRegistry.getDropSourcesForItem(itemId);
         
@@ -82,10 +121,17 @@ public class PinnedItemsHud extends CustomUIHud {
         uiBuilder.append("    LayoutMode: Left;\n");
         uiBuilder.append("    Anchor: (Height: 44);\n");
         uiBuilder.append("    Padding: (Bottom: 8);\n");
-        uiBuilder.append("    ItemIcon #ItemIcon {\n");
+        uiBuilder.append("    \n");
+        uiBuilder.append("    Group {\n");
         uiBuilder.append("      Anchor: (Width: 40, Height: 40);\n");
-        uiBuilder.append("      Visible: true;\n");
+        uiBuilder.append("      Background: \"").append(rarityBg).append("\";\n");
+        uiBuilder.append("      LayoutMode: Center;\n");
+        uiBuilder.append("      ItemIcon #ItemIcon {\n");
+        uiBuilder.append("        Anchor: (Width: 36, Height: 36);\n");
+        uiBuilder.append("        Visible: true;\n");
+        uiBuilder.append("      }\n");
         uiBuilder.append("    }\n");
+        uiBuilder.append("\n");
         uiBuilder.append("    Group {\n");
         uiBuilder.append("      Anchor: (Width: 8);\n");
         uiBuilder.append("    }\n");
@@ -93,7 +139,7 @@ public class PinnedItemsHud extends CustomUIHud {
         uiBuilder.append("      FlexWeight: 1;\n");
         uiBuilder.append("      Style: (\n");
         uiBuilder.append("        FontSize: 14,\n");
-        uiBuilder.append("        TextColor: #ffffff,\n");
+        uiBuilder.append("        TextColor: ").append(rarityColor).append(",\n");
         uiBuilder.append("        VerticalAlignment: Center,\n");
         uiBuilder.append("        RenderBold: true\n");
         uiBuilder.append("      );\n");
@@ -211,14 +257,26 @@ public class PinnedItemsHud extends CustomUIHud {
                 uiBuilder.append("    Anchor: (Height: 24);\n");
                 
                 if (ingredientId != null) {
-                    uiBuilder.append("    ItemIcon {\n");
-                    uiBuilder.append("      Anchor: (Width: 22, Height: 22);\n");
-                    uiBuilder.append("      Visible: true;\n");
+                    Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
+                    String ingRarityBg = getRarityBackground(ingredientItem);
+                    uiBuilder.append("    Group {\n");
+                    uiBuilder.append("      Anchor: (Width: 24, Height: 24);\n");
+                    uiBuilder.append("      Background: \"").append(ingRarityBg).append("\";\n");
+                    uiBuilder.append("      LayoutMode: Center;\n");
+                    uiBuilder.append("      ItemIcon {\n");
+                    uiBuilder.append("        Anchor: (Width: 22, Height: 22);\n");
+                    uiBuilder.append("        Visible: true;\n");
+                    uiBuilder.append("      }\n");
                     uiBuilder.append("    }\n");
                 } else if (resourceTypeId != null) {
-                    uiBuilder.append("    AssetImage {\n");
-                    uiBuilder.append("      Anchor: (Width: 22, Height: 22);\n");
-                    uiBuilder.append("      Visible: true;\n");
+                    uiBuilder.append("    Group {\n");
+                    uiBuilder.append("      Anchor: (Width: 24, Height: 24);\n");
+                    uiBuilder.append("      Background: \"hytems/textures/rarity_default.png\";\n");
+                    uiBuilder.append("      LayoutMode: Center;\n");
+                    uiBuilder.append("      AssetImage {\n");
+                    uiBuilder.append("        Anchor: (Width: 22, Height: 22);\n");
+                    uiBuilder.append("        Visible: true;\n");
+                    uiBuilder.append("      }\n");
                     uiBuilder.append("    }\n");
                 }
                 
@@ -252,8 +310,8 @@ public class PinnedItemsHud extends CustomUIHud {
                 String rowSelector = listSelector + "[" + i + "]";
                 
                 if (ingredientId != null) {
-                    cmd.set(rowSelector + "[0][0].ItemId", ingredientId);
-                    cmd.set(rowSelector + "[0][0].Visible", true);
+                    cmd.set(rowSelector + "[0][0][0].ItemId", ingredientId);
+                    cmd.set(rowSelector + "[0][0][0].Visible", true);
                     
                     Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
                     String ingredientName = getTranslatedName(ingredientItem, ingredientId);
@@ -265,8 +323,8 @@ public class PinnedItemsHud extends CustomUIHud {
                     try {
                         ResourceType resourceType = (ResourceType) ResourceType.getAssetMap().getAsset(resourceTypeId);
                         if (resourceType != null) {
-                            cmd.set(rowSelector + "[0][0].AssetPath", resourceType.getIcon());
-                            cmd.set(rowSelector + "[0][0].Visible", true);
+                            cmd.set(rowSelector + "[0][0][0].AssetPath", resourceType.getIcon());
+                            cmd.set(rowSelector + "[0][0][0].Visible", true);
                             
                             String resourceTypeName = formatResourceTypeName(resourceTypeId);
                             cmd.set(rowSelector + "[0][2].Text", "Any " + resourceTypeName);

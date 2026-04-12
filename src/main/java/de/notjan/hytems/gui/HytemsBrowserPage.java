@@ -6,10 +6,12 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.BenchRequirement;
+import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality;
 import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
@@ -50,6 +52,40 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         super(playerRef, lifetime, BrowserData.CODEC);
         this.playerRef = playerRef;
         this.favoriteItems = new LinkedHashSet<>(HytemsPlugin.pinnedItemsManager.getFavoriteItems(playerRef));
+    }
+
+    private ItemQuality getItemQuality(Item item) {
+        if (item == null) return null;
+        try {
+            int qualityIndex = item.getQualityIndex();
+            return ItemQuality.getAssetMap().getAsset(qualityIndex);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String getRarityBackground(Item item) {
+        ItemQuality quality = getItemQuality(item);
+        if (quality != null) {
+            String texture = quality.getSlotTexture();
+            if (texture != null) {
+                if (texture.contains("SlotCommon")) return "hytems/textures/rarity_common.png";
+                if (texture.contains("SlotUncommon")) return "hytems/textures/rarity_uncommon.png";
+                if (texture.contains("SlotRare")) return "hytems/textures/rarity_rare.png";
+                if (texture.contains("SlotEpic")) return "hytems/textures/rarity_epic.png";
+                if (texture.contains("SlotLegendary")) return "hytems/textures/rarity_legendary.png";
+            }
+        }
+        return "hytems/textures/rarity_default.png";
+    }
+
+    private String getRarityColor(Item item) {
+        ItemQuality quality = getItemQuality(item);
+        if (quality != null && quality.getTextColor() != null) {
+            Color color = quality.getTextColor();
+            return String.format("#%02x%02x%02x", color.red & 0xFF, color.green & 0xFF, color.blue & 0xFF);
+        }
+        return "#ffffff";
     }
 
     private void updatePinnedItemsHud() {
@@ -277,9 +313,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         try {
             Item item = HytemsPlugin.ITEMS.get(selectedItemId);
             String translatedName = getTranslatedName(item, selectedItemId);
+            
+            String rarityBg = getRarityBackground(item);
+            String rarityColor = getRarityColor(item);
 
             cmd.set("#DetailItemIcon.ItemId", selectedItemId);
             cmd.set("#DetailItemName.Text", translatedName);
+            cmd.set("#DetailItemName.Style.TextColor", rarityColor);
+            cmd.set("#DetailPanelContainer #ItemHeader[0].Background", rarityBg);
             cmd.set("#DetailItemId.Text", selectedItemId);
 
             boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, selectedItemId);
@@ -419,16 +460,28 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                     uiBuilder.append("  Padding: (Bottom: 6);\n");
 
                     if (ingredientId != null) {
-                        uiBuilder.append("  ItemIcon {\n");
+                        Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
+                        String ingRarityBg = getRarityBackground(ingredientItem);
+                        uiBuilder.append("  Group {\n");
                         uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
-                        uiBuilder.append("    Visible: true;\n");
+                        uiBuilder.append("    Background: \"").append(ingRarityBg).append("\";\n");
+                        uiBuilder.append("    LayoutMode: Center;\n");
+                        uiBuilder.append("    ItemIcon {\n");
+                        uiBuilder.append("      Anchor: (Width: 40, Height: 40);\n");
+                        uiBuilder.append("      Visible: true;\n");
+                        uiBuilder.append("    }\n");
                         uiBuilder.append("  }\n");
                     }
 
                     else if (resourceTypeId != null) {
-                        uiBuilder.append("  AssetImage {\n");
+                        uiBuilder.append("  Group {\n");
                         uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
-                        uiBuilder.append("    Visible: true;\n");
+                        uiBuilder.append("    Background: \"hytems/textures/rarity_default.png\";\n");
+                        uiBuilder.append("    LayoutMode: Center;\n");
+                        uiBuilder.append("    AssetImage {\n");
+                        uiBuilder.append("      Anchor: (Width: 40, Height: 40);\n");
+                        uiBuilder.append("      Visible: true;\n");
+                        uiBuilder.append("    }\n");
                         uiBuilder.append("  }\n");
                     }
 
@@ -459,8 +512,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                     String rowSelector = "#IngredientsList[" + i + "]";
 
                     if (ingredientId != null) {
-                        cmd.set(rowSelector + "[0].ItemId", ingredientId);
-                        cmd.set(rowSelector + "[0].Visible", true);
+                        cmd.set(rowSelector + "[0][0].ItemId", ingredientId);
+                        cmd.set(rowSelector + "[0][0].Visible", true);
                         cmd.set(rowSelector + "[2].Text", "x" + quantity);
 
                         Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
@@ -471,8 +524,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         try {
                             ResourceType resourceType = (ResourceType) ResourceType.getAssetMap().getAsset(resourceTypeId);
                             if (resourceType != null) {
-                                cmd.set(rowSelector + "[0].AssetPath", resourceType.getIcon());
-                                cmd.set(rowSelector + "[0].Visible", true);
+                                cmd.set(rowSelector + "[0][0].AssetPath", resourceType.getIcon());
+                                cmd.set(rowSelector + "[0][0].Visible", true);
 
                                 String resourceTypeName = formatResourceTypeName(resourceTypeId);
 
@@ -619,9 +672,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         try {
             Item item = HytemsPlugin.ITEMS.get(dropsItemId);
             String translatedName = getTranslatedName(item, dropsItemId);
+            
+            String rarityBg = getRarityBackground(item);
+            String rarityColor = getRarityColor(item);
 
             cmd.set("#DropDetailItemIcon.ItemId", dropsItemId);
             cmd.set("#DropDetailItemName.Text", translatedName);
+            cmd.set("#DropDetailItemName.Style.TextColor", rarityColor);
+            cmd.set("#DropPanelContainer #ItemHeader[0].Background", rarityBg);
             cmd.set("#DropDetailItemId.Text", dropsItemId);
 
             boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, dropsItemId);
@@ -1385,7 +1443,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 if (col == 0) {
                     cmd.appendInline("#ItemGrid",
                             "Group {\n" +
-                                    "  Anchor: (Height: 109);\n" +
+                                    "  Anchor: (Height: 116);\n" +
                                     "  LayoutMode: Left;\n" +
                                     "}\n"
                     );
@@ -1407,6 +1465,11 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     private void renderItemButton(UICommandBuilder cmd, UIEventBuilder events, String selector, String itemId, String translatedName, boolean isFavoriteSection) {
         String parentSelector = selector.substring(0, selector.lastIndexOf("["));
+        Item item = HytemsPlugin.ITEMS.get(itemId);
+        
+        String rarityBg = getRarityBackground(item);
+        String rarityColor = getRarityColor(item);
+        
         boolean isFav = favoriteItems.contains(itemId);
         String favDefaultBg = isFav ? "\"hytems/textures/star_filled.png\"" : "#ffffff(0.01)";
         String favHoveredBg = isFav ? "\"hytems/textures/star_filled.png\"" : "\"hytems/textures/star.png\"";
@@ -1417,7 +1480,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         cmd.appendInline(parentSelector,
                 "Button {\n" +
-                        "  Anchor: (Width: 92, Height: 102, Right: 7, Bottom: 7);\n" +
+                        "  Anchor: (Width: 92, Height: 108, Right: 7, Bottom: 7);\n" +
                         "  Background: #2a2a2a(0.7);\n" +
                         "  Padding: (Full: 6);\n" +
                         "  Style: ButtonStyle(\n" +
@@ -1428,23 +1491,29 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         "\n" +
                         "  Group {\n" +
                         "    LayoutMode: Top;\n" +
-                        "    Anchor: (Width: 80, Height: 90);\n" +
+                        "    Anchor: (Width: 80, Height: 96);\n" +
                         "    \n" +
-                        "    ItemIcon #ItemIcon {\n" +
-                        "      Anchor: (Width: 76, Height: 76);\n" +
-                        "      Visible: true;\n" +
+                        "    Group {\n" +
+                        "      Anchor: (Width: 80, Height: 80);\n" +
+                        "      Background: \"" + rarityBg + "\";\n" +
+                        "      LayoutMode: Center;\n" +
+                        "      \n" +
+                        "      ItemIcon #ItemIcon {\n" +
+                        "        Anchor: (Width: 72, Height: 72);\n" +
+                        "        Visible: true;\n" +
+                        "      }\n" +
                         "    }\n" +
                         "\n" +
                         "    Group {\n" +
-                        "      Anchor: (Height: 4);\n" +
+                        "      Anchor: (Height: 2);\n" +
                         "    }\n" +
                         "\n" +
                         "    Label #ItemName {\n" +
                         "      Text: \"\";\n" +
-                        "      Anchor: (Height: 16);\n" +
+                        "      Anchor: (Height: 14);\n" +
                         "      Style: (\n" +
                         "        FontSize: 11,\n" +
-                        "        TextColor: #ffffff,\n" +
+                        "        TextColor: " + rarityColor + ",\n" +
                         "        HorizontalAlignment: Center\n" +
                         "      );\n" +
                         "    }\n" +

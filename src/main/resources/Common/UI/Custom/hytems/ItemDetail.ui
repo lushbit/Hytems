@@ -55,21 +55,20 @@ Group #DetailContent {
 
   Group #ItemHeader {
     LayoutMode: Left;
-    Anchor: (Height: 80);
-    Padding: (Full: 12);
+    Anchor: (Height: 90);
+    Padding: (Full: 10);
     Background: #252525(0.8);
 
-    Group #IconBox {
-      Anchor: (Width: 80, Height: 80);
+    Group {
+      Anchor: (Width: 70, Height: 70);
+      Background: #ffffff(0.01);
       LayoutMode: Center;
-      Background: #1e1e1e(0.9);
 
       ItemIcon #DetailItemIcon {
-        Anchor: (Width: 72, Height: 72);
+        Anchor: (Width: 64, Height: 64);
         Visible: true;
       }
     }
-
     Group {
       Anchor: (Width: 12);
     }

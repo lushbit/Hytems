@@ -1,5 +1,7 @@
 package de.notjan.hytems.gui;
 
+import com.hypixel.hytale.protocol.Color;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality;
 import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
@@ -38,6 +40,41 @@ public class ItemDetailHud extends CustomUIHud {
         this.visible = true;
     }
 
+    private ItemQuality getItemQuality(Item item) {
+        if (item == null) return null;
+        try {
+            int qualityIndex = item.getQualityIndex();
+            return ItemQuality.getAssetMap().getAsset(qualityIndex);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String getRarityBackground(Item item) {
+        ItemQuality quality = getItemQuality(item);
+        if (quality != null) {
+            String texture = quality.getSlotTexture();
+            if (texture != null) {
+                if (texture.contains("SlotCommon")) return "hytems/textures/rarity_common.png";
+                if (texture.contains("SlotUncommon")) return "hytems/textures/rarity_uncommon.png";
+                if (texture.contains("SlotRare")) return "hytems/textures/rarity_rare.png";
+                if (texture.contains("SlotEpic")) return "hytems/textures/rarity_epic.png";
+                if (texture.contains("SlotLegendary")) return "hytems/textures/rarity_legendary.png";
+            }
+        }
+        return "hytems/textures/rarity_default.png";
+    }
+
+
+    private String getRarityColor(Item item) {
+        ItemQuality quality = getItemQuality(item);
+        if (quality != null && quality.getTextColor() != null) {
+            Color color = quality.getTextColor();
+            return String.format("#%02x%02x%02x", color.red & 0xFF, color.green & 0xFF, color.blue & 0xFF);
+        }
+        return "#ffffff";
+    }
+
     @Override
     public void build(@Nonnull UICommandBuilder cmd) {
         if (!visible) {
@@ -53,9 +90,14 @@ public class ItemDetailHud extends CustomUIHud {
             if (itemId != null && !itemId.isEmpty()) {
                 Item item = HytemsPlugin.ITEMS.get(itemId);
                 String translatedName = getTranslatedName(item, itemId);
+                
+                String rarityBg = getRarityBackground(item);
+                String rarityColor = getRarityColor(item);
 
                 cmd.set("#DetailItemIcon.ItemId", itemId);
                 cmd.set("#DetailItemName.Text", translatedName);
+                cmd.set("#DetailItemName.Style.TextColor", rarityColor);
+                cmd.set("#ItemHeader[0].Background", rarityBg);
                 cmd.set("#DetailItemId.Text", itemId);
 
                 if (item != null) {
@@ -177,16 +219,28 @@ public class ItemDetailHud extends CustomUIHud {
                     uiBuilder.append("  Padding: (Bottom: 6);\n");
 
                     if (ingredientId != null) {
-                        uiBuilder.append("  ItemIcon {\n");
+                        Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
+                        String ingRarityBg = getRarityBackground(ingredientItem);
+                        uiBuilder.append("  Group {\n");
                         uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
-                        uiBuilder.append("    Visible: true;\n");
+                        uiBuilder.append("    Background: \"").append(ingRarityBg).append("\";\n");
+                        uiBuilder.append("    LayoutMode: Center;\n");
+                        uiBuilder.append("    ItemIcon {\n");
+                        uiBuilder.append("      Anchor: (Width: 40, Height: 40);\n");
+                        uiBuilder.append("      Visible: true;\n");
+                        uiBuilder.append("    }\n");
                         uiBuilder.append("  }\n");
                     }
 
                     else if (resourceTypeId != null) {
-                        uiBuilder.append("  AssetImage {\n");
+                        uiBuilder.append("  Group {\n");
                         uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
-                        uiBuilder.append("    Visible: true;\n");
+                        uiBuilder.append("    Background: \"hytems/textures/rarity_default.png\";\n");
+                        uiBuilder.append("    LayoutMode: Center;\n");
+                        uiBuilder.append("    AssetImage {\n");
+                        uiBuilder.append("      Anchor: (Width: 40, Height: 40);\n");
+                        uiBuilder.append("      Visible: true;\n");
+                        uiBuilder.append("    }\n");
                         uiBuilder.append("  }\n");
                     }
 
@@ -217,8 +271,8 @@ public class ItemDetailHud extends CustomUIHud {
                     String rowSelector = "#IngredientsList[" + i + "]";
 
                     if (ingredientId != null) {
-                        cmd.set(rowSelector + "[0].ItemId", ingredientId);
-                        cmd.set(rowSelector + "[0].Visible", true);
+                        cmd.set(rowSelector + "[0][0].ItemId", ingredientId);
+                        cmd.set(rowSelector + "[0][0].Visible", true);
                         cmd.set(rowSelector + "[2].Text", "x" + quantity);
 
                         Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
@@ -229,8 +283,8 @@ public class ItemDetailHud extends CustomUIHud {
                         try {
                             ResourceType resourceType = (ResourceType) ResourceType.getAssetMap().getAsset(resourceTypeId);
                             if (resourceType != null) {
-                                cmd.set(rowSelector + "[0].AssetPath", resourceType.getIcon());
-                                cmd.set(rowSelector + "[0].Visible", true);
+                                cmd.set(rowSelector + "[0][0].AssetPath", resourceType.getIcon());
+                                cmd.set(rowSelector + "[0][0].Visible", true);
 
                                 String resourceTypeName = formatResourceTypeName(resourceTypeId);
 

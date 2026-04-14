@@ -1,0 +1,80 @@
+Button {
+  Anchor: (Width: 92, Height: 108, Right: 7, Bottom: 7);
+  Background: #2a2a2a(0.7);
+  Padding: (Full: 6);
+  Style: ButtonStyle(
+    Default: (Background: #2a2a2a(0.7)),
+    Hovered: (Background: #3a3a3a(0.85)),
+    Pressed: (Background: #4a4a4a(0.9))
+  );
+
+  Group {
+    LayoutMode: Top;
+    Anchor: (Width: 80, Height: 96);
+
+    Group #RarityBackground {
+      Anchor: (Width: 80, Height: 80);
+      Background: "hytems/textures/rarity_default.png";
+      LayoutMode: Center;
+
+      ItemIcon #ItemIcon {
+        Anchor: (Width: 72, Height: 72);
+        Visible: true;
+      }
+    }
+
+    Group {
+      Anchor: (Height: 2);
+    }
+
+    Label #ItemName {
+      Text: "";
+      Anchor: (Height: 14);
+      Style: (
+        FontSize: 11,
+        TextColor: #ffffff,
+        HorizontalAlignment: Center
+      );
+    }
+  }
+
+  Button #FavoriteButtonEmpty {
+    Anchor: (Width: 24, Height: 24, Right: 2, Top: 2);
+    Style: ButtonStyle(
+      Default: (Background: #000000(0)),
+      Hovered: (Background: #000000(0)),
+      Pressed: (Background: #000000(0))
+    );
+    Visible: true;
+  }
+
+  Button #FavoriteButtonFilled {
+    Anchor: (Width: 24, Height: 24, Right: 2, Top: 2);
+    Style: ButtonStyle(
+      Default: (Background: #000000(0)),
+      Hovered: (Background: #000000(0)),
+      Pressed: (Background: #000000(0))
+    );
+    Visible: false;
+  }
+
+  Button #PinButtonEmpty {
+    Anchor: (Width: 24, Height: 24, Left: 2, Top: 2);
+    Style: ButtonStyle(
+      Default: (Background: #000000(0)),
+      Hovered: (Background: #000000(0)),
+      Pressed: (Background: #000000(0))
+    );
+    Visible: true;
+  }
+
+  Button #PinButtonFilled {
+    Anchor: (Width: 24, Height: 24, Left: 2, Top: 2);
+    Style: ButtonStyle(
+      Default: (Background: #000000(0)),
+      Hovered: (Background: #000000(0)),
+      Pressed: (Background: #000000(0))
+    );
+    Visible: false;
+  }
+}

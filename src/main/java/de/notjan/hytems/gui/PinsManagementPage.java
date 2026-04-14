@@ -87,7 +87,7 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
                 buildPinnedItemCard(cmd, events, itemId, translatedName, i, pinnedItems.size());
 
                 if (i < pinnedItems.size() - 1) {
-                    cmd.appendInline("#PinnedItemsList", "Group { Anchor: (Width: 20); }");
+                    cmd.appendInline("#PinnedItemsList", "Group { Anchor: (Width: 30); }");
                 }
             }
         }
@@ -110,123 +110,31 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
         boolean isFirst = (index == 0);
         boolean isLast = (index == totalItems - 1);
 
-        StringBuilder uiBuilder = new StringBuilder();
-        uiBuilder.append("Group #PinnedCard").append(index).append(" {\n");
-        uiBuilder.append("  LayoutMode: Top;\n");
-        if (!isFirst) {
-            uiBuilder.append("  Anchor: (Width: 240, Left: 10);\n");
-        } else {
-            uiBuilder.append("  Anchor: (Width: 240);\n");
-        }
-        uiBuilder.append("  Background: #1a2836(0.85);\n");
-        uiBuilder.append("  Padding: (Left: 8, Right: 8, Top: 8, Bottom: 0);\n");
-        uiBuilder.append("\n");
-        
-        uiBuilder.append("  Group {\n");
-        uiBuilder.append("    LayoutMode: Center;\n");
-        uiBuilder.append("    Anchor: (Width: 80, Height: 80);\n");
-        uiBuilder.append("    Background: \"").append(rarityBg).append("\";\n");
-        uiBuilder.append("    ItemIcon #ItemIcon {\n");
-        uiBuilder.append("      Anchor: (Width: 72, Height: 72);\n");
-        uiBuilder.append("      Visible: true;\n");
-        uiBuilder.append("    }\n");
-        uiBuilder.append("  }\n");
-        uiBuilder.append("\n");
-        
-        uiBuilder.append("  Group {\n");
-        uiBuilder.append("    Anchor: (Height: 20);\n");
-        uiBuilder.append("  }\n");
-        uiBuilder.append("\n");
-        
-        uiBuilder.append("  Label #ItemName {\n");
-        uiBuilder.append("    Anchor: (Height: 20);\n");
-        uiBuilder.append("    Style: (\n");
-        uiBuilder.append("      FontSize: 15,\n");
-        uiBuilder.append("      TextColor: ").append(rarityColor).append(",\n");
-        uiBuilder.append("      HorizontalAlignment: Center,\n");
-        uiBuilder.append("      RenderBold: true\n");
-        uiBuilder.append("    );\n");
-        uiBuilder.append("  }\n");
-        uiBuilder.append("\n");
-        
-        uiBuilder.append("  Group {\n");
-        uiBuilder.append("    Anchor: (Height: 36);\n");
-        uiBuilder.append("  }\n");
-        uiBuilder.append("\n");
-        
-        uiBuilder.append("  Group #ButtonRow {\n");
-        uiBuilder.append("    LayoutMode: Center;\n");
-        uiBuilder.append("    Anchor: (Height: 36);\n");
-        uiBuilder.append("  }\n");
-        
-        uiBuilder.append("}\n");
+        int childIndex = index * 2;
+        cmd.append("#PinnedItemsList", HytemsUiTemplates.PINS_MANAGEMENT_CARD);
 
-        cmd.appendInline("#PinnedItemsList", uiBuilder.toString());
-
-        String cardSelector = "#PinnedCard" + index;
+        String cardSelector = "#PinnedItemsList[" + childIndex + "]";
+        cmd.set(cardSelector + " #IconBackground.Background", rarityBg);
         cmd.set(cardSelector + " #ItemIcon.ItemId", itemId);
         cmd.set(cardSelector + " #ItemName.Text", translatedName);
-
-        String buttonRowSelector = cardSelector + " #ButtonRow";
+        cmd.set(cardSelector + " #ItemName.Style.TextColor", rarityColor);
         
         if (!isFirst) {
-            cmd.appendInline(buttonRowSelector,
-                "Button #MoveLeftBtn" + index + " {\n" +
-                "  Anchor: (Width: 50, Height: 36, Right: 8);\n" +
-                "  Background: #3d5973;\n" +
-                "  Style: ButtonStyle(\n" +
-                "    Default: (Background: #3d5973),\n" +
-                "    Hovered: (Background: #4d6983),\n" +
-                "    Pressed: (Background: #2d4963)\n" +
-                "  );\n" +
-                "  Label {\n" +
-                "    Text: \"<\";\n" +
-                "    Style: (\n" +
-                "      FontSize: 16,\n" +
-                "      TextColor: #ffffff,\n" +
-                "      HorizontalAlignment: Center,\n" +
-                "      VerticalAlignment: Center\n" +
-                "    );\n" +
-                "  }\n" +
-                "}\n"
-            );
-            
             events.addEventBinding(
                     CustomUIEventBindingType.Activating,
-                    "#MoveLeftBtn" + index,
+                    cardSelector + " #MoveLeftBtn",
                     new EventData()
                             .append("Action", "moveLeft")
                             .append("ItemId", itemId),
                     false
             );
         } else {
-            cmd.appendInline(buttonRowSelector, "Group { Anchor: (Width: 58); }");
+            cmd.set(cardSelector + " #MoveLeftBtn.Visible", false);
         }
 
-        cmd.appendInline(buttonRowSelector,
-            "Button #DeleteBtn" + index + " {\n" +
-            "  Anchor: (Width: 100, Height: 36);\n" +
-            "  Background: #c44c4c;\n" +
-            "  Style: ButtonStyle(\n" +
-            "    Default: (Background: #c44c4c),\n" +
-            "    Hovered: (Background: #d45c5c),\n" +
-            "    Pressed: (Background: #b43c3c)\n" +
-            "  );\n" +
-            "  Label {\n" +
-            "    Text: \"Remove\";\n" +
-            "    Style: (\n" +
-            "      FontSize: 14,\n" +
-            "      TextColor: #ffffff,\n" +
-            "      HorizontalAlignment: Center,\n" +
-            "      VerticalAlignment: Center\n" +
-            "    );\n" +
-            "  }\n" +
-            "}\n"
-        );
-        
         events.addEventBinding(
                 CustomUIEventBindingType.Activating,
-                "#DeleteBtn" + index,
+                cardSelector + " #DeleteBtn",
                 new EventData()
                         .append("Action", "delete")
                         .append("ItemId", itemId),
@@ -234,37 +142,16 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
         );
         
         if (!isLast) {
-            cmd.appendInline(buttonRowSelector,
-                "Button #MoveRightBtn" + index + " {\n" +
-                "  Anchor: (Width: 50, Height: 36, Left: 8);\n" +
-                "  Background: #3d5973;\n" +
-                "  Style: ButtonStyle(\n" +
-                "    Default: (Background: #3d5973),\n" +
-                "    Hovered: (Background: #4d6983),\n" +
-                "    Pressed: (Background: #2d4963)\n" +
-                "  );\n" +
-                "  Label {\n" +
-                "    Text: \">\";\n" +
-                "    Style: (\n" +
-                "      FontSize: 16,\n" +
-                "      TextColor: #ffffff,\n" +
-                "      HorizontalAlignment: Center,\n" +
-                "      VerticalAlignment: Center\n" +
-                "    );\n" +
-                "  }\n" +
-                "}\n"
-            );
-            
             events.addEventBinding(
                     CustomUIEventBindingType.Activating,
-                    "#MoveRightBtn" + index,
+                    cardSelector + " #MoveRightBtn",
                     new EventData()
                             .append("Action", "moveRight")
                             .append("ItemId", itemId),
                     false
             );
         } else {
-            cmd.appendInline(buttonRowSelector, "Group { Anchor: (Width: 58); }");
+            cmd.set(cardSelector + " #MoveRightBtn.Visible", false);
         }
     }
 

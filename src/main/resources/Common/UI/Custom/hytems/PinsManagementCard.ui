@@ -1,0 +1,100 @@
+Group {
+  LayoutMode: Top;
+  Anchor: (Width: 240);
+  Background: #1a2836(0.85);
+  Padding: (Left: 8, Right: 8, Top: 8, Bottom: 0);
+
+  Group #IconBackground {
+    LayoutMode: Center;
+    Anchor: (Width: 80, Height: 80);
+    Background: "hytems/textures/rarity_default.png";
+
+    ItemIcon #ItemIcon {
+      Anchor: (Width: 72, Height: 72);
+      Visible: true;
+    }
+  }
+
+  Group {
+    Anchor: (Height: 20);
+  }
+
+  Label #ItemName {
+    Anchor: (Height: 20);
+    Style: (
+      FontSize: 15,
+      TextColor: #ffffff,
+      HorizontalAlignment: Center,
+      RenderBold: true
+    );
+  }
+
+  Group {
+    Anchor: (Height: 36);
+  }
+
+  Group #ButtonRow {
+    LayoutMode: Center;
+    Anchor: (Height: 36);
+
+    Button #MoveLeftBtn {
+      Anchor: (Width: 50, Height: 36, Right: 8);
+      Background: #3d5973;
+      Style: ButtonStyle(
+        Default: (Background: #3d5973),
+        Hovered: (Background: #4d6983),
+        Pressed: (Background: #2d4963)
+      );
+
+      Label {
+        Text: "<";
+        Style: (
+          FontSize: 16,
+          TextColor: #ffffff,
+          HorizontalAlignment: Center,
+          VerticalAlignment: Center
+        );
+      }
+    }
+
+    Button #DeleteBtn {
+      Anchor: (Width: 100, Height: 36);
+      Background: #c44c4c;
+      Style: ButtonStyle(
+        Default: (Background: #c44c4c),
+        Hovered: (Background: #d45c5c),
+        Pressed: (Background: #b43c3c)
+      );
+
+      Label {
+        Text: "Remove";
+        Style: (
+          FontSize: 14,
+          TextColor: #ffffff,
+          HorizontalAlignment: Center,
+          VerticalAlignment: Center
+        );
+      }
+    }
+
+    Button #MoveRightBtn {
+      Anchor: (Width: 50, Height: 36, Left: 8);
+      Background: #3d5973;
+      Style: ButtonStyle(
+        Default: (Background: #3d5973),
+        Hovered: (Background: #4d6983),
+        Pressed: (Background: #2d4963)
+      );
+
+      Label {
+        Text: ">";
+        Style: (
+          FontSize: 16,
+          TextColor: #ffffff,
+          HorizontalAlignment: Center,
+          VerticalAlignment: Center
+        );
+      }
+    }
+  }
+}

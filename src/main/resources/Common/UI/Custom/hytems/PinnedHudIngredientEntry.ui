@@ -1,0 +1,49 @@
+Group {
+  LayoutMode: Top;
+  Anchor: (Height: 42);
+  Padding: (Bottom: 5);
+
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 24);
+
+    Group #IconBackground {
+      Anchor: (Width: 24, Height: 24);
+      Background: "hytems/textures/rarity_default.png";
+      LayoutMode: Center;
+
+      ItemIcon #ItemIcon {
+        Anchor: (Width: 22, Height: 22);
+        Visible: false;
+      }
+
+      AssetImage #ResourceIcon {
+        Anchor: (Width: 22, Height: 22);
+        Visible: false;
+      }
+    }
+
+    Group {
+      Anchor: (Width: 6);
+    }
+
+    Label #IngredientName {
+      FlexWeight: 1;
+      Style: (
+        FontSize: 12,
+        TextColor: #cccccc,
+        VerticalAlignment: Center
+      );
+    }
+  }
+
+  Label #IngredientCount {
+    Anchor: (Height: 14);
+    Padding: (Left: 28);
+    Style: (
+      FontSize: 11,
+      TextColor: #F44336,
+      RenderBold: true
+    );
+  }
+}

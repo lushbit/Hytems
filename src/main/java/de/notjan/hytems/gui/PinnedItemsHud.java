@@ -83,16 +83,15 @@ public class PinnedItemsHud extends CustomUIHud {
         List<String> pinnedItems = pinnedItemsManager.getPinnedItems(playerRef);
         
         cmd.clear("#PinnedItemsList");
-        
-        int index = 0;
-        for (String itemId : pinnedItems) {
-            buildPinnedItemBox(cmd, itemId, index);
-            
-            if (index < pinnedItems.size() - 1) {
-                cmd.appendInline("#PinnedItemsList", "Group {\n  Anchor: (Height: 6);\n}\n");
+
+        for (int itemIndex = 0; itemIndex < pinnedItems.size(); itemIndex++) {
+            String itemId = pinnedItems.get(itemIndex);
+            int childIndex = itemIndex * 2;
+            buildPinnedItemBox(cmd, itemId, childIndex);
+
+            if (itemIndex < pinnedItems.size() - 1) {
+                cmd.appendInline("#PinnedItemsList", "Group { Anchor: (Height: 6); }");
             }
-            
-            index++;
         }
     }
     
@@ -109,107 +108,18 @@ public class PinnedItemsHud extends CustomUIHud {
         boolean hasRecipe = recipes != null && !recipes.isEmpty() && recipes.size() == 1;
         boolean hasDrops = dropSources != null && !dropSources.isEmpty();
         
-        StringBuilder uiBuilder = new StringBuilder();
-        uiBuilder.append("Group #PinnedItem").append(index).append(" {\n");
-        uiBuilder.append("  LayoutMode: Top;\n");
-        uiBuilder.append("  Anchor: (Width: 280);\n");
-        uiBuilder.append("  Background: #1e1e1e(0.7);\n");
-        uiBuilder.append("  Padding: (Full: 8);\n");
-        uiBuilder.append("\n");
+        cmd.append("#PinnedItemsList", HytemsUiTemplates.PINNED_HUD_ITEM);
         
-        uiBuilder.append("  Group #Header {\n");
-        uiBuilder.append("    LayoutMode: Left;\n");
-        uiBuilder.append("    Anchor: (Height: 44);\n");
-        uiBuilder.append("    Padding: (Bottom: 8);\n");
-        uiBuilder.append("    \n");
-        uiBuilder.append("    Group {\n");
-        uiBuilder.append("      Anchor: (Width: 40, Height: 40);\n");
-        uiBuilder.append("      Background: \"").append(rarityBg).append("\";\n");
-        uiBuilder.append("      LayoutMode: Center;\n");
-        uiBuilder.append("      ItemIcon #ItemIcon {\n");
-        uiBuilder.append("        Anchor: (Width: 36, Height: 36);\n");
-        uiBuilder.append("        Visible: true;\n");
-        uiBuilder.append("      }\n");
-        uiBuilder.append("    }\n");
-        uiBuilder.append("\n");
-        uiBuilder.append("    Group {\n");
-        uiBuilder.append("      Anchor: (Width: 8);\n");
-        uiBuilder.append("    }\n");
-        uiBuilder.append("    Label #ItemName {\n");
-        uiBuilder.append("      FlexWeight: 1;\n");
-        uiBuilder.append("      Style: (\n");
-        uiBuilder.append("        FontSize: 14,\n");
-        uiBuilder.append("        TextColor: ").append(rarityColor).append(",\n");
-        uiBuilder.append("        VerticalAlignment: Center,\n");
-        uiBuilder.append("        RenderBold: true\n");
-        uiBuilder.append("      );\n");
-        uiBuilder.append("    }\n");
-        uiBuilder.append("  }\n");
-        
-        if (hasRecipe) {
-            uiBuilder.append("  Label {\n");
-            uiBuilder.append("    Text: \"Recipe:\";\n");
-            uiBuilder.append("    Anchor: (Height: 20);\n");
-            uiBuilder.append("    Padding: (Top: 4, Bottom: 4);\n");
-            uiBuilder.append("    Style: (\n");
-            uiBuilder.append("      FontSize: 13,\n");
-            uiBuilder.append("      TextColor: #66ccff,\n");
-            uiBuilder.append("      RenderBold: true\n");
-            uiBuilder.append("    );\n");
-            uiBuilder.append("  }\n");
-            uiBuilder.append("  Group #IngredientsList {\n");
-            uiBuilder.append("    LayoutMode: Top;\n");
-            uiBuilder.append("    Padding: (Top: 8);\n");
-            uiBuilder.append("  }\n");
-        }
-        
-        if (hasDrops) {
-            uiBuilder.append("  Label {\n");
-            uiBuilder.append("    Text: \"Drops from:\";\n");
-            uiBuilder.append("    Anchor: (Height: 20);\n");
-            uiBuilder.append("    Padding: (Top: 6, Bottom: 4);\n");
-            uiBuilder.append("    Style: (\n");
-            uiBuilder.append("      FontSize: 13,\n");
-            uiBuilder.append("      TextColor: #66ccff,\n");
-            uiBuilder.append("      RenderBold: true\n");
-            uiBuilder.append("    );\n");
-            uiBuilder.append("  }\n");
-            uiBuilder.append("  Group #DropsList {\n");
-            uiBuilder.append("    LayoutMode: Top;\n");
-            uiBuilder.append("    Padding: (Top: 8);\n");
-            uiBuilder.append("  }\n");
-            uiBuilder.append("  Label {\n");
-            uiBuilder.append("    Text: \"For other drop variants, check the browser using /h!\";\n");
-            uiBuilder.append("    Anchor: (Height: 16);\n");
-            uiBuilder.append("    Padding: (Top: 6);\n");
-            uiBuilder.append("    Style: (\n");
-            uiBuilder.append("      FontSize: 9,\n");
-            uiBuilder.append("      TextColor: #ffffff,\n");
-            uiBuilder.append("      HorizontalAlignment: Center\n");
-            uiBuilder.append("    );\n");
-            uiBuilder.append("  }\n");
-        }
-        
-        if (!hasRecipe && !hasDrops) {
-            uiBuilder.append("  Label {\n");
-            uiBuilder.append("    Text: \"No recipe or drops available\";\n");
-            uiBuilder.append("    Anchor: (Height: 16);\n");
-            uiBuilder.append("    Padding: (Top: 2);\n");
-            uiBuilder.append("    Style: (\n");
-            uiBuilder.append("      FontSize: 9,\n");
-            uiBuilder.append("      TextColor: #888888,\n");
-            uiBuilder.append("      HorizontalAlignment: Center\n");
-            uiBuilder.append("    );\n");
-            uiBuilder.append("  }\n");
-        }
-        
-        uiBuilder.append("}\n");
-        
-        cmd.appendInline("#PinnedItemsList", uiBuilder.toString());
-        
-        String selector = "#PinnedItem" + index;
+        String selector = "#PinnedItemsList[" + index + "]";
+        cmd.set(selector + " #RarityBackground.Background", rarityBg);
         cmd.set(selector + " #Header #ItemIcon.ItemId", itemId);
         cmd.set(selector + " #Header #ItemName.Text", translatedName);
+        cmd.set(selector + " #Header #ItemName.Style.TextColor", rarityColor);
+        cmd.set(selector + " #RecipeTitle.Visible", hasRecipe);
+        cmd.set(selector + " #IngredientsList.Visible", hasRecipe);
+        cmd.set(selector + " #DropsTitle.Visible", hasDrops);
+        cmd.set(selector + " #DropsList.Visible", hasDrops);
+        cmd.set(selector + " #EmptyInfo.Visible", !hasRecipe && !hasDrops);
         
         if (hasRecipe) {
             displayRecipeIngredients(cmd, selector + " #IngredientsList", recipes.get(0));
@@ -239,98 +149,41 @@ public class PinnedItemsHud extends CustomUIHud {
                 
                 if (ingredientId == null && resourceTypeId == null) continue;
                 
-                StringBuilder uiBuilder = new StringBuilder();
-                uiBuilder.append("Group {\n");
-                uiBuilder.append("  LayoutMode: Top;\n");
-                uiBuilder.append("  Anchor: (Height: 42);\n");
-                uiBuilder.append("  Padding: (Bottom: 5);\n");
-                
                 int inventoryCount = 0;
                 if (ingredientId != null) {
                     inventoryCount = playerInventory.getOrDefault(ingredientId, 0);
                 }
                 
                 String countColor = inventoryCount >= quantity ? "#4CAF50" : "#F44336";
-                
-                uiBuilder.append("  Group {\n");
-                uiBuilder.append("    LayoutMode: Left;\n");
-                uiBuilder.append("    Anchor: (Height: 24);\n");
-                
-                if (ingredientId != null) {
-                    Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
-                    String ingRarityBg = getRarityBackground(ingredientItem);
-                    uiBuilder.append("    Group {\n");
-                    uiBuilder.append("      Anchor: (Width: 24, Height: 24);\n");
-                    uiBuilder.append("      Background: \"").append(ingRarityBg).append("\";\n");
-                    uiBuilder.append("      LayoutMode: Center;\n");
-                    uiBuilder.append("      ItemIcon {\n");
-                    uiBuilder.append("        Anchor: (Width: 22, Height: 22);\n");
-                    uiBuilder.append("        Visible: true;\n");
-                    uiBuilder.append("      }\n");
-                    uiBuilder.append("    }\n");
-                } else if (resourceTypeId != null) {
-                    uiBuilder.append("    Group {\n");
-                    uiBuilder.append("      Anchor: (Width: 24, Height: 24);\n");
-                    uiBuilder.append("      Background: \"hytems/textures/rarity_default.png\";\n");
-                    uiBuilder.append("      LayoutMode: Center;\n");
-                    uiBuilder.append("      AssetImage {\n");
-                    uiBuilder.append("        Anchor: (Width: 22, Height: 22);\n");
-                    uiBuilder.append("        Visible: true;\n");
-                    uiBuilder.append("      }\n");
-                    uiBuilder.append("    }\n");
-                }
-                
-                uiBuilder.append("    Group {\n");
-                uiBuilder.append("      Anchor: (Width: 6);\n");
-                uiBuilder.append("    }\n");
-                uiBuilder.append("    Label {\n");
-                uiBuilder.append("      FlexWeight: 1;\n");
-                uiBuilder.append("      Style: (\n");
-                uiBuilder.append("        FontSize: 12,\n");
-                uiBuilder.append("        TextColor: #cccccc,\n");
-                uiBuilder.append("        VerticalAlignment: Center\n");
-                uiBuilder.append("      );\n");
-                uiBuilder.append("    }\n");
-                uiBuilder.append("  }\n");
-                
-                uiBuilder.append("  Label {\n");
-                uiBuilder.append("    Anchor: (Height: 14);\n");
-                uiBuilder.append("    Padding: (Left: 28);\n");
-                uiBuilder.append("    Style: (\n");
-                uiBuilder.append("      FontSize: 11,\n");
-                uiBuilder.append("      TextColor: ").append(countColor).append(",\n");
-                uiBuilder.append("      RenderBold: true\n");
-                uiBuilder.append("    );\n");
-                uiBuilder.append("  }\n");
-                
-                uiBuilder.append("}\n");
-                
-                cmd.appendInline(listSelector, uiBuilder.toString());
+                cmd.append(listSelector, HytemsUiTemplates.PINNED_HUD_INGREDIENT_ENTRY);
                 
                 String rowSelector = listSelector + "[" + i + "]";
                 
                 if (ingredientId != null) {
-                    cmd.set(rowSelector + "[0][0][0].ItemId", ingredientId);
-                    cmd.set(rowSelector + "[0][0][0].Visible", true);
-                    
                     Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
+                    cmd.set(rowSelector + " #IconBackground.Background", getRarityBackground(ingredientItem));
+                    cmd.set(rowSelector + " #ItemIcon.ItemId", ingredientId);
+                    cmd.set(rowSelector + " #ItemIcon.Visible", true);
+
                     String ingredientName = getTranslatedName(ingredientItem, ingredientId);
-                    cmd.set(rowSelector + "[0][2].Text", ingredientName);
+                    cmd.set(rowSelector + " #IngredientName.Text", ingredientName);
                     
                     String countText = inventoryCount + "/" + quantity;
-                    cmd.set(rowSelector + "[1].Text", countText);
+                    cmd.set(rowSelector + " #IngredientCount.Text", countText);
+                    cmd.set(rowSelector + " #IngredientCount.Style.TextColor", countColor);
                 } else if (resourceTypeId != null) {
                     try {
                         ResourceType resourceType = (ResourceType) ResourceType.getAssetMap().getAsset(resourceTypeId);
                         if (resourceType != null) {
-                            cmd.set(rowSelector + "[0][0][0].AssetPath", resourceType.getIcon());
-                            cmd.set(rowSelector + "[0][0][0].Visible", true);
+                            cmd.set(rowSelector + " #ResourceIcon.AssetPath", resourceType.getIcon());
+                            cmd.set(rowSelector + " #ResourceIcon.Visible", true);
                             
                             String resourceTypeName = formatResourceTypeName(resourceTypeId);
-                            cmd.set(rowSelector + "[0][2].Text", "Any " + resourceTypeName);
+                            cmd.set(rowSelector + " #IngredientName.Text", "Any " + resourceTypeName);
                             
                             String countText = inventoryCount + "/" + quantity;
-                            cmd.set(rowSelector + "[1].Text", countText);
+                            cmd.set(rowSelector + " #IngredientCount.Text", countText);
+                            cmd.set(rowSelector + " #IngredientCount.Style.TextColor", countColor);
                         }
                     } catch (Exception e) {
                         System.err.println("[Hytems] Error loading resource type: " + resourceTypeId);
@@ -375,31 +228,11 @@ public class PinnedItemsHud extends CustomUIHud {
                 Map<String, List<Integer>> zoneData = mobEntry.getValue();
                 String displayName = formatMobName(mobType);
                 
-                StringBuilder uiBuilder = new StringBuilder();
-                uiBuilder.append("Group {\n");
-                uiBuilder.append("  LayoutMode: Left;\n");
-                uiBuilder.append("  Anchor: (Height: 30);\n");
-                uiBuilder.append("  Padding: (Bottom: 4);\n");
-                
-                uiBuilder.append("  Label {\n");
-                uiBuilder.append("    Text: \"").append(displayName).append("\";\n");
-                uiBuilder.append("    Anchor: (Width: 135);\n");
-                uiBuilder.append("    Style: (\n");
-                uiBuilder.append("      FontSize: 12,\n");
-                uiBuilder.append("      TextColor: #ffffff,\n");
-                uiBuilder.append("      VerticalAlignment: Center,\n");
-                uiBuilder.append("      RenderBold: true\n");
-                uiBuilder.append("    );\n");
-                uiBuilder.append("  }\n");
-                
-                uiBuilder.append("  Group {\n");
-                uiBuilder.append("    Anchor: (Width: 4);\n");
-                uiBuilder.append("  }\n");
-                
-                uiBuilder.append("  Group {\n");
-                uiBuilder.append("    LayoutMode: Left;\n");
-                uiBuilder.append("    FlexWeight: 1;\n");
-                
+                cmd.append(listSelector, HytemsUiTemplates.PINNED_HUD_DROP_ROW);
+                String rowSelector = listSelector + "[" + dropIndex + "]";
+                String badgesSelector = rowSelector + " #ZoneBadges";
+                cmd.set(rowSelector + " #SourceName.Text", displayName);
+
                 List<Map.Entry<String, List<Integer>>> sortedZones = new ArrayList<>(zoneData.entrySet());
                 sortedZones.sort((a, b) -> {
                     String numA = a.getKey().replaceAll("[^0-9]", "");
@@ -409,34 +242,18 @@ public class PinnedItemsHud extends CustomUIHud {
                     return Integer.compare(Integer.parseInt(numA), Integer.parseInt(numB));
                 });
                 
+                int badgeIndex = 0;
                 for (Map.Entry<String, List<Integer>> entry : sortedZones) {
                     String zone = entry.getKey();
                     String zoneNumber = zone.replaceAll("[^0-9]", "");
-                    String color = getZoneColor(zone);
-                    
-                    uiBuilder.append("    Group {\n");
-                    uiBuilder.append("      Anchor: (Width: 28, Height: 24);\n");
-                    uiBuilder.append("      Background: ").append(color).append("(0.9);\n");
-                    uiBuilder.append("      LayoutMode: Center;\n");
-                    uiBuilder.append("      Label {\n");
-                    uiBuilder.append("        Text: \"Z").append(zoneNumber).append("\";\n");
-                    uiBuilder.append("        Style: (\n");
-                    uiBuilder.append("          FontSize: 10,\n");
-                    uiBuilder.append("          TextColor: #ffffff,\n");
-                    uiBuilder.append("          HorizontalAlignment: Center,\n");
-                    uiBuilder.append("          VerticalAlignment: Center,\n");
-                    uiBuilder.append("          RenderBold: true\n");
-                    uiBuilder.append("        );\n");
-                    uiBuilder.append("      }\n");
-                    uiBuilder.append("    }\n");
-                    
-                    uiBuilder.append("    Group { Anchor: (Width: 2); }\n");
+                    cmd.append(badgesSelector, HytemsUiTemplates.PINNED_HUD_ZONE_BADGE);
+                    String badgeSelector = badgesSelector + "[" + badgeIndex + "]";
+                    configureZoneBadge(cmd, badgeSelector, zone, "Z" + zoneNumber);
+                    badgeIndex++;
+
+                    cmd.appendInline(badgesSelector, "Group { Anchor: (Width: 2); }");
+                    badgeIndex++;
                 }
-                
-                uiBuilder.append("  }\n");
-                uiBuilder.append("}\n");
-                
-                cmd.appendInline(listSelector, uiBuilder.toString());
                 dropIndex++;
             }
             
@@ -444,42 +261,46 @@ public class PinnedItemsHud extends CustomUIHud {
             int remainingDrops = totalDropSources - dropIndex;
             
             if (remainingDrops > 0) {
-                StringBuilder moreBuilder = new StringBuilder();
-                moreBuilder.append("Label {\n");
-                moreBuilder.append("  Text: \"... and ").append(remainingDrops).append(" other drop");
-                if (remainingDrops != 1) {
-                    moreBuilder.append("s");
-                }
-                moreBuilder.append(" (/h)\";\n");
-                moreBuilder.append("  Anchor: (Height: 16);\n");
-                moreBuilder.append("  Padding: (Top: 4);\n");
-                moreBuilder.append("  Style: (\n");
-                moreBuilder.append("    FontSize: 12,\n");
-                moreBuilder.append("    TextColor: #888888\n");
-                moreBuilder.append("  );\n");
-                moreBuilder.append("}\n");
-                
-                cmd.appendInline(listSelector, moreBuilder.toString());
+                cmd.appendInline(listSelector,
+                        "Label {\n" +
+                                "  Text: \"\";\n" +
+                                "  Anchor: (Height: 16);\n" +
+                                "  Padding: (Top: 4);\n" +
+                                "  Style: (\n" +
+                                "    FontSize: 12,\n" +
+                                "    TextColor: #888888\n" +
+                                "  );\n" +
+                                "}"
+                );
+                String suffix = remainingDrops == 1 ? "" : "s";
+                cmd.set(listSelector + "[" + dropIndex + "].Text", "... and " + remainingDrops + " other drop" + suffix + " (/h)");
             }
         } catch (Exception e) {
             System.err.println("[Hytems] Error displaying drops: " + e.getMessage());
             e.printStackTrace();
         }
     }
-    
-    private String getZoneColor(String zone) {
-        if (zone == null) return "#888888";
-        
-        String zoneNumber = zone.replaceAll("[^0-9]", "");
-        if (zoneNumber.isEmpty()) return "#888888";
-        
-        int zoneNum = Integer.parseInt(zoneNumber);
-        switch (zoneNum) {
-            case 1: return "#4CAF50";
-            case 2: return "#FFC107";
-            case 3: return "#FF9800";
-            case 4: return "#F44336";
-            default: return "#888888";
+
+    private void configureZoneBadge(@Nonnull UICommandBuilder cmd, @Nonnull String badgeSelector,
+                                    @Nonnull String zone, @Nonnull String label) {
+        int zoneNumber = parseZoneNumber(zone);
+        cmd.set(badgeSelector + " #BgDefault.Visible", zoneNumber < 1 || zoneNumber > 4);
+        cmd.set(badgeSelector + " #BgZone1.Visible", zoneNumber == 1);
+        cmd.set(badgeSelector + " #BgZone2.Visible", zoneNumber == 2);
+        cmd.set(badgeSelector + " #BgZone3.Visible", zoneNumber == 3);
+        cmd.set(badgeSelector + " #BgZone4.Visible", zoneNumber == 4);
+        cmd.set(badgeSelector + " #ZoneLabel.Text", label);
+    }
+
+    private int parseZoneNumber(@Nonnull String zone) {
+        String zoneDigits = zone.replaceAll("[^0-9]", "");
+        if (zoneDigits.isEmpty()) {
+            return -1;
+        }
+        try {
+            return Integer.parseInt(zoneDigits);
+        } catch (NumberFormatException ignored) {
+            return -1;
         }
     }
     

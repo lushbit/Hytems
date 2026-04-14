@@ -212,84 +212,31 @@ public class ItemDetailHud extends CustomUIHud {
 
                     if (ingredientId == null && resourceTypeId == null) continue;
 
-                    StringBuilder uiBuilder = new StringBuilder();
-                    uiBuilder.append("Group {\n");
-                    uiBuilder.append("  LayoutMode: Left;\n");
-                    uiBuilder.append("  Anchor: (Height: 50);\n");
-                    uiBuilder.append("  Padding: (Bottom: 6);\n");
-
-                    if (ingredientId != null) {
-                        Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
-                        String ingRarityBg = getRarityBackground(ingredientItem);
-                        uiBuilder.append("  Group {\n");
-                        uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
-                        uiBuilder.append("    Background: \"").append(ingRarityBg).append("\";\n");
-                        uiBuilder.append("    LayoutMode: Center;\n");
-                        uiBuilder.append("    ItemIcon {\n");
-                        uiBuilder.append("      Anchor: (Width: 40, Height: 40);\n");
-                        uiBuilder.append("      Visible: true;\n");
-                        uiBuilder.append("    }\n");
-                        uiBuilder.append("  }\n");
-                    }
-
-                    else if (resourceTypeId != null) {
-                        uiBuilder.append("  Group {\n");
-                        uiBuilder.append("    Anchor: (Width: 44, Height: 44);\n");
-                        uiBuilder.append("    Background: \"hytems/textures/rarity_default.png\";\n");
-                        uiBuilder.append("    LayoutMode: Center;\n");
-                        uiBuilder.append("    AssetImage {\n");
-                        uiBuilder.append("      Anchor: (Width: 40, Height: 40);\n");
-                        uiBuilder.append("      Visible: true;\n");
-                        uiBuilder.append("    }\n");
-                        uiBuilder.append("  }\n");
-                    }
-
-                    uiBuilder.append("  Group {\n");
-                    uiBuilder.append("    Anchor: (Width: 8);\n");
-                    uiBuilder.append("  }\n");
-                    uiBuilder.append("  Label {\n");
-                    uiBuilder.append("    Anchor: (Width: 40);\n");
-                    uiBuilder.append("    Style: (\n");
-                    uiBuilder.append("      FontSize: 12,\n");
-                    uiBuilder.append("      TextColor: #ffaa00,\n");
-                    uiBuilder.append("      VerticalAlignment: Center,\n");
-                    uiBuilder.append("      RenderBold: true\n");
-                    uiBuilder.append("    );\n");
-                    uiBuilder.append("  }\n");
-                    uiBuilder.append("  Label {\n");
-                    uiBuilder.append("    FlexWeight: 1;\n");
-                    uiBuilder.append("    Style: (\n");
-                    uiBuilder.append("      FontSize: 12,\n");
-                    uiBuilder.append("      TextColor: #cccccc,\n");
-                    uiBuilder.append("      VerticalAlignment: Center\n");
-                    uiBuilder.append("    );\n");
-                    uiBuilder.append("  }\n");
-                    uiBuilder.append("}\n");
-
-                    cmd.appendInline("#IngredientsList", uiBuilder.toString());
+                    cmd.append("#IngredientsList", HytemsUiTemplates.INGREDIENT_ENTRY);
 
                     String rowSelector = "#IngredientsList[" + i + "]";
 
                     if (ingredientId != null) {
-                        cmd.set(rowSelector + "[0][0].ItemId", ingredientId);
-                        cmd.set(rowSelector + "[0][0].Visible", true);
-                        cmd.set(rowSelector + "[2].Text", "x" + quantity);
-
                         Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
+                        cmd.set(rowSelector + " #IconBackground.Background", getRarityBackground(ingredientItem));
+                        cmd.set(rowSelector + " #ItemIcon.ItemId", ingredientId);
+                        cmd.set(rowSelector + " #ItemIcon.Visible", true);
+                        cmd.set(rowSelector + " #Quantity.Text", "x" + quantity);
+
                         String ingredientName = getTranslatedName(ingredientItem, ingredientId);
-                        cmd.set(rowSelector + "[3].Text", ingredientName);
+                        cmd.set(rowSelector + " #IngredientName.Text", ingredientName);
                     }
                     else if (resourceTypeId != null) {
                         try {
                             ResourceType resourceType = (ResourceType) ResourceType.getAssetMap().getAsset(resourceTypeId);
                             if (resourceType != null) {
-                                cmd.set(rowSelector + "[0][0].AssetPath", resourceType.getIcon());
-                                cmd.set(rowSelector + "[0][0].Visible", true);
+                                cmd.set(rowSelector + " #ResourceIcon.AssetPath", resourceType.getIcon());
+                                cmd.set(rowSelector + " #ResourceIcon.Visible", true);
 
                                 String resourceTypeName = formatResourceTypeName(resourceTypeId);
 
-                                cmd.set(rowSelector + "[2].Text", "x" + quantity);
-                                cmd.set(rowSelector + "[3].Text", "Any " + resourceTypeName);
+                                cmd.set(rowSelector + " #Quantity.Text", "x" + quantity);
+                                cmd.set(rowSelector + " #IngredientName.Text", "Any " + resourceTypeName);
                             }
                         } catch (Exception e) {
                             System.err.println("[Hytems] Error loading resource type: " + resourceTypeId);

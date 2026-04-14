@@ -1,0 +1,49 @@
+Group {
+  Anchor: (Width: 28, Height: 24);
+
+  Group #BgDefault {
+    Anchor: (Width: 28, Height: 24);
+    Background: #888888(0.9);
+    Visible: true;
+  }
+
+  Group #BgZone1 {
+    Anchor: (Width: 28, Height: 24);
+    Background: #4CAF50(0.9);
+    Visible: false;
+  }
+
+  Group #BgZone2 {
+    Anchor: (Width: 28, Height: 24);
+    Background: #FFC107(0.9);
+    Visible: false;
+  }
+
+  Group #BgZone3 {
+    Anchor: (Width: 28, Height: 24);
+    Background: #FF9800(0.9);
+    Visible: false;
+  }
+
+  Group #BgZone4 {
+    Anchor: (Width: 28, Height: 24);
+    Background: #F44336(0.9);
+    Visible: false;
+  }
+
+  Group {
+    Anchor: (Width: 28, Height: 24);
+    LayoutMode: Center;
+
+    Label #ZoneLabel {
+      Text: "";
+      Style: (
+        FontSize: 10,
+        TextColor: #ffffff,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center,
+        RenderBold: true
+      );
+    }
+  }
+}

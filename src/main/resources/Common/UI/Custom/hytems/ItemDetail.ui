@@ -19,16 +19,48 @@ Group #DetailContent {
       );
     }
 
-    Group #FavoriteButtonContainer {
+    Button #FavoriteItemButtonEmpty {
       Anchor: (Width: 32, Height: 32);
+      Style: ButtonStyle(
+        Default: (Background: #000000(0)),
+        Hovered: (Background: #000000(0)),
+        Pressed: (Background: #000000(0))
+      );
+      Visible: true;
+    }
+
+    Button #FavoriteItemButtonFilled {
+      Anchor: (Width: 32, Height: 32);
+      Style: ButtonStyle(
+        Default: (Background: #000000(0)),
+        Hovered: (Background: #000000(0)),
+        Pressed: (Background: #000000(0))
+      );
+      Visible: false;
     }
 
     Group {
       Anchor: (Width: 8);
     }
 
-    Group #PinButtonContainer {
+    Button #PinItemButtonEmpty {
       Anchor: (Width: 32, Height: 32);
+      Style: ButtonStyle(
+        Default: (Background: #000000(0)),
+        Hovered: (Background: #000000(0)),
+        Pressed: (Background: #000000(0))
+      );
+      Visible: true;
+    }
+
+    Button #PinItemButtonPinned {
+      Anchor: (Width: 32, Height: 32);
+      Style: ButtonStyle(
+        Default: (Background: #000000(0)),
+        Hovered: (Background: #000000(0)),
+        Pressed: (Background: #000000(0))
+      );
+      Visible: false;
     }
 
     Group {

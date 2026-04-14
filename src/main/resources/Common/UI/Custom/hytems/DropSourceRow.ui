@@ -1,0 +1,27 @@
+Group {
+  LayoutMode: Left;
+  Anchor: (Height: 40);
+  Padding: (Bottom: 8, Top: 8);
+  Background: #1e1e1e(0.8);
+
+  Label #SourceName {
+    Text: "";
+    Anchor: (Width: 150);
+    Padding: (Left: 8);
+    Style: (
+      FontSize: 14,
+      TextColor: #ffffff,
+      VerticalAlignment: Center,
+      RenderBold: true
+    );
+  }
+
+  Group {
+    Anchor: (Width: 8);
+  }
+
+  Group #ZoneBadges {
+    LayoutMode: Left;
+    FlexWeight: 1;
+  }
+}

@@ -1,0 +1,25 @@
+Group {
+  LayoutMode: Left;
+  Anchor: (Height: 30);
+  Padding: (Bottom: 4);
+
+  Label #SourceName {
+    Text: "";
+    Anchor: (Width: 135);
+    Style: (
+      FontSize: 12,
+      TextColor: #ffffff,
+      VerticalAlignment: Center,
+      RenderBold: true
+    );
+  }
+
+  Group {
+    Anchor: (Width: 4);
+  }
+
+  Group #ZoneBadges {
+    LayoutMode: Left;
+    FlexWeight: 1;
+  }
+}

@@ -1,0 +1,18 @@
+Group {
+  LayoutMode: Top;
+  Anchor: (Height: 40);
+  Padding: (Bottom: 8, Top: 8);
+  Background: #1e1e1e(0.8);
+
+  Label #SourceName {
+    Text: "";
+    Anchor: (Height: 24);
+    Padding: (Left: 8);
+    Style: (
+      FontSize: 14,
+      TextColor: #ffffff,
+      VerticalAlignment: Center,
+      RenderBold: true
+    );
+  }
+}

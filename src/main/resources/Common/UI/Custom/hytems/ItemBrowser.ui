@@ -262,16 +262,48 @@ Group #DropPanelContainer {
           );
         }
 
-        Group #FavoriteDropButtonContainer {
+        Button #FavoriteDropItemButtonEmpty {
           Anchor: (Width: 32, Height: 32);
+          Style: ButtonStyle(
+            Default: (Background: #000000(0)),
+            Hovered: (Background: #000000(0)),
+            Pressed: (Background: #000000(0))
+          );
+          Visible: true;
+        }
+
+        Button #FavoriteDropItemButtonFilled {
+          Anchor: (Width: 32, Height: 32);
+          Style: ButtonStyle(
+            Default: (Background: #000000(0)),
+            Hovered: (Background: #000000(0)),
+            Pressed: (Background: #000000(0))
+          );
+          Visible: false;
         }
 
         Group {
           Anchor: (Width: 8);
         }
 
-        Group #PinDropButtonContainer {
+        Button #PinDropItemButtonEmpty {
           Anchor: (Width: 32, Height: 32);
+          Style: ButtonStyle(
+            Default: (Background: #000000(0)),
+            Hovered: (Background: #000000(0)),
+            Pressed: (Background: #000000(0))
+          );
+          Visible: true;
+        }
+
+        Button #PinDropItemButtonPinned {
+          Anchor: (Width: 32, Height: 32);
+          Style: ButtonStyle(
+            Default: (Background: #000000(0)),
+            Hovered: (Background: #000000(0)),
+            Pressed: (Background: #000000(0))
+          );
+          Visible: false;
         }
 
         Group {

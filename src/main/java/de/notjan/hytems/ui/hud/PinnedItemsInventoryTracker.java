@@ -1,4 +1,4 @@
-package de.notjan.hytems.gui;
+package de.notjan.hytems.ui.hud;
 
 import com.buuz135.mhud.MultipleHUD;
 import com.hypixel.hytale.component.ArchetypeChunk;

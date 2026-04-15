@@ -1,4 +1,4 @@
-package de.notjan.hytems;
+package de.notjan.hytems.asset;
 
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;

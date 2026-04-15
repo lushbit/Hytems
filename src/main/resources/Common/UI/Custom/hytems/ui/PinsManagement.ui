@@ -1,4 +1,4 @@
-$C = "../Common.ui";
+$C = "../../Common.ui";
 
 Group {
   Anchor: (Width: 920, Height: 440);
@@ -8,7 +8,7 @@ Group {
     Anchor: (Width: 920, Height: 440);
     LayoutMode: Top;
     Padding: (Full: 20);
-    Background: (TexturePath: "../Common/ContainerFullPatch.png", Border: 23);
+    Background: (TexturePath: "../../Common/ContainerFullPatch.png", Border: 23);
 
     Label #Title {
       Text: "PINNED ITEMS";

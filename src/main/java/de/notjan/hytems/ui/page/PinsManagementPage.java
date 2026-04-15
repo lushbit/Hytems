@@ -1,7 +1,5 @@
-package de.notjan.hytems.gui;
+package de.notjan.hytems.ui.page;
 
-import com.hypixel.hytale.protocol.Color;
-import com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
@@ -11,13 +9,14 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
-import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import de.notjan.hytems.HytemsPlugin;
+import de.notjan.hytems.ui.HytemsUiTemplates;
+import de.notjan.hytems.ui.ItemUiSupport;
 
 import javax.annotation.Nonnull;
 import java.util.List;
@@ -31,44 +30,10 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
         this.playerRef = playerRef;
     }
 
-    private ItemQuality getItemQuality(Item item) {
-        if (item == null) return null;
-        try {
-            int qualityIndex = item.getQualityIndex();
-            return ItemQuality.getAssetMap().getAsset(qualityIndex);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private String getRarityBackground(Item item) {
-        ItemQuality quality = getItemQuality(item);
-        if (quality != null) {
-            String texture = quality.getSlotTexture();
-            if (texture != null) {
-                if (texture.contains("SlotCommon")) return "hytems/textures/rarity_common.png";
-                if (texture.contains("SlotUncommon")) return "hytems/textures/rarity_uncommon.png";
-                if (texture.contains("SlotRare")) return "hytems/textures/rarity_rare.png";
-                if (texture.contains("SlotEpic")) return "hytems/textures/rarity_epic.png";
-                if (texture.contains("SlotLegendary")) return "hytems/textures/rarity_legendary.png";
-            }
-        }
-        return "hytems/textures/rarity_default.png";
-    }
-
-    private String getRarityColor(Item item) {
-        ItemQuality quality = getItemQuality(item);
-        if (quality != null && quality.getTextColor() != null) {
-            Color color = quality.getTextColor();
-            return String.format("#%02x%02x%02x", color.red & 0xFF, color.green & 0xFF, color.blue & 0xFF);
-        }
-        return "#ffffff";
-    }
-
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder cmd,
                       @Nonnull UIEventBuilder events, @Nonnull Store<EntityStore> store) {
-        cmd.append("hytems/PinsManagement.ui");
+        cmd.append("hytems/ui/PinsManagement.ui");
 
         List<String> pinnedItems = HytemsPlugin.pinnedItemsManager.getPinnedItems(playerRef);
 
@@ -82,7 +47,7 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
             for (int i = 0; i < pinnedItems.size(); i++) {
                 String itemId = pinnedItems.get(i);
                 Item item = HytemsPlugin.ITEMS.get(itemId);
-                String translatedName = getTranslatedName(item, itemId);
+                String translatedName = ItemUiSupport.translatedName(playerRef, item, itemId);
 
                 buildPinnedItemCard(cmd, events, itemId, translatedName, i, pinnedItems.size());
 
@@ -104,8 +69,8 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
                                      @Nonnull String itemId, @Nonnull String translatedName,
                                      int index, int totalItems) {
         Item item = HytemsPlugin.ITEMS.get(itemId);
-        String rarityBg = getRarityBackground(item);
-        String rarityColor = getRarityColor(item);
+        String rarityBg = ItemUiSupport.rarityBackground(item);
+        String rarityColor = ItemUiSupport.rarityColor(item);
 
         boolean isFirst = (index == 0);
         boolean isLast = (index == totalItems - 1);
@@ -187,24 +152,6 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
         if (changed) {
             HytemsPlugin.pinnedItemsHudManager.registerPlayer(playerRef, store, ref);
             this.rebuild();
-        }
-    }
-
-    private String getTranslatedName(Item item, String itemId) {
-        try {
-            if (item == null) return itemId;
-            String translationKey = item.getTranslationKey();
-            if (translationKey == null || translationKey.isEmpty()) {
-                return itemId;
-            }
-
-            String translated = I18nModule.get().getMessage(this.playerRef.getLanguage(), translationKey);
-            if (translated != null && !translated.equals(translationKey)) {
-                return translated;
-            }
-            return itemId;
-        } catch (Exception e) {
-            return itemId;
         }
     }
 

@@ -9,7 +9,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import de.notjan.hytems.gui.PinsManagementPage;
+import de.notjan.hytems.ui.page.PinsManagementPage;
 
 import javax.annotation.Nonnull;
 

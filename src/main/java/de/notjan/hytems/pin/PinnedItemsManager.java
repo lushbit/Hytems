@@ -1,11 +1,13 @@
-package de.notjan.hytems.util;
+package de.notjan.hytems.pin;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import de.notjan.hytems.ui.hud.PinnedItemsInventoryTracker;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -97,21 +99,7 @@ public class PinnedItemsManager {
     }
     
     public boolean togglePin(PlayerRef playerRef, String itemId) {
-        UUID uuid = playerRef.getUuid();
-        loadedPlayers.add(uuid);
-        LinkedHashSet<String> pinnedItems = playerPinnedItems.computeIfAbsent(uuid, k -> new LinkedHashSet<>());
-        
-        boolean result;
-        if (pinnedItems.contains(itemId)) {
-            pinnedItems.remove(itemId);
-            result = false;
-        } else {
-            if (pinnedItems.size() >= MAX_PINNED_ITEMS) {
-                return false;
-            }
-            pinnedItems.add(itemId);
-            result = true;
-        }
+        boolean result = toggleItem(playerRef, itemId, playerPinnedItems, MAX_PINNED_ITEMS);
         saveData(playerRef);
         return result;
     }
@@ -122,34 +110,15 @@ public class PinnedItemsManager {
     }
     
     public List<String> getPinnedItems(PlayerRef playerRef) {
-        LinkedHashSet<String> pinnedItems = playerPinnedItems.get(playerRef.getUuid());
-        return pinnedItems != null ? new ArrayList<>(pinnedItems) : new ArrayList<>();
+        return getItems(playerRef, playerPinnedItems);
     }
     
     public void setPinnedItems(PlayerRef playerRef, Collection<String> items) {
-        UUID uuid = playerRef.getUuid();
-        loadedPlayers.add(uuid);
-        LinkedHashSet<String> pinnedItems = new LinkedHashSet<>(items);
-        playerPinnedItems.put(uuid, pinnedItems);
-        saveData(playerRef);
+        setItems(playerRef, items, playerPinnedItems);
     }
 
     public boolean toggleFavorite(PlayerRef playerRef, String itemId) {
-        UUID uuid = playerRef.getUuid();
-        loadedPlayers.add(uuid);
-        LinkedHashSet<String> favoriteItems = playerFavoriteItems.computeIfAbsent(uuid, k -> new LinkedHashSet<>());
-        
-        boolean result;
-        if (favoriteItems.contains(itemId)) {
-            favoriteItems.remove(itemId);
-            result = false;
-        } else {
-            if (favoriteItems.size() >= MAX_FAVORITE_ITEMS) {
-                return false;
-            }
-            favoriteItems.add(itemId);
-            result = true;
-        }
+        boolean result = toggleItem(playerRef, itemId, playerFavoriteItems, MAX_FAVORITE_ITEMS);
         saveData(playerRef);
         return result;
     }
@@ -160,16 +129,11 @@ public class PinnedItemsManager {
     }
 
     public List<String> getFavoriteItems(PlayerRef playerRef) {
-        LinkedHashSet<String> favoriteItems = playerFavoriteItems.get(playerRef.getUuid());
-        return favoriteItems != null ? new ArrayList<>(favoriteItems) : new ArrayList<>();
+        return getItems(playerRef, playerFavoriteItems);
     }
 
     public void setFavoriteItems(PlayerRef playerRef, Collection<String> items) {
-        UUID uuid = playerRef.getUuid();
-        loadedPlayers.add(uuid);
-        LinkedHashSet<String> favoriteItems = new LinkedHashSet<>(items);
-        playerFavoriteItems.put(uuid, favoriteItems);
-        saveData(playerRef);
+        setItems(playerRef, items, playerFavoriteItems);
     }
     
     public int getPinnedCount(PlayerRef playerRef) {
@@ -193,27 +157,44 @@ public class PinnedItemsManager {
     }
     
     public boolean movePinUp(PlayerRef playerRef, String itemId) {
-        UUID uuid = playerRef.getUuid();
-        LinkedHashSet<String> pinnedItems = playerPinnedItems.get(uuid);
-        if (pinnedItems == null || !pinnedItems.contains(itemId)) {
-            return false;
-        }
-        
-        List<String> itemList = new ArrayList<>(pinnedItems);
-        int index = itemList.indexOf(itemId);
-        
-        if (index <= 0) {
-            return false;
-        }
-        
-        Collections.swap(itemList, index, index - 1);
-        pinnedItems.clear();
-        pinnedItems.addAll(itemList);
-        saveData(playerRef);
-        return true;
+        return movePin(playerRef, itemId, -1);
     }
     
     public boolean movePinDown(PlayerRef playerRef, String itemId) {
+        return movePin(playerRef, itemId, 1);
+    }
+
+    private boolean toggleItem(PlayerRef playerRef, String itemId,
+                               Map<UUID, LinkedHashSet<String>> itemMap, int maxItems) {
+        UUID uuid = playerRef.getUuid();
+        loadedPlayers.add(uuid);
+        LinkedHashSet<String> items = itemMap.computeIfAbsent(uuid, k -> new LinkedHashSet<>());
+
+        if (items.remove(itemId)) {
+            return false;
+        }
+
+        if (items.size() >= maxItems) {
+            return false;
+        }
+
+        items.add(itemId);
+        return true;
+    }
+
+    private List<String> getItems(PlayerRef playerRef, Map<UUID, LinkedHashSet<String>> itemMap) {
+        LinkedHashSet<String> items = itemMap.get(playerRef.getUuid());
+        return items != null ? new ArrayList<>(items) : new ArrayList<>();
+    }
+
+    private void setItems(PlayerRef playerRef, Collection<String> items, Map<UUID, LinkedHashSet<String>> itemMap) {
+        UUID uuid = playerRef.getUuid();
+        loadedPlayers.add(uuid);
+        itemMap.put(uuid, new LinkedHashSet<>(items));
+        saveData(playerRef);
+    }
+
+    private boolean movePin(PlayerRef playerRef, String itemId, int offset) {
         UUID uuid = playerRef.getUuid();
         LinkedHashSet<String> pinnedItems = playerPinnedItems.get(uuid);
         if (pinnedItems == null || !pinnedItems.contains(itemId)) {
@@ -223,11 +204,12 @@ public class PinnedItemsManager {
         List<String> itemList = new ArrayList<>(pinnedItems);
         int index = itemList.indexOf(itemId);
         
-        if (index < 0 || index >= itemList.size() - 1) {
+        int targetIndex = index + offset;
+        if (targetIndex < 0 || targetIndex >= itemList.size()) {
             return false;
         }
         
-        Collections.swap(itemList, index, index + 1);
+        Collections.swap(itemList, index, targetIndex);
         pinnedItems.clear();
         pinnedItems.addAll(itemList);
         saveData(playerRef);
@@ -240,7 +222,7 @@ public class PinnedItemsManager {
         playerPinnedItems.remove(uuid);
         playerFavoriteItems.remove(uuid);
         loadedPlayers.remove(uuid);
-        de.notjan.hytems.gui.PinnedItemsInventoryTracker.clearCache(uuid);
+        PinnedItemsInventoryTracker.clearCache(uuid);
     }
 
     private static class PlayerData {

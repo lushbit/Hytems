@@ -1,4 +1,4 @@
-package de.notjan.hytems.gui;
+package de.notjan.hytems.ui.page;
 
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -6,29 +6,28 @@ import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.BenchRequirement;
-import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality;
 import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
-import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import de.notjan.hytems.HytemsPlugin;
+import de.notjan.hytems.asset.DropSourceParser;
+import de.notjan.hytems.asset.ItemSearchService;
+import de.notjan.hytems.asset.RecipeUtils;
+import de.notjan.hytems.ui.HytemsUiTemplates;
+import de.notjan.hytems.ui.ItemUiSupport;
+import de.notjan.hytems.ui.TextFormatters;
 
 import javax.annotation.Nonnull;
-import java.lang.reflect.Method;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage.BrowserData> {
 
@@ -46,45 +45,13 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private Ref<EntityStore> pageRef;
     private Store<EntityStore> pageStore;
     private PlayerRef playerRef;
+    private final ItemSearchService itemSearchService;
 
     public HytemsBrowserPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime) {
         super(playerRef, lifetime, BrowserData.CODEC);
         this.playerRef = playerRef;
+        this.itemSearchService = new ItemSearchService(playerRef);
         this.favoriteItems = new LinkedHashSet<>(HytemsPlugin.pinnedItemsManager.getFavoriteItems(playerRef));
-    }
-
-    private ItemQuality getItemQuality(Item item) {
-        if (item == null) return null;
-        try {
-            int qualityIndex = item.getQualityIndex();
-            return ItemQuality.getAssetMap().getAsset(qualityIndex);
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    private String getRarityBackground(Item item) {
-        ItemQuality quality = getItemQuality(item);
-        if (quality != null) {
-            String texture = quality.getSlotTexture();
-            if (texture != null) {
-                if (texture.contains("SlotCommon")) return "hytems/textures/rarity_common.png";
-                if (texture.contains("SlotUncommon")) return "hytems/textures/rarity_uncommon.png";
-                if (texture.contains("SlotRare")) return "hytems/textures/rarity_rare.png";
-                if (texture.contains("SlotEpic")) return "hytems/textures/rarity_epic.png";
-                if (texture.contains("SlotLegendary")) return "hytems/textures/rarity_legendary.png";
-            }
-        }
-        return "hytems/textures/rarity_default.png";
-    }
-
-    private String getRarityColor(Item item) {
-        ItemQuality quality = getItemQuality(item);
-        if (quality != null && quality.getTextColor() != null) {
-            Color color = quality.getTextColor();
-            return String.format("#%02x%02x%02x", color.red & 0xFF, color.green & 0xFF, color.blue & 0xFF);
-        }
-        return "#ffffff";
     }
 
     private void updatePinnedItemsHud() {
@@ -98,22 +65,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
-    private void setBinaryIconState(@Nonnull UICommandBuilder cmd, @Nonnull String emptySelector,
-                                    @Nonnull String filledSelector, boolean filled) {
-        cmd.set(emptySelector + ".Visible", !filled);
-        cmd.set(filledSelector + ".Visible", filled);
-    }
-
-    private void setButtonIcon(@Nonnull UICommandBuilder cmd, @Nonnull String selector, @Nonnull String iconPath) {
-        cmd.set(selector + ".Style.Default.Background", iconPath);
-        cmd.set(selector + ".Style.Hovered.Background", iconPath);
-        cmd.set(selector + ".Style.Pressed.Background", iconPath);
-    }
-
-    private void setButtonIconHoverOnly(@Nonnull UICommandBuilder cmd, @Nonnull String selector, @Nonnull String iconPath) {
-        cmd.set(selector + ".Style.Hovered.Background", iconPath);
-        cmd.set(selector + ".Style.Pressed.Background", iconPath);
-    }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder cmd,
@@ -121,7 +72,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         this.pageRef = ref;
         this.pageStore = store;
 
-        cmd.append("hytems/ItemBrowser.ui");
+        cmd.append("hytems/ui/ItemBrowser.ui");
         cmd.set("#SearchInput.Value", this.searchQuery);
         updateSearchInputColor(cmd);
         cmd.set("#DropPanelContainer.Visible", false);
@@ -303,7 +254,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         cmd.set("#DetailPanelContainer.Visible", true);
         cmd.clear("#DetailPanelContainer");
-        cmd.append("#DetailPanelContainer", "hytems/ItemDetail.ui");
+        cmd.append("#DetailPanelContainer", "hytems/ui/ItemDetail.ui");
 
         events.addEventBinding(
                 CustomUIEventBindingType.Activating,
@@ -342,10 +293,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         try {
             Item item = HytemsPlugin.ITEMS.get(selectedItemId);
-            String translatedName = getTranslatedName(item, selectedItemId);
+            String translatedName = translatedName(item, selectedItemId);
             
-            String rarityBg = getRarityBackground(item);
-            String rarityColor = getRarityColor(item);
+            String rarityBg = ItemUiSupport.rarityBackground(item);
+            String rarityColor = ItemUiSupport.rarityColor(item);
 
             cmd.set("#DetailItemIcon.ItemId", selectedItemId);
             cmd.set("#DetailItemName.Text", translatedName);
@@ -354,14 +305,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             cmd.set("#DetailItemId.Text", selectedItemId);
 
             boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, selectedItemId);
-            setBinaryIconState(cmd, "#PinItemButtonEmpty", "#PinItemButtonPinned", isPinned);
-            setButtonIcon(cmd, "#PinItemButtonEmpty", "hytems/textures/unpinned.png");
-            setButtonIcon(cmd, "#PinItemButtonPinned", "hytems/textures/pinned.png");
+            ItemUiSupport.setBinaryIconState(cmd, "#PinItemButtonEmpty", "#PinItemButtonPinned", isPinned);
+            ItemUiSupport.setButtonIcon(cmd, "#PinItemButtonEmpty", "hytems/textures/unpinned.png");
+            ItemUiSupport.setButtonIcon(cmd, "#PinItemButtonPinned", "hytems/textures/pinned.png");
 
             boolean isFav = favoriteItems.contains(selectedItemId);
-            setBinaryIconState(cmd, "#FavoriteItemButtonEmpty", "#FavoriteItemButtonFilled", isFav);
-            setButtonIcon(cmd, "#FavoriteItemButtonEmpty", "hytems/textures/star.png");
-            setButtonIcon(cmd, "#FavoriteItemButtonFilled", "hytems/textures/star_filled.png");
+            ItemUiSupport.setBinaryIconState(cmd, "#FavoriteItemButtonEmpty", "#FavoriteItemButtonFilled", isFav);
+            ItemUiSupport.setButtonIcon(cmd, "#FavoriteItemButtonEmpty", "hytems/textures/star.png");
+            ItemUiSupport.setButtonIcon(cmd, "#FavoriteItemButtonFilled", "hytems/textures/star_filled.png");
 
             if (item != null) {
                 int maxStack = item.getMaxStack();
@@ -420,7 +371,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 BenchRequirement bench = benchReqs[0];
                 int tier = bench.requiredTierLevel;
                 Item stationItem = HytemsPlugin.ITEMS.get(bench.id);
-                String stationName = getTranslatedName(stationItem, bench.id);
+                String stationName = translatedName(stationItem, bench.id);
 
                 cmd.set("#StationName.Text", stationName);
                 if (tier > 0) {
@@ -442,7 +393,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     private void displaySingleRecipe(@Nonnull UICommandBuilder cmd, @Nonnull CraftingRecipe recipe) {
         try {
-            List<MaterialQuantity> ingredients = getRecipeInputs(recipe);
+            List<MaterialQuantity> ingredients = RecipeUtils.getInputs(recipe);
 
             if (ingredients == null || ingredients.isEmpty()) {
                 cmd.set("#NoRecipeContainer.Visible", true);
@@ -473,12 +424,12 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
                     if (ingredientId != null) {
                         Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
-                        cmd.set(rowSelector + " #IconBackground.Background", getRarityBackground(ingredientItem));
+                        cmd.set(rowSelector + " #IconBackground.Background", ItemUiSupport.rarityBackground(ingredientItem));
                         cmd.set(rowSelector + " #ItemIcon.ItemId", ingredientId);
                         cmd.set(rowSelector + " #ItemIcon.Visible", true);
                         cmd.set(rowSelector + " #Quantity.Text", "x" + quantity);
 
-                        String ingredientName = getTranslatedName(ingredientItem, ingredientId);
+                        String ingredientName = translatedName(ingredientItem, ingredientId);
                         cmd.set(rowSelector + " #IngredientName.Text", ingredientName);
                     }
                     else if (resourceTypeId != null) {
@@ -488,7 +439,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                                 cmd.set(rowSelector + " #ResourceIcon.AssetPath", resourceType.getIcon());
                                 cmd.set(rowSelector + " #ResourceIcon.Visible", true);
 
-                                String resourceTypeName = formatResourceTypeName(resourceTypeId);
+                                String resourceTypeName = TextFormatters.resourceTypeName(resourceTypeId);
 
                                 cmd.set(rowSelector + " #Quantity.Text", "x" + quantity);
                                 cmd.set(rowSelector + " #IngredientName.Text", "Any " + resourceTypeName);
@@ -510,95 +461,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             cmd.set("#NoRecipeContainer.Visible", true);
             cmd.set("#RecipeContent.Visible", false);
         }
-    }
-
-    private String formatResourceTypeName(String resourceTypeId) {
-        if (resourceTypeId == null) return "Unknown";
-
-        String name = resourceTypeId;
-
-        if (name.contains(":")) {
-            name = name.substring(name.indexOf(":") + 1);
-        }
-
-        name = name.replace("_", " ");
-
-        StringBuilder result = new StringBuilder();
-
-        for (int i = 0; i < name.length(); i++) {
-            char c = name.charAt(i);
-
-            if (i == 0) {
-                result.append(Character.toUpperCase(c));
-            } else if (Character.isUpperCase(c) && i > 0 && name.charAt(i - 1) != ' ') {
-                result.append(" ").append(c);
-            } else {
-                result.append(c);
-            }
-        }
-
-        return result.toString();
-    }
-
-    private List<MaterialQuantity> getRecipeInputs(@Nonnull CraftingRecipe recipe) {
-        List<MaterialQuantity> result = new ArrayList<>();
-        Object inputsObj = null;
-
-        try {
-            Method getInputMethod = CraftingRecipe.class.getMethod("getInput");
-            inputsObj = getInputMethod.invoke(recipe);
-        } catch (Exception e) {
-            String[] methodNames = {"getInputs", "getIngredients", "getMaterials"};
-            for (String methodName : methodNames) {
-                try {
-                    Method method = CraftingRecipe.class.getMethod(methodName);
-                    inputsObj = method.invoke(recipe);
-                    if (inputsObj != null) break;
-                } catch (Exception ex) {
-                    // Continue trying other methods
-                }
-            }
-        }
-
-        if (inputsObj != null) {
-            if (inputsObj instanceof MaterialQuantity) {
-                MaterialQuantity input = (MaterialQuantity) inputsObj;
-                if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
-                    result.add(input);
-                }
-            } else if (inputsObj instanceof List) {
-                @SuppressWarnings("unchecked")
-                List<Object> inputs = (List<Object>) inputsObj;
-                for (Object obj : inputs) {
-                    if (obj instanceof MaterialQuantity) {
-                        MaterialQuantity input = (MaterialQuantity) obj;
-                        if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
-                            result.add(input);
-                        }
-                    }
-                }
-            } else if (inputsObj instanceof MaterialQuantity[]) {
-                MaterialQuantity[] inputs = (MaterialQuantity[]) inputsObj;
-                for (MaterialQuantity input : inputs) {
-                    if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
-                        result.add(input);
-                    }
-                }
-            } else if (inputsObj instanceof Collection) {
-                @SuppressWarnings("unchecked")
-                Collection<Object> inputs = (Collection<Object>) inputsObj;
-                for (Object obj : inputs) {
-                    if (obj instanceof MaterialQuantity) {
-                        MaterialQuantity input = (MaterialQuantity) obj;
-                        if (input != null && (input.getItemId() != null || input.getResourceTypeId() != null)) {
-                            result.add(input);
-                        }
-                    }
-                }
-            }
-        }
-
-        return result;
     }
 
     private void renderDropsPanel(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
@@ -646,10 +508,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         try {
             Item item = HytemsPlugin.ITEMS.get(dropsItemId);
-            String translatedName = getTranslatedName(item, dropsItemId);
+            String translatedName = translatedName(item, dropsItemId);
             
-            String rarityBg = getRarityBackground(item);
-            String rarityColor = getRarityColor(item);
+            String rarityBg = ItemUiSupport.rarityBackground(item);
+            String rarityColor = ItemUiSupport.rarityColor(item);
 
             cmd.set("#DropDetailItemIcon.ItemId", dropsItemId);
             cmd.set("#DropDetailItemName.Text", translatedName);
@@ -658,14 +520,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             cmd.set("#DropDetailItemId.Text", dropsItemId);
 
             boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, dropsItemId);
-            setBinaryIconState(cmd, "#PinDropItemButtonEmpty", "#PinDropItemButtonPinned", isPinned);
-            setButtonIcon(cmd, "#PinDropItemButtonEmpty", "hytems/textures/unpinned.png");
-            setButtonIcon(cmd, "#PinDropItemButtonPinned", "hytems/textures/pinned.png");
+            ItemUiSupport.setBinaryIconState(cmd, "#PinDropItemButtonEmpty", "#PinDropItemButtonPinned", isPinned);
+            ItemUiSupport.setButtonIcon(cmd, "#PinDropItemButtonEmpty", "hytems/textures/unpinned.png");
+            ItemUiSupport.setButtonIcon(cmd, "#PinDropItemButtonPinned", "hytems/textures/pinned.png");
 
             boolean isFav = favoriteItems.contains(dropsItemId);
-            setBinaryIconState(cmd, "#FavoriteDropItemButtonEmpty", "#FavoriteDropItemButtonFilled", isFav);
-            setButtonIcon(cmd, "#FavoriteDropItemButtonEmpty", "hytems/textures/star.png");
-            setButtonIcon(cmd, "#FavoriteDropItemButtonFilled", "hytems/textures/star_filled.png");
+            ItemUiSupport.setBinaryIconState(cmd, "#FavoriteDropItemButtonEmpty", "#FavoriteDropItemButtonFilled", isFav);
+            ItemUiSupport.setButtonIcon(cmd, "#FavoriteDropItemButtonEmpty", "hytems/textures/star.png");
+            ItemUiSupport.setButtonIcon(cmd, "#FavoriteDropItemButtonFilled", "hytems/textures/star_filled.png");
 
             if (item != null) {
                 int maxStack = item.getMaxStack();
@@ -711,13 +573,13 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             List<String> otherSources = new ArrayList<>();
 
             for (String dropSourceId : dropSources) {
-                ParsedDropSource parsed = parseDropSource(dropSourceId);
+                DropSourceParser.ParsedDropSource parsed = DropSourceParser.parse(dropSourceId);
 
-                if (parsed.mobType != null) {
+                if (parsed.isMobSource()) {
                     mobGrouping.computeIfAbsent(parsed.mobType, k -> new LinkedHashMap<>())
                             .computeIfAbsent(parsed.zone != null ? parsed.zone : "Unknown", k -> new ArrayList<>())
                             .add(parsed.tier);
-                } else if (parsed.cropType != null) {
+                } else if (parsed.isCropSource()) {
                     cropGrouping.computeIfAbsent(parsed.cropType, k -> new LinkedHashMap<>())
                             .computeIfAbsent(parsed.cropZone != null ? parsed.cropZone : "Unknown", k -> new ArrayList<>())
                             .add(parsed.cropStage);
@@ -731,7 +593,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             for (Map.Entry<String, Map<String, List<Integer>>> mobEntry : mobGrouping.entrySet()) {
                 String mobType = mobEntry.getKey();
                 Map<String, List<Integer>> zoneData = mobEntry.getValue();
-                String displayName = formatMobName(mobType);
+                String displayName = TextFormatters.mobName(mobType);
 
                 if (zoneData.size() >= 2) {
                     index = addDropSourceRowMultiZone(cmd, index, displayName, zoneData);
@@ -743,13 +605,13 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
             for (Map.Entry<String, Map<String, List<String>>> cropEntry : cropGrouping.entrySet()) {
                 String cropType = cropEntry.getKey();
-                String displayName = formatCropName(cropType);
+                String displayName = TextFormatters.cropName(cropType);
 
                 index = addCropSourceRow(cmd, index, displayName);
             }
 
             for (String source : otherSources) {
-                String displayName = formatDropSourceName(source);
+                String displayName = TextFormatters.dropSourceName(source);
                 index = addSimpleDropSourceRow(cmd, index, displayName);
             }
 
@@ -778,13 +640,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     private int addDropSourceRowWithZoneBoxes(UICommandBuilder cmd, int index, String displayName, Map<String, List<Integer>> zoneData) {
         List<Map.Entry<String, List<Integer>>> sortedZones = new ArrayList<>(zoneData.entrySet());
-        sortedZones.sort((a, b) -> {
-            String numA = a.getKey().replaceAll("[^0-9]", "");
-            String numB = b.getKey().replaceAll("[^0-9]", "");
-            if (numA.isEmpty()) return 1;
-            if (numB.isEmpty()) return -1;
-            return Integer.compare(Integer.parseInt(numA), Integer.parseInt(numB));
-        });
+        sortedZones.sort((a, b) -> DropSourceParser.compareZones(a.getKey(), b.getKey()));
 
         cmd.append("#DropSourcesList", HytemsUiTemplates.DROP_SOURCE_ROW);
         String rowSelector = "#DropSourcesList[" + index + "]";
@@ -809,25 +665,13 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     private void configureZoneBadge(@Nonnull UICommandBuilder cmd, @Nonnull String badgeSelector,
                                     @Nonnull String zone, @Nonnull String label) {
-        int zoneNumber = parseZoneNumber(zone);
+        int zoneNumber = DropSourceParser.zoneNumber(zone);
         cmd.set(badgeSelector + " #BgDefault.Visible", zoneNumber < 1 || zoneNumber > 4);
         cmd.set(badgeSelector + " #BgZone1.Visible", zoneNumber == 1);
         cmd.set(badgeSelector + " #BgZone2.Visible", zoneNumber == 2);
         cmd.set(badgeSelector + " #BgZone3.Visible", zoneNumber == 3);
         cmd.set(badgeSelector + " #BgZone4.Visible", zoneNumber == 4);
         cmd.set(badgeSelector + " #ZoneLabel.Text", label);
-    }
-
-    private int parseZoneNumber(@Nonnull String zone) {
-        String zoneDigits = zone.replaceAll("[^0-9]", "");
-        if (zoneDigits.isEmpty()) {
-            return -1;
-        }
-        try {
-            return Integer.parseInt(zoneDigits);
-        } catch (NumberFormatException ignored) {
-            return -1;
-        }
     }
 
     private int addSimpleDropSourceRow(UICommandBuilder cmd, int index, String displayName) {
@@ -842,64 +686,15 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         return addSimpleDropSourceRow(cmd, index, displayName);
     }
 
-    private static class ParsedDropSource {
-        String mobType;
-        String zone;
-        Integer tier;
-        String cropType;
-        String cropZone;
-        String cropStage;
-    }
-
-    private ParsedDropSource parseDropSource(String dropSourceId) {
-        ParsedDropSource result = new ParsedDropSource();
-        if (dropSourceId == null) return result;
-
-        String name = dropSourceId;
-        if (name.contains(":")) {
-            name = name.substring(name.indexOf(":") + 1);
-        }
-
-        Pattern cropPattern = Pattern.compile("(?i)drops?_?plant_?crop_(.+?)_(eternal_)?stage(.+)", Pattern.CASE_INSENSITIVE);
-        Matcher cropMatcher = cropPattern.matcher(name);
-
-        if (cropMatcher.find()) {
-            result.cropType = cropMatcher.group(1);
-            result.cropStage = cropMatcher.group(3);
-            result.cropZone = "Eternal";
-            return result;
-        }
-
-        Pattern zonePattern = Pattern.compile("(?i)(zone\\d+)\\s*(.+?)\\s*tier(\\d+)", Pattern.CASE_INSENSITIVE);
-        Matcher matcher = zonePattern.matcher(name);
-
-        if (matcher.find()) {
-            result.zone = matcher.group(1);
-            result.mobType = matcher.group(2).trim();
-            result.tier = Integer.parseInt(matcher.group(3));
-        } else {
-            Pattern zoneOnlyPattern = Pattern.compile("(?i)(zone\\d+)\\s*(.+)", Pattern.CASE_INSENSITIVE);
-            Matcher zoneOnlyMatcher = zoneOnlyPattern.matcher(name);
-
-            if (zoneOnlyMatcher.find()) {
-                result.zone = zoneOnlyMatcher.group(1);
-                result.mobType = zoneOnlyMatcher.group(2).trim();
-            }
-        }
-
-        return result;
-    }
-
     private String formatZoneInfo(Map<String, List<Integer>> zoneData) {
         List<String> zoneParts = new ArrayList<>();
 
         for (Map.Entry<String, List<Integer>> entry : zoneData.entrySet()) {
             String zone = entry.getKey();
             List<Integer> tiers = entry.getValue();
-            Collections.sort(tiers);
 
-            String zoneName = formatZoneName(zone);
-            String tierRange = formatTierRange(tiers);
+            String zoneName = TextFormatters.zoneName(zone);
+            String tierRange = TextFormatters.tierRange(tiers);
 
             if (!tierRange.isEmpty()) {
                 zoneParts.add(zoneName + ": " + tierRange);
@@ -911,221 +706,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         return String.join(", ", zoneParts);
     }
 
-    private String formatStageInfo(List<String> stages) {
-        if (stages == null || stages.isEmpty()) return "";
-
-        Set<String> uniqueStages = new LinkedHashSet<>(stages);
-        if (uniqueStages.size() == 1) {
-            return "Stage " + stages.get(0);
-        }
-
-        return "Stages: " + String.join(", ", uniqueStages);
-    }
-
-    private String formatZoneName(String zone) {
-        if (zone == null || zone.equalsIgnoreCase("Unknown")) return "Unknown Zone";
-
-        Pattern pattern = Pattern.compile("(?i)zone(\\d+)");
-        Matcher matcher = pattern.matcher(zone);
-
-        if (matcher.find()) {
-            return "Zone " + matcher.group(1);
-        }
-
-        return zone;
-    }
-
-    private String formatTierRange(List<Integer> tiers) {
-        if (tiers == null || tiers.isEmpty()) {
-            return "";
-        }
-
-        Set<Integer> uniqueTiers = new TreeSet<>(tiers);
-        List<Integer> sortedTiers = new ArrayList<>(uniqueTiers);
-
-        if (sortedTiers.size() == 1) {
-            return "Tier " + sortedTiers.get(0);
-        } else {
-            int min = sortedTiers.get(0);
-            int max = sortedTiers.get(sortedTiers.size() - 1);
-            return "Tier " + min + "-" + max;
-        }
-    }
-
-    private String formatMobName(String mobType) {
-        if (mobType == null) return "Unknown";
-
-        StringBuilder result = new StringBuilder();
-        boolean capitalizeNext = true;
-
-        for (int i = 0; i < mobType.length(); i++) {
-            char c = mobType.charAt(i);
-
-            if (c == '_' || c == '-') {
-                result.append(' ');
-                capitalizeNext = true;
-            } else if (capitalizeNext) {
-                result.append(Character.toUpperCase(c));
-                capitalizeNext = false;
-            } else if (Character.isUpperCase(c) && i > 0 && !Character.isUpperCase(mobType.charAt(i - 1))) {
-                result.append(' ').append(c);
-            } else {
-                result.append(c);
-            }
-        }
-
-        return result.toString().trim();
-    }
-
-    private String formatCropName(String cropType) {
-        if (cropType == null) return "Unknown Crop";
-
-        StringBuilder result = new StringBuilder();
-        boolean capitalizeNext = true;
-
-        for (int i = 0; i < cropType.length(); i++) {
-            char c = cropType.charAt(i);
-
-            if (c == '_' || c == '-') {
-                result.append(' ');
-                capitalizeNext = true;
-            } else if (capitalizeNext) {
-                result.append(Character.toUpperCase(c));
-                capitalizeNext = false;
-            } else {
-                result.append(c);
-            }
-        }
-
-        return result.toString().trim() + " Crop";
-    }
-
-    private String formatDropSourceName(String dropSourceId) {
-        if (dropSourceId == null) return "Unknown";
-
-        String name = dropSourceId;
-        if (name.contains(":")) {
-            name = name.substring(name.indexOf(":") + 1);
-        }
-
-        if (name.toLowerCase(Locale.ENGLISH).startsWith("drop_")) {
-            name = name.substring(5);
-        }
-
-        StringBuilder result = new StringBuilder();
-        boolean capitalizeNext = true;
-
-        for (int i = 0; i < name.length(); i++) {
-            char c = name.charAt(i);
-            if (c == '_' || c == '-') {
-                result.append(' ');
-                capitalizeNext = true;
-            } else if (capitalizeNext) {
-                result.append(Character.toUpperCase(c));
-                capitalizeNext = false;
-            } else if (Character.isUpperCase(c) && i > 0 && !Character.isUpperCase(name.charAt(i - 1))) {
-                result.append(' ').append(c);
-            } else {
-                result.append(c);
-            }
-        }
-
-        return result.toString().trim();
-    }
-
-
     private void filterItems() {
-        Map<String, Item> allItems = HytemsPlugin.ITEMS;
-        Map<String, Item> nonTodoItems = allItems.entrySet().stream()
-                .filter(entry -> !isFromTodoBench(entry.getKey()))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-        if (searchQuery.isEmpty()) {
-            filteredItems = nonTodoItems.entrySet().stream()
-                    .sorted((e1, e2) -> {
-                        String name1 = getTranslatedName(e1.getValue(), e1.getKey());
-                        String name2 = getTranslatedName(e2.getValue(), e2.getKey());
-                        return name1.compareToIgnoreCase(name2);
-                    })
-                    .collect(Collectors.toList());
-        } else {
-            if (searchQuery.startsWith("@")) {
-                String queryAfterAt = searchQuery.substring(1).trim();
-                String category;
-                String additionalSearch = "";
-
-                int spaceIndex = queryAfterAt.indexOf(' ');
-                if (spaceIndex > 0) {
-                    category = queryAfterAt.substring(0, spaceIndex).toLowerCase(Locale.ENGLISH);
-                    additionalSearch = queryAfterAt.substring(spaceIndex + 1).trim().toLowerCase(Locale.ENGLISH);
-                } else {
-                    category = queryAfterAt.toLowerCase(Locale.ENGLISH);
-                }
-
-                final String finalAdditionalSearch = additionalSearch;
-                filteredItems = nonTodoItems.entrySet().stream()
-                        .filter(entry -> {
-                            if (!matchesCategory(entry.getValue(), entry.getKey(), category)) {
-                                return false;
-                            }
-
-                            if (!finalAdditionalSearch.isEmpty()) {
-                                Item item = entry.getValue();
-                                if (item == null) return false;
-                                String translatedName = getTranslatedName(item, entry.getKey());
-                                return entry.getKey().toLowerCase(Locale.ENGLISH).contains(finalAdditionalSearch) ||
-                                        translatedName.toLowerCase(Locale.ENGLISH).contains(finalAdditionalSearch);
-                            }
-
-                            return true;
-                        })
-                        .sorted((e1, e2) -> {
-                            String name1 = getTranslatedName(e1.getValue(), e1.getKey());
-                            String name2 = getTranslatedName(e2.getValue(), e2.getKey());
-                            return name1.compareToIgnoreCase(name2);
-                        })
-                        .collect(Collectors.toList());
-            } else {
-                String lowerQuery = searchQuery.toLowerCase(Locale.ENGLISH);
-                filteredItems = nonTodoItems.entrySet().stream()
-                        .filter(entry -> {
-                            Item item = entry.getValue();
-                            if (item == null) return false;
-                            String translatedName = getTranslatedName(item, entry.getKey());
-                            return entry.getKey().toLowerCase(Locale.ENGLISH).contains(lowerQuery) ||
-                                    translatedName.toLowerCase(Locale.ENGLISH).contains(lowerQuery);
-                        })
-                        .sorted((e1, e2) -> {
-                            String name1 = getTranslatedName(e1.getValue(), e1.getKey());
-                            String name2 = getTranslatedName(e2.getValue(), e2.getKey());
-                            return name1.compareToIgnoreCase(name2);
-                        })
-                        .collect(Collectors.toList());
-            }
-        }
-    }
-
-    private boolean isFromTodoBench(String itemId) {
-        try {
-            List<CraftingRecipe> recipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
-            if (recipes == null || recipes.isEmpty()) {
-                return false;
-            }
-
-            for (CraftingRecipe recipe : recipes) {
-                BenchRequirement[] benchReqs = recipe.getBenchRequirement();
-                if (benchReqs != null) {
-                    for (BenchRequirement bench : benchReqs) {
-                        if (bench != null && bench.id != null &&
-                                bench.id.toLowerCase(Locale.ENGLISH).contains("todo")) {
-                            return true;
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-        }
-        return false;
+        filteredItems = itemSearchService.filter(HytemsPlugin.ITEMS, searchQuery);
     }
 
     private void updateSearchInputColor(@Nonnull UICommandBuilder cmd) {
@@ -1140,7 +722,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 category = queryAfterAt.toLowerCase(Locale.ENGLISH);
             }
 
-            boolean isValid = isValidCategory(category);
+            boolean isValid = itemSearchService.isValidCategory(category);
             if (isValid) {
                 cmd.set("#SearchInput.Style.TextColor", "#00cc00");
             } else {
@@ -1151,160 +733,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
-    private boolean isValidCategory(String category) {
-        Set<String> validCategories = new HashSet<>(Arrays.asList(
-                "weapon", "weapons", "tool", "tools", "armor", "armour",
-                "block", "blocks", "food", "consumable", "consumables",
-                "material", "materials", "resource", "resources",
-                "furniture", "craftable", "ingredient", "ingredients"
-        ));
-        return validCategories.contains(category);
-    }
-
-    private boolean matchesCategory(Item item, String itemId, String category) {
-        if (item == null) return false;
-
-        try {
-            switch (category) {
-                case "weapon":
-                case "weapons":
-                    return hasComponent(item, "Weapon") || itemId.contains("Sword") ||
-                            itemId.contains("Bow") || itemId.contains("Staff") ||
-                            itemId.contains("Axe") || itemId.contains("Dagger");
-
-                case "tool":
-                case "tools":
-                    return hasComponent(item, "Tool") || itemId.contains("Pickaxe") ||
-                            itemId.contains("Hoe") || itemId.contains("Shovel");
-
-                case "armor":
-                case "armour":
-                    return hasComponent(item, "Armor") || itemId.contains("Helmet") ||
-                            itemId.contains("Chestplate") || itemId.contains("Leggings") ||
-                            itemId.contains("Boots");
-
-                case "block":
-                case "blocks":
-                    return hasComponent(item, "Block") || isBlock(item);
-
-                case "food":
-                case "consumable":
-                case "consumables":
-                    return hasComponent(item, "Consumable") || itemId.contains("Food") ||
-                            itemId.contains("Potion") || itemId.contains("Ingredient");
-
-                case "material":
-                case "materials":
-                case "resource":
-                case "resources":
-                    return itemId.contains("Ingot") || itemId.contains("Ore") ||
-                            itemId.contains("Wood") || itemId.contains("Stone") ||
-                            itemId.contains("Plank") || itemId.contains("Bar");
-
-                case "furniture":
-                    return itemId.contains("Chair") || itemId.contains("Table") ||
-                            itemId.contains("Bed") || itemId.contains("Torch");
-
-                case "craftable":
-                    return HytemsPlugin.recipeManager.getCraftingRecipes(itemId) != null &&
-                            !HytemsPlugin.recipeManager.getCraftingRecipes(itemId).isEmpty() &&
-                            !isFromTodoBench(itemId);
-
-                case "ingredient":
-                case "ingredients":
-                    return itemId.contains("Ingredient");
-
-                default:
-                    return itemId.toLowerCase(Locale.ENGLISH).contains(category) ||
-                            hasComponent(item, category);
-            }
-        } catch (Exception e) {
-            System.err.println("[Hytems] Error checking category for " + itemId + ": " + e.getMessage());
-            return false;
-        }
-    }
-
-    private boolean isBlock(Item item) {
-        try {
-            Method getItemTypeMethod = Item.class.getMethod("getItemType");
-            Object itemType = getItemTypeMethod.invoke(item);
-            if (itemType != null) {
-                String typeName = itemType.toString().toLowerCase(Locale.ENGLISH);
-                return typeName.contains("block");
-            }
-        } catch (Exception e) {
-        }
-        return false;
-    }
-
-    private boolean hasComponent(Item item, String componentName) {
-        if (item == null || componentName == null || componentName.isEmpty()) {
-            return false;
-        }
-
-        try {
-            if (componentName.equalsIgnoreCase("Weapon")) {
-                Method method = Item.class.getMethod("getWeapon");
-                Object result = method.invoke(item);
-                if (result != null) return true;
-            }
-
-            if (componentName.equalsIgnoreCase("Tool")) {
-                Method method = Item.class.getMethod("getTool");
-                Object result = method.invoke(item);
-                if (result != null) return true;
-            }
-
-            if (componentName.equalsIgnoreCase("Armor")) {
-                Method method = Item.class.getMethod("getArmor");
-                Object result = method.invoke(item);
-                if (result != null) return true;
-            }
-
-            if (componentName.equalsIgnoreCase("Consumable")) {
-                Method method = Item.class.getMethod("getConsumable");
-                Object result = method.invoke(item);
-                if (result != null) return true;
-            }
-
-            if (componentName.equalsIgnoreCase("Block")) {
-                Method method = Item.class.getMethod("getBlock");
-                Object result = method.invoke(item);
-                if (result != null) return true;
-            }
-
-            Method hasComponentMethod = Item.class.getMethod("hasComponent", String.class);
-            Object result = hasComponentMethod.invoke(item, componentName);
-            if (result instanceof Boolean && (Boolean) result) {
-                return true;
-            }
-
-            Method getComponentMethod = Item.class.getMethod("getComponent", String.class);
-            Object component = getComponentMethod.invoke(item, componentName);
-            if (component != null) {
-                return true;
-            }
-
-            Method getItemTypeMethod = Item.class.getMethod("getItemType");
-            Object itemType = getItemTypeMethod.invoke(item);
-            if (itemType != null) {
-                String typeStr = itemType.toString().toLowerCase(Locale.ENGLISH);
-                if (typeStr.contains(componentName.toLowerCase(Locale.ENGLISH))) {
-                    return true;
-                }
-            }
-
-        } catch (Exception e) {
-        }
-
-        return false;
-    }
-
-    private String getTranslatedName(Item item, String itemId) {
-        if (item == null) return itemId;
-        String translatedName = I18nModule.get()
-                .getMessage(this.playerRef.getLanguage(), item.getTranslationKey());
-        return translatedName != null ? translatedName : itemId;
+    private String translatedName(Item item, String itemId) {
+        return ItemUiSupport.translatedName(playerRef, item, itemId);
     }
 
     private void renderItems(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
@@ -1316,7 +746,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             int col = 0;
             for (String favId : favoriteItems) {
                 Item item = HytemsPlugin.ITEMS.get(favId);
-                String translatedName = getTranslatedName(item, favId);
+                String translatedName = translatedName(item, favId);
                 String selector = "#FavoritesGrid[" + col + "]";
                 
                 renderItemButton(cmd, events, selector, favId, translatedName, true);
@@ -1344,7 +774,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 Map.Entry<String, Item> entry = filteredItems.get(i);
                 String itemId = entry.getKey();
                 Item item = entry.getValue();
-                String translatedName = getTranslatedName(item, itemId);
+                String translatedName = translatedName(item, itemId);
 
                 if (col == 0) {
                     cmd.appendInline("#ItemGrid", "Group { Anchor: (Height: 116); LayoutMode: Left; }");
@@ -1368,8 +798,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         String parentSelector = selector.substring(0, selector.lastIndexOf("["));
         Item item = HytemsPlugin.ITEMS.get(itemId);
         
-        String rarityBg = getRarityBackground(item);
-        String rarityColor = getRarityColor(item);
+        String rarityBg = ItemUiSupport.rarityBackground(item);
+        String rarityColor = ItemUiSupport.rarityColor(item);
         
         boolean isFav = favoriteItems.contains(itemId);
         boolean isPinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, itemId);
@@ -1384,10 +814,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         cmd.set(selector + " #FavoriteButtonFilled.Visible", isFav);
         cmd.set(selector + " #PinButtonEmpty.Visible", !isPinned);
         cmd.set(selector + " #PinButtonFilled.Visible", isPinned);
-        setButtonIconHoverOnly(cmd, selector + " #FavoriteButtonEmpty", "hytems/textures/star.png");
-        setButtonIcon(cmd, selector + " #FavoriteButtonFilled", "hytems/textures/star_filled.png");
-        setButtonIconHoverOnly(cmd, selector + " #PinButtonEmpty", "hytems/textures/unpinned.png");
-        setButtonIcon(cmd, selector + " #PinButtonFilled", "hytems/textures/pinned.png");
+        ItemUiSupport.setButtonIconHoverOnly(cmd, selector + " #FavoriteButtonEmpty", "hytems/textures/star.png");
+        ItemUiSupport.setButtonIcon(cmd, selector + " #FavoriteButtonFilled", "hytems/textures/star_filled.png");
+        ItemUiSupport.setButtonIconHoverOnly(cmd, selector + " #PinButtonEmpty", "hytems/textures/unpinned.png");
+        ItemUiSupport.setButtonIcon(cmd, selector + " #PinButtonFilled", "hytems/textures/pinned.png");
 
         events.addEventBinding(
                 CustomUIEventBindingType.Activating,
@@ -1563,4 +993,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         private String isFavSectionStr;
     }
 }
+
+
 

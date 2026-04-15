@@ -22,10 +22,12 @@ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import de.notjan.hytems.asset.DropListRegistry;
+import de.notjan.hytems.asset.RecipeManager;
 import de.notjan.hytems.command.HytemsCommand;
-import de.notjan.hytems.gui.PinnedItemsInventoryTracker;
-import de.notjan.hytems.util.PinnedItemsHudManager;
-import de.notjan.hytems.util.PinnedItemsManager;
+import de.notjan.hytems.ui.hud.PinnedItemsInventoryTracker;
+import de.notjan.hytems.ui.hud.PinnedItemsHudManager;
+import de.notjan.hytems.pin.PinnedItemsManager;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;

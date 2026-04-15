@@ -1,10 +1,9 @@
-package de.notjan.hytems.util;
+package de.notjan.hytems.ui.hud;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import de.notjan.hytems.gui.PinnedItemsInventoryTracker;
 
 public class PinnedItemsHudManager {
     

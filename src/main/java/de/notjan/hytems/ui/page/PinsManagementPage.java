@@ -33,7 +33,7 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder cmd,
                       @Nonnull UIEventBuilder events, @Nonnull Store<EntityStore> store) {
-        cmd.append("hytems/ui/PinsManagement.ui");
+        cmd.append(HytemsUiTemplates.PINS_MANAGEMENT);
 
         List<String> pinnedItems = HytemsPlugin.pinnedItemsManager.getPinnedItems(playerRef);
 
@@ -50,10 +50,6 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
                 String translatedName = ItemUiSupport.translatedName(playerRef, item, itemId);
 
                 buildPinnedItemCard(cmd, events, itemId, translatedName, i, pinnedItems.size());
-
-                if (i < pinnedItems.size() - 1) {
-                    cmd.appendInline("#PinnedItemsList", "Group { Anchor: (Width: 30); }");
-                }
             }
         }
 
@@ -75,10 +71,9 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
         boolean isFirst = (index == 0);
         boolean isLast = (index == totalItems - 1);
 
-        int childIndex = index * 2;
         cmd.append("#PinnedItemsList", HytemsUiTemplates.PINS_MANAGEMENT_CARD);
 
-        String cardSelector = "#PinnedItemsList[" + childIndex + "]";
+        String cardSelector = "#PinnedItemsList[" + index + "]";
         cmd.set(cardSelector + " #IconBackground.Background", rarityBg);
         cmd.set(cardSelector + " #ItemIcon.ItemId", itemId);
         cmd.set(cardSelector + " #ItemName.Text", translatedName);

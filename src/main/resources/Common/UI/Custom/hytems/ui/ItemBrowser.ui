@@ -1,523 +1,193 @@
 $C = "../../Common.ui";
 
-// Item Browser
-Group #BrowserContainer {
-  Anchor: (Width: 750, Height: 820);
+Group {
+  Anchor: (Width: 1680, Height: 1010);
   LayoutMode: Top;
-  Background: #1e1e1e(0.95);
-  Padding: (Full: 15);
 
-  Label #Title {
-    Text: "ITEM BROWSER";
-    Anchor: (Height: 30);
-    Style: (
-      FontSize: 18,
-      TextColor: #66ccff,
-      HorizontalAlignment: Center,
-      RenderBold: true
-    );
-  }
-
-  $C.@ContentSeparator {
-    Anchor: (Height: 1);
-  }
-
-  Group {
-    Anchor: (Height: 8);
-  }
-
-  Group #FavoritesSection {
-    Anchor: (Width: 720);
-    LayoutMode: Top;
-
-    Button #ToggleFavoritesButton {
-      Anchor: (Width: 720, Height: 32);
-      LayoutMode: Left;
-      Background: #66ccff(0.15);
-      Padding: (Left: 12, Right: 12);
-      
-      Label #FavoritesTitle {
-        Text: "FAVORITES";
-        FlexWeight: 1;
-        Style: (
-          FontSize: 14,
-          TextColor: #66ccff,
-          VerticalAlignment: Center,
-          RenderBold: true
-        );
-      }
-
-      Label #ToggleIndicator {
-        Text: "v";
-        Anchor: (Width: 20);
-        Style: (
-          FontSize: 14,
-          TextColor: #66ccff,
-          HorizontalAlignment: Center,
-          VerticalAlignment: Center
-        );
-      }
-    }
-
-    Group #FavoritesGrid {
-      Anchor: (Width: 720, Height: 125);
-      LayoutMode: Left;
-      Background: #252525(0.8);
-      Visible: false;
-      Padding: (Full: 8);
-    }
-  }
-
-  Group {
-    Anchor: (Height: 8);
-  }
-
-  Group #BrowserSection {
-    Anchor: (Width: 720);
-    FlexWeight: 1;
-    LayoutMode: Top;
-
-    Group #BrowserHeader {
-      Anchor: (Width: 720, Height: 32);
-      LayoutMode: Left;
-      Background: #66ccff(0.15);
-      Padding: (Left: 12, Right: 12);
-      
-      Label {
-        Text: "ITEM LIST";
-        FlexWeight: 1;
-        Style: (
-          FontSize: 14,
-          TextColor: #66ccff,
-          VerticalAlignment: Center,
-          RenderBold: true
-        );
-      }
-    }
-
-    Group #ScrollContainer {
-      FlexWeight: 1;
-      LayoutMode: TopScrolling;
-      Background: #252525(0.8);
-      Padding: (Full: 8);
-      ScrollbarStyle: $C.@DefaultScrollbarStyle;
-
-      Label #PlaceholderText {
-        Text: "No items to display";
-        Padding: (Top: 60);
-        Visible: false;
-        Style: (
-          FontSize: 13,
-          TextColor: #888888,
-          HorizontalAlignment: Center
-        );
-      }
-
-      Group #ItemGrid {
-        LayoutMode: Top;
-      }
-    }
-  }
-
-  Group {
-    Anchor: (Height: 8);
-  }
-
-  Label #ItemCount {
-    Text: "0 items found";
-    Anchor: (Height: 22);
-    Style: (
-      FontSize: 12,
-      TextColor: #aaaaaa,
-      HorizontalAlignment: Center
-    );
-  }
-
-  Group {
-    Anchor: (Height: 8);
-  }
-
-  Group #PaginationSection {
-    Anchor: (Height: 36);
-
-    Group #PrevButtonContainer {
-      Anchor: (Left: 0, Width: 100, Height: 36);
-
-      $C.@SecondaryTextButton #PrevPageButton {
-        @Text = "<";
-        @Anchor = (Width: 100, Height: 36);
-      }
-    }
-
-    Label #PageLabel {
-      Anchor: (Width: 550, Height: 36);
-      Text: "Page 1 / 1";
-      Style: (
-        FontSize: 16,
-        TextColor: #cccccc,
-        HorizontalAlignment: Center,
-        VerticalAlignment: Center
-      );
-    }
-
-    Group #NextButtonContainer {
-      Anchor: (Right: 0, Width: 100, Height: 36);
-
-      $C.@SecondaryTextButton #NextPageButton {
-        @Text = ">";
-        @Anchor = (Width: 100, Height: 36);
-      }
-    }
-  }
-
-  Group {
-    Anchor: (Height: 20);
-  }
-
-  Group #SearchSection {
-    LayoutMode: Left;
+  Group #Header {
     Anchor: (Height: 38);
+    LayoutMode: Center;
+    Padding: (Top: 7);
+    Background: (TexturePath: "../../Common/ContainerHeader.png", HorizontalBorder: 50, VerticalBorder: 0);
 
-    Label #SearchLabel {
-      Text: "Search:";
-      Anchor: (Width: 60);
+    Label #Title {
+      Anchor: (Height: 22);
+      Text: "ITEM BROWSER";
       Style: (
-        FontSize: 14,
-        TextColor: #96a9be,
-        VerticalAlignment: Center
+        FontSize: 15,
+        TextColor: #b4c8c9,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center,
+        RenderUppercase: true,
+        RenderBold: true
       );
     }
-
-    Group {
-      Anchor: (Width: 5);
-    }
-
-    Group #SearchInputContainer {
-      FlexWeight: 1;
-      LayoutMode: Top;
-
-      $C.@TextField #SearchInput {
-        @PlaceholderText = "Search items...";
-      }
-    }
-
-    Group {
-      Anchor: (Width: 8);
-    }
-
-    $C.@CancelTextButton #ClearSearchButton {
-      @Text = "X";
-      @Anchor = (Width: 44, Height: 38);
-    }
   }
 
-  Group {
-    Anchor: (Height: 10);
-  }
-
-  $C.@CancelTextButton #CloseButton {
-    @Text = "Close";
-    @Anchor = (Width: 120, Height: 40);
-  }
-}
-
-// Detail Panel Container
-Group #DetailPanelContainer {
-  Anchor: (Width: 400, Right: 175, Top: 130, Bottom: 130);
-  LayoutMode: TopScrolling;
-  Background: #1e1e1e(0.95);
-  Padding: (Full: 15);
-  ScrollbarStyle: $C.@DefaultScrollbarStyle;
-  Visible: false;
-}
-
-// Drops Panel
-Group #DropPanelContainer {
-  Anchor: (Width: 400, Right: 175, Top: 130, Bottom: 130);
-  LayoutMode: Top;
-  Background: #1e1e1e(0.95);
-  Padding: (Full: 15);
-  Visible: false;
-
-  Group #DropPanelScroll {
+  Group #BrowserContainer {
+    Anchor: (Top: -1);
     FlexWeight: 1;
-    LayoutMode: TopScrolling;
-    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+    LayoutMode: Top;
+    Padding: (Full: 16);
+    Background: (TexturePath: "../../Common/ContainerPatch.png", Border: 23);
 
-    Group #DropContent {
-      LayoutMode: Top;
+    Group {
+      Anchor: (Height: 6);
+    }
 
-      Group #Header {
-        LayoutMode: Left;
-        Anchor: (Height: 32);
+    Group #MainContent {
+      FlexWeight: 1;
+      LayoutMode: Left;
 
-        Label #PanelTitle {
-          FlexWeight: 1;
-          Text: "Item Drops";
+      Group #LeftSpacePanel {
+        Anchor: (Width: 320);
+        LayoutMode: Center;
+
+        Label {
+          Anchor: (Height: 24);
+          Text: "COMING SOON!";
           Style: (
             FontSize: 16,
-            TextColor: #ffdd66,
-            RenderBold: true,
-            VerticalAlignment: Center
+            TextColor: #b4c8c9,
+            HorizontalAlignment: Center,
+            VerticalAlignment: Center,
+            RenderUppercase: true,
+            RenderBold: true
           );
-        }
-
-        Button #FavoriteDropItemButtonEmpty {
-          Anchor: (Width: 32, Height: 32);
-          Style: ButtonStyle(
-            Default: (Background: #000000(0)),
-            Hovered: (Background: #000000(0)),
-            Pressed: (Background: #000000(0))
-          );
-          Visible: true;
-        }
-
-        Button #FavoriteDropItemButtonFilled {
-          Anchor: (Width: 32, Height: 32);
-          Style: ButtonStyle(
-            Default: (Background: #000000(0)),
-            Hovered: (Background: #000000(0)),
-            Pressed: (Background: #000000(0))
-          );
-          Visible: false;
-        }
-
-        Group {
-          Anchor: (Width: 8);
-        }
-
-        Button #PinDropItemButtonEmpty {
-          Anchor: (Width: 32, Height: 32);
-          Style: ButtonStyle(
-            Default: (Background: #000000(0)),
-            Hovered: (Background: #000000(0)),
-            Pressed: (Background: #000000(0))
-          );
-          Visible: true;
-        }
-
-        Button #PinDropItemButtonPinned {
-          Anchor: (Width: 32, Height: 32);
-          Style: ButtonStyle(
-            Default: (Background: #000000(0)),
-            Hovered: (Background: #000000(0)),
-            Pressed: (Background: #000000(0))
-          );
-          Visible: false;
-        }
-
-        Group {
-          Anchor: (Width: 8);
-        }
-
-        $C.@CancelTextButton #CloseDropButton {
-          @Text = "X";
-          @Anchor = (Width: 32, Height: 32);
         }
       }
 
       Group {
-        Anchor: (Height: 8);
+        Anchor: (Width: 12);
       }
 
-      $C.@ContentSeparator {
-        Anchor: (Height: 1);
-      }
+      Group #CenterBrowserPanel {
+        Anchor: (Width: 844);
+        LayoutMode: Top;
+        Padding: (Full: 8);
 
-      Group {
-        Anchor: (Height: 10);
-      }
+        Group #GridSection {
+          Anchor: (Height: 744);
 
-      Group #ItemHeader {
-        LayoutMode: Left;
-        Anchor: (Height: 90);
-        Padding: (Full: 10);
-        Background: #252525(0.8);
-
-        Group {
-          Anchor: (Width: 70, Height: 70);
-          Background: #ffffff(0.01);
-          LayoutMode: Center;
-
-          ItemIcon #DropDetailItemIcon {
-            Anchor: (Width: 64, Height: 64);
-            Visible: true;
+          Group #ItemGrid {
+            Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+            LayoutMode: Top;
           }
+
         }
 
         Group {
-          Anchor: (Width: 12);
+          Anchor: (Height: 10);
         }
 
-        Group #NameSection {
-          FlexWeight: 1;
+        Group #PaginationSection {
+          Anchor: (Height: 52);
           LayoutMode: Top;
-          Padding: (Top: 10);
 
-          Label #DropDetailItemName {
-            Text: "";
-            FlexWeight: 1;
+          Group {
+            Anchor: (Height: 34);
+            LayoutMode: Center;
+
+            Group #PaginationControls {
+              Anchor: (Width: 334, Height: 34);
+              LayoutMode: Left;
+
+              $C.@SecondaryTextButton #PrevPageButton {
+                @Text = "PREV";
+                @Anchor = (Width: 84, Height: 28);
+              }
+
+              Group {
+                Anchor: (Width: 10);
+              }
+
+              Group {
+                Anchor: (Width: 146, Height: 34);
+                LayoutMode: Center;
+
+                Label #PageLabel {
+                  Anchor: (Height: 34);
+                  Text: "Page 1 / 1";
+                  Style: (
+                    FontSize: 16,
+                    RenderBold: true,
+                    TextColor: #d0d7df,
+                    HorizontalAlignment: Center,
+                    VerticalAlignment: Center
+                  );
+                }
+              }
+
+              Group {
+                Anchor: (Width: 10);
+              }
+
+              $C.@SecondaryTextButton #NextPageButton {
+                @Text = "NEXT";
+                @Anchor = (Width: 84, Height: 28);
+              }
+            }
+          }
+
+          Label #ItemCountLabel {
+            Anchor: (Height: 18);
+            Text: "0 items found";
             Style: (
-              FontSize: 17,
-              TextColor: #ffffff,
-              RenderBold: true,
+              FontSize: 11,
+              RenderBold: false,
+              TextColor: #b4c8c9,
+              HorizontalAlignment: Center,
               VerticalAlignment: Center
             );
           }
         }
-      }
-
-      Group {
-        Anchor: (Height: 12);
-      }
-
-      Group #DropsContainer {
-        LayoutMode: Top;
-        Background: #252525(0.8);
-        Padding: (Full: 12);
-
-        Label #DropsTitle {
-          Text: "Obtained From";
-          Anchor: (Height: 24);
-          Style: (
-            FontSize: 16,
-            TextColor: #96a9be,
-            RenderBold: true
-          );
-        }
 
         Group {
-          Anchor: (Height: 8);
+          FlexWeight: 1;
         }
 
-        Group #NoDropsContainer {
-          Anchor: (Height: 35);
-          Visible: true;
+        Group #SearchSection {
+          LayoutMode: Center;
+          Anchor: (Height: 46);
 
-          Label #NoDropsLabel {
-            Text: "No drop sources found!";
-            Anchor: (Height: 24);
-            Style: (
-              FontSize: 14,
-              TextColor: #ff4444,
-              HorizontalAlignment: Center,
-              RenderBold: true
-            );
-          }
-        }
-
-        Group #DropsContent {
-          LayoutMode: Top;
-          Visible: false;
-
-          Group #DropsSection {
-            LayoutMode: Top;
+          Group #SearchFrame {
+            Anchor: (Width: 760, Height: 42);
+            LayoutMode: Center;
+            Padding: (Full: 2);
+            Background: $C.@InputBoxBackground;
 
             Group {
-              Anchor: (Height: 6);
-            }
+              Anchor: (Width: 752, Height: 38);
+              LayoutMode: Center;
 
-           Group #DropSourcesList {
-             LayoutMode: Top;
-             Background: #1e1e1e(0.8);
-           }
+              CompactTextField #SearchInput {
+                Anchor: (Width: 744, Height: 38);
+                CollapsedWidth: 744;
+                ExpandedWidth: 744;
+                PlaceholderText: "Search items...";
+                Style: (FontSize: 14, TextColor: #ffffff);
+                PlaceholderStyle: (TextColor: #6e7da1, FontSize: 14);
+                Padding: (Horizontal: 12, Left: 36, Right: 38);
+                Decoration: (
+                  Default: (
+                    Icon: (Texture: "../../Common/SearchIcon.png", Width: 16, Height: 16, Offset: 10),
+                    ClearButtonStyle: $C.@ClearButtonStyle
+                  )
+                );
+              }
+            }
           }
         }
       }
 
       Group {
-        Anchor: (Height: 12);
+        Anchor: (Width: 12);
       }
 
-      Group #DetailsContainer {
+      Group #InfoPanelSlot {
+        Anchor: (Width: 460);
         LayoutMode: Top;
-        Padding: (Full: 12);
-        Background: #252525(0.8);
-
-        Label #DetailsTitle {
-          Text: "Item Information";
-          Anchor: (Height: 22);
-          Style: (
-            FontSize: 15,
-            TextColor: #96a9be,
-            RenderBold: true
-          );
-        }
-
-        Group {
-          Anchor: (Height: 8);
-        }
-
-        Group #ItemIdRow {
-          LayoutMode: Left;
-          Anchor: (Height: 18);
-          Padding: (Bottom: 4);
-
-          Label {
-            Text: "ID:";
-            Anchor: (Width: 80);
-            Style: (
-              FontSize: 11,
-              TextColor: #888888
-            );
-          }
-
-          Label #DropDetailItemId {
-            FlexWeight: 1;
-            Text: "";
-            Style: (
-              FontSize: 11,
-              TextColor: #cccccc
-            );
-          }
-        }
-
-        Group #MaxStackRow {
-          LayoutMode: Left;
-          Anchor: (Height: 18);
-          Padding: (Bottom: 4);
-
-          Label {
-            Text: "Max Stack:";
-            Anchor: (Width: 80);
-            Style: (
-              FontSize: 11,
-              TextColor: #888888
-            );
-          }
-
-          Label #DropDetailMaxStack {
-            FlexWeight: 1;
-            Text: "";
-            Style: (
-              FontSize: 11,
-              TextColor: #cccccc
-            );
-          }
-        }
-
-        Group #DurabilityRow {
-          LayoutMode: Left;
-          Anchor: (Height: 18);
-
-          Label {
-            Text: "Durability:";
-            Anchor: (Width: 80);
-            Style: (
-              FontSize: 11,
-              TextColor: #888888
-            );
-          }
-
-          Label #DropDetailDurability {
-            FlexWeight: 1;
-            Text: "";
-            Style: (
-              FontSize: 11,
-              TextColor: #cccccc
-            );
-          }
-        }
+        Padding: (Full: 10);
       }
     }
   }

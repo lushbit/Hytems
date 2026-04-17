@@ -1,5 +1,5 @@
 Group {
-  Anchor: (Width: 28, Height: 24);
+  Anchor: (Width: 30, Height: 24);
 
   Group #BgDefault {
     Anchor: (Width: 28, Height: 24);

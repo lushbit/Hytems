@@ -15,11 +15,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class PinnedItemsManager {
     private static final int MAX_PINNED_ITEMS = 3;
-    private static final int MAX_FAVORITE_ITEMS = 7;
+    private static final int MAX_FAVORITE_ITEMS = 8;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     
     private final Map<UUID, LinkedHashSet<String>> playerPinnedItems = new ConcurrentHashMap<>();
     private final Map<UUID, LinkedHashSet<String>> playerFavoriteItems = new ConcurrentHashMap<>();
+    private final Map<UUID, String> playerLastViewedItems = new ConcurrentHashMap<>();
+    private final Map<UUID, String> playerLastViewedTabs = new ConcurrentHashMap<>();
     private final Set<UUID> loadedPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private Path dataDirectory;
     
@@ -49,6 +51,12 @@ public class PinnedItemsManager {
                     if (data.favoriteItems != null && !data.favoriteItems.isEmpty()) {
                         playerFavoriteItems.put(uuid, new LinkedHashSet<>(data.favoriteItems));
                     }
+                    if (data.lastViewedItem != null && !data.lastViewedItem.isEmpty()) {
+                        playerLastViewedItems.put(uuid, data.lastViewedItem);
+                    }
+                    if (data.lastViewedTab != null && !data.lastViewedTab.isEmpty()) {
+                        playerLastViewedTabs.put(uuid, data.lastViewedTab);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -70,10 +78,15 @@ public class PinnedItemsManager {
 
         LinkedHashSet<String> pinned = playerPinnedItems.get(uuid);
         LinkedHashSet<String> favorites = playerFavoriteItems.get(uuid);
+        String lastViewedItem = playerLastViewedItems.get(uuid);
+        String lastViewedTab = playerLastViewedTabs.get(uuid);
 
         Path playerFile = dataDirectory.resolve("players").resolve(uuid.toString() + ".json");
 
-        if ((pinned == null || pinned.isEmpty()) && (favorites == null || favorites.isEmpty())) {
+        if ((pinned == null || pinned.isEmpty())
+                && (favorites == null || favorites.isEmpty())
+                && (lastViewedItem == null || lastViewedItem.isEmpty())
+                && (lastViewedTab == null || lastViewedTab.isEmpty())) {
             try {
                 Files.deleteIfExists(playerFile);
             } catch (IOException e) {
@@ -85,6 +98,8 @@ public class PinnedItemsManager {
         PlayerData data = new PlayerData();
         data.pinnedItems = pinned != null ? new ArrayList<>(pinned) : new ArrayList<>();
         data.favoriteItems = favorites != null ? new ArrayList<>(favorites) : new ArrayList<>();
+        data.lastViewedItem = lastViewedItem;
+        data.lastViewedTab = lastViewedTab;
         
         try (Writer writer = Files.newBufferedWriter(playerFile)) {
             GSON.toJson(data, writer);
@@ -134,6 +149,36 @@ public class PinnedItemsManager {
 
     public void setFavoriteItems(PlayerRef playerRef, Collection<String> items) {
         setItems(playerRef, items, playerFavoriteItems);
+    }
+
+    public String getLastViewedItem(PlayerRef playerRef) {
+        return playerLastViewedItems.get(playerRef.getUuid());
+    }
+
+    public void setLastViewedItem(PlayerRef playerRef, String itemId) {
+        UUID uuid = playerRef.getUuid();
+        loadedPlayers.add(uuid);
+        if (itemId == null || itemId.isEmpty()) {
+            playerLastViewedItems.remove(uuid);
+        } else {
+            playerLastViewedItems.put(uuid, itemId);
+        }
+        saveData(playerRef);
+    }
+
+    public String getLastViewedTab(PlayerRef playerRef) {
+        return playerLastViewedTabs.get(playerRef.getUuid());
+    }
+
+    public void setLastViewedTab(PlayerRef playerRef, String tab) {
+        UUID uuid = playerRef.getUuid();
+        loadedPlayers.add(uuid);
+        if (tab == null || tab.isEmpty()) {
+            playerLastViewedTabs.remove(uuid);
+        } else {
+            playerLastViewedTabs.put(uuid, tab);
+        }
+        saveData(playerRef);
     }
     
     public int getPinnedCount(PlayerRef playerRef) {
@@ -221,6 +266,8 @@ public class PinnedItemsManager {
         saveDataForUuid(uuid);
         playerPinnedItems.remove(uuid);
         playerFavoriteItems.remove(uuid);
+        playerLastViewedItems.remove(uuid);
+        playerLastViewedTabs.remove(uuid);
         loadedPlayers.remove(uuid);
         PinnedItemsInventoryTracker.clearCache(uuid);
     }
@@ -228,5 +275,7 @@ public class PinnedItemsManager {
     private static class PlayerData {
         List<String> pinnedItems;
         List<String> favoriteItems;
+        String lastViewedItem;
+        String lastViewedTab;
     }
 }

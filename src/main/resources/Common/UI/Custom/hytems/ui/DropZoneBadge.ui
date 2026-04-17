@@ -1,38 +1,38 @@
 Group {
-  Anchor: (Width: 32, Height: 24);
+  Anchor: (Width: 36, Height: 24);
 
   Group #BgDefault {
-    Anchor: (Width: 32, Height: 24);
+    Anchor: (Left: 2, Width: 32, Height: 24);
     Background: #888888(0.9);
     Visible: true;
   }
 
   Group #BgZone1 {
-    Anchor: (Width: 32, Height: 24);
+    Anchor: (Left: 2, Width: 32, Height: 24);
     Background: #4CAF50(0.9);
     Visible: false;
   }
 
   Group #BgZone2 {
-    Anchor: (Width: 32, Height: 24);
+    Anchor: (Left: 2, Width: 32, Height: 24);
     Background: #FFC107(0.9);
     Visible: false;
   }
 
   Group #BgZone3 {
-    Anchor: (Width: 32, Height: 24);
+    Anchor: (Left: 2, Width: 32, Height: 24);
     Background: #FF9800(0.9);
     Visible: false;
   }
 
   Group #BgZone4 {
-    Anchor: (Width: 32, Height: 24);
+    Anchor: (Left: 2, Width: 32, Height: 24);
     Background: #F44336(0.9);
     Visible: false;
   }
 
   Group {
-    Anchor: (Width: 32, Height: 24);
+    Anchor: (Left: 2, Width: 32, Height: 24);
     LayoutMode: Center;
 
     Label #ZoneLabel {

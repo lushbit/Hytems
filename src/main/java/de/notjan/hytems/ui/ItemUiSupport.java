@@ -14,6 +14,7 @@ public final class ItemUiSupport {
     public static final String ICON_PIN_FILLED = "hytems/textures/pinned.png";
     public static final String ICON_STAR_EMPTY = "hytems/textures/star.png";
     public static final String ICON_STAR_FILLED = "hytems/textures/star_filled.png";
+    public static final String RARITY_DEFAULT_BACKGROUND = "hytems/textures/rarity_default.png";
 
     private ItemUiSupport() {
     }
@@ -41,7 +42,7 @@ public final class ItemUiSupport {
             if (texture.contains("SlotEpic")) return "hytems/textures/rarity_epic.png";
             if (texture.contains("SlotLegendary")) return "hytems/textures/rarity_legendary.png";
         }
-        return "hytems/textures/rarity_default.png";
+        return RARITY_DEFAULT_BACKGROUND;
     }
 
     public static String rarityColor(Item item) {

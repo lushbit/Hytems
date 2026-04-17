@@ -1,0 +1,147 @@
+$C = "../../Common.ui";
+
+Group #BrowserInfoPanel {
+  FlexWeight: 1;
+  LayoutMode: Top;
+  Padding: (Full: 0);
+
+  Group #InfoTabs {
+    Anchor: (Height: 42);
+    LayoutMode: Left;
+
+    Group {
+      FlexWeight: 1;
+    }
+
+    Group #TabButtons {
+      Anchor: (Width: 344, Height: 46);
+      LayoutMode: Left;
+
+      Group {
+        Anchor: (Width: 164, Height: 38);
+
+        TextButton #RecipesTabButton {
+          Text: "RECIPES";
+          Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+          Padding: (Horizontal: 14);
+          Style: TextButtonStyle(
+            Default: (
+              Background: PatchStyle(TexturePath: "../../Common/BackButton.png", Border: 8),
+              LabelStyle: (FontSize: 16, FontName: "Secondary", TextColor: #ffcc66, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, RenderBold: true)
+            ),
+            Hovered: (
+              Background: PatchStyle(TexturePath: "../../Common/BackButtonHovered.png", Border: 8),
+              LabelStyle: (FontSize: 16, FontName: "Secondary", TextColor: #ffcc66, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, RenderBold: true)
+            ),
+            Pressed: (
+              Background: PatchStyle(TexturePath: "../../Common/BackButtonPressed.png", Border: 8),
+              LabelStyle: (FontSize: 16, FontName: "Secondary", TextColor: #ffcc66, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, RenderBold: true)
+            )
+          );
+        }
+
+        Group #RecipesTabOverlay {
+          Anchor: (Left: 8, Right: 8, Bottom: -6, Height: 96);
+          Background: "../../Common/TabOverlay.png";
+          Visible: false;
+        }
+
+        Group #RecipesTabSelectedOverlay {
+          Anchor: (Left: 8, Right: 8, Bottom: -6, Height: 96);
+          Background: "../../Common/TabSelectedOverlay.png";
+          Visible: true;
+        }
+      }
+
+      Group {
+        Anchor: (Width: 16);
+      }
+
+      Group {
+        Anchor: (Width: 164, Height: 38);
+
+        TextButton #DropsTabButton {
+          Text: "DROPS";
+          Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+          Padding: (Horizontal: 14);
+          Style: TextButtonStyle(
+            Default: (
+              Background: PatchStyle(TexturePath: "../../Common/BackButton.png", Border: 8),
+              LabelStyle: (FontSize: 16, FontName: "Secondary", TextColor: #b4c8c9, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, RenderBold: false)
+            ),
+            Hovered: (
+              Background: PatchStyle(TexturePath: "../../Common/BackButtonHovered.png", Border: 8),
+              LabelStyle: (FontSize: 16, FontName: "Secondary", TextColor: #b4c8c9, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, RenderBold: false)
+            ),
+            Pressed: (
+              Background: PatchStyle(TexturePath: "../../Common/BackButtonPressed.png", Border: 8),
+              LabelStyle: (FontSize: 16, FontName: "Secondary", TextColor: #b4c8c9, HorizontalAlignment: Center, VerticalAlignment: Center, RenderUppercase: true, RenderBold: false)
+            )
+          );
+        }
+
+        Group #DropsTabOverlay {
+          Anchor: (Left: 8, Right: 8, Bottom: -6, Height: 96);
+          Background: "../../Common/TabOverlay.png";
+          Visible: false;
+        }
+
+        Group #DropsTabSelectedOverlay {
+          Anchor: (Left: 8, Right: 8, Bottom: -6, Height: 96);
+          Background: "../../Common/TabSelectedOverlay.png";
+          Visible: false;
+        }
+      }
+    }
+
+    Group {
+      FlexWeight: 1;
+    }
+  }
+
+  Group {
+    Anchor: (Height: 0);
+  }
+
+  Group #InfoContentContainer {
+    Anchor: (Height: 520);
+    LayoutMode: Top;
+    Padding: (Full: 14);
+    Background: (TexturePath: "../../Common/ContainerFullPatch.png", Border: 23);
+
+    Group #InfoModeContent {
+      Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+
+      Group #NoItemSelectedContainer {
+        Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+        LayoutMode: Center;
+        Visible: false;
+
+        Label #NoItemSelectedText {
+          Text: "No item selected";
+          Anchor: (Height: 28);
+          Style: (
+            FontSize: 16,
+            TextColor: #a4b1bf,
+            HorizontalAlignment: Center,
+            VerticalAlignment: Center
+          );
+        }
+      }
+
+      Group #DetailPanelContainer {
+        Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+        Visible: true;
+      }
+
+      Group #DropPanelContainer {
+        Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+        Visible: false;
+      }
+    }
+  }
+}

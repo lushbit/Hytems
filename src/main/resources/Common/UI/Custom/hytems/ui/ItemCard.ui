@@ -1,80 +1,55 @@
-Button {
-  Anchor: (Width: 92, Height: 108, Right: 7, Bottom: 7);
-  Background: #2a2a2a(0.7);
-  Padding: (Full: 6);
-  Style: ButtonStyle(
-    Default: (Background: #2a2a2a(0.7)),
-    Hovered: (Background: #3a3a3a(0.85)),
-    Pressed: (Background: #4a4a4a(0.9))
-  );
+Group {
+  Anchor: (Width: 95, Height: 87);
+  LayoutMode: Center;
 
-  Group {
-    LayoutMode: Top;
-    Anchor: (Width: 80, Height: 96);
+  Group #RarityBackground {
+    Anchor: (Width: 93, Height: 84);
+    Background: "hytems/textures/rarity_default.png";
 
-    Group #RarityBackground {
-      Anchor: (Width: 80, Height: 80);
-      Background: "hytems/textures/rarity_default.png";
+    Label #ItemName {
+      Text: "";
+      Anchor: (Left: 4, Right: 4, Bottom: 3, Height: 15);
+      Style: (
+        FontSize: 11,
+        TextColor: #ffffff,
+        RenderBold: true,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center,
+        Wrap: false
+      );
+    }
+
+    Group #IconLayer {
+      Anchor: (Top: 1, Left: 1, Right: 1, Bottom: 16);
       LayoutMode: Center;
 
       ItemIcon #ItemIcon {
-        Anchor: (Width: 72, Height: 72);
+        Anchor: (Width: 70, Height: 65);
         Visible: true;
       }
     }
 
-    Group {
-      Anchor: (Height: 2);
-    }
-
-    Label #ItemName {
-      Text: "";
-      Anchor: (Height: 14);
-      Style: (
-        FontSize: 11,
-        TextColor: #ffffff,
-        HorizontalAlignment: Center
+    Button #InteractButton {
+      Anchor: (Top: 3, Bottom: 3, Left: 3, Right: 3);
+      Background: #000000(0);
+      Padding: (Full: 0);
+      Style: ButtonStyle(
+        Default: (Background: #000000(0)),
+        Hovered: (Background: #7db0db(0.2)),
+        Pressed: (Background: #7db0db(0.3))
       );
     }
-  }
 
-  Button #FavoriteButtonEmpty {
-    Anchor: (Width: 24, Height: 24, Right: 2, Top: 2);
-    Style: ButtonStyle(
-      Default: (Background: #000000(0)),
-      Hovered: (Background: #000000(0)),
-      Pressed: (Background: #000000(0))
-    );
-    Visible: true;
-  }
+    Group #PinnedMarker {
+      Anchor: (Top: 3, Left: 3, Width: 20, Height: 20);
+      Background: (TexturePath: "hytems/textures/pinned.png");
+      Visible: false;
+    }
 
-  Button #FavoriteButtonFilled {
-    Anchor: (Width: 24, Height: 24, Right: 2, Top: 2);
-    Style: ButtonStyle(
-      Default: (Background: #000000(0)),
-      Hovered: (Background: #000000(0)),
-      Pressed: (Background: #000000(0))
-    );
-    Visible: false;
-  }
-
-  Button #PinButtonEmpty {
-    Anchor: (Width: 24, Height: 24, Left: 2, Top: 2);
-    Style: ButtonStyle(
-      Default: (Background: #000000(0)),
-      Hovered: (Background: #000000(0)),
-      Pressed: (Background: #000000(0))
-    );
-    Visible: true;
-  }
-
-  Button #PinButtonFilled {
-    Anchor: (Width: 24, Height: 24, Left: 2, Top: 2);
-    Style: ButtonStyle(
-      Default: (Background: #000000(0)),
-      Hovered: (Background: #000000(0)),
-      Pressed: (Background: #000000(0))
-    );
-    Visible: false;
+    Group #FavoriteMarker {
+      Anchor: (Top: 3, Right: 3, Width: 20, Height: 20);
+      Background: (TexturePath: "hytems/textures/star_filled.png");
+      Visible: false;
+    }
   }
 }

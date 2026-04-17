@@ -2,7 +2,7 @@ Group {
   LayoutMode: Top;
   Anchor: (Width: 280);
   Background: #1e1e1e(0.7);
-  Padding: (Full: 8);
+  Padding: (Left: 8, Right: 8, Top: 8, Bottom: 14);
 
   Group #Header {
     LayoutMode: Left;
@@ -69,6 +69,17 @@ Group {
     LayoutMode: Top;
     Padding: (Top: 8);
     Visible: false;
+  }
+
+  Label #MoreDropsLabel {
+    Text: "";
+    Anchor: (Height: 16);
+    Padding: (Top: 4);
+    Visible: false;
+    Style: (
+      FontSize: 12,
+      TextColor: #888888
+    );
   }
 
   Label #EmptyInfo {

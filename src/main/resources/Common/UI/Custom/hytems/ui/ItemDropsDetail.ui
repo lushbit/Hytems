@@ -1,6 +1,6 @@
 $C = "../../Common.ui";
 
-Group #DetailContent {
+Group #DropDetailContent {
   LayoutMode: Top;
 
   Group #ItemHeader {
@@ -14,11 +14,12 @@ Group #DetailContent {
       Background: #ffffff(0.01);
       LayoutMode: Center;
 
-      ItemIcon #DetailItemIcon {
+      ItemIcon #DropDetailItemIcon {
         Anchor: (Width: 64, Height: 64);
         Visible: true;
       }
     }
+
     Group {
       Anchor: (Width: 12);
     }
@@ -28,7 +29,7 @@ Group #DetailContent {
       LayoutMode: Top;
       Padding: (Top: 16);
 
-      Label #DetailItemName {
+      Label #DropDetailItemName {
         Text: "";
         Anchor: (Height: 30);
         Style: (
@@ -50,7 +51,7 @@ Group #DetailContent {
         Group {
           Anchor: (Width: 26, Height: 26);
 
-          Button #DetailPinButtonEmpty {
+          Button #DropPinButtonEmpty {
             Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
             Background: #000000(0);
             Padding: (Full: 0);
@@ -61,7 +62,7 @@ Group #DetailContent {
             );
           }
 
-          Button #DetailPinButtonFilled {
+          Button #DropPinButtonFilled {
             Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
             Background: #000000(0);
             Padding: (Full: 0);
@@ -81,7 +82,7 @@ Group #DetailContent {
         Group {
           Anchor: (Width: 26, Height: 26);
 
-          Button #DetailFavoriteButtonEmpty {
+          Button #DropFavoriteButtonEmpty {
             Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
             Background: #000000(0);
             Padding: (Full: 0);
@@ -92,7 +93,7 @@ Group #DetailContent {
             );
           }
 
-          Button #DetailFavoriteButtonFilled {
+          Button #DropFavoriteButtonFilled {
             Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
             Background: #000000(0);
             Padding: (Full: 0);
@@ -107,17 +108,18 @@ Group #DetailContent {
       }
     }
   }
+
   Group {
     Anchor: (Height: 12);
   }
 
-  Group #RecipeContainer {
+  Group #DropsContainer {
     LayoutMode: Top;
     Background: #252525(0.8);
     Padding: (Full: 12);
 
-    Label #RecipeTitle {
-      Text: "Recipes";
+    Label #DropsTitle {
+      Text: "Obtained From";
       Anchor: (Height: 24);
       Style: (
         FontSize: 16,
@@ -130,12 +132,12 @@ Group #DetailContent {
       Anchor: (Height: 8);
     }
 
-    Group #NoRecipeContainer {
+    Group #NoDropsContainer {
       Anchor: (Height: 35);
       Visible: true;
 
-      Label #NoRecipeLabel {
-        Text: "No recipe found!";
+      Label #NoDropsLabel {
+        Text: "No drop sources found!";
         Anchor: (Height: 24);
         Style: (
           FontSize: 14,
@@ -146,81 +148,20 @@ Group #DetailContent {
       }
     }
 
-    Group #RecipeContent {
+    Group #DropsContent {
       LayoutMode: Top;
       Visible: false;
 
-      Group #CraftingStationSection {
+      Group #DropsSection {
         LayoutMode: Top;
-        Padding: (Bottom: 10);
-
-        Label #CraftingStationLabel {
-          Text: "Can be crafted at:";
-          Anchor: (Height: 20);
-          Style: (
-            FontSize: 14,
-            TextColor: #96a9be
-          );
-        }
 
         Group {
           Anchor: (Height: 6);
         }
 
-        Group #StationInfo {
-          LayoutMode: Top;
-          Padding: (Full: 10);
-          Background: #1e1e1e(0.8);
-
-          Label #StationName {
-            Text: "";
-            Anchor: (Height: 22);
-            Style: (
-              FontSize: 15,
-              TextColor: #ffffff,
-              RenderBold: true
-            );
-          }
-
-          Group {
-            Anchor: (Height: 4);
-          }
-
-          Label #StationTier {
-            Text: "";
-            Anchor: (Height: 16);
-            Style: (
-              FontSize: 12,
-              TextColor: #aaaaaa
-            );
-          }
-        }
-      }
-
-      Group {
-        Anchor: (Height: 10);
-      }
-
-      Group #IngredientsSection {
-        LayoutMode: Top;
-
-        Label #IngredientsLabel {
-          Text: "Items needed to craft:";
-          Anchor: (Height: 20);
-          Style: (
-            FontSize: 14,
-            TextColor: #96a9be
-          );
-        }
-
-        Group {
-          Anchor: (Height: 6);
-        }
-
-        Group #IngredientsList {
+        Group #DropSourcesList {
           LayoutMode: Top;
           Background: #1e1e1e(0.8);
-          Padding: (Full: 8);
         }
       }
     }
@@ -263,7 +204,7 @@ Group #DetailContent {
         );
       }
 
-      Label #DetailItemId {
+      Label #DropDetailItemId {
         FlexWeight: 1;
         Text: "";
         Style: (
@@ -287,9 +228,9 @@ Group #DetailContent {
         );
       }
 
-      Label #DetailMaxStack {
+      Label #DropDetailMaxStack {
         FlexWeight: 1;
-        Text: "-";
+        Text: "";
         Style: (
           FontSize: 11,
           TextColor: #cccccc
@@ -310,9 +251,9 @@ Group #DetailContent {
         );
       }
 
-      Label #DetailDurability {
+      Label #DropDetailDurability {
         FlexWeight: 1;
-        Text: "-";
+        Text: "";
         Style: (
           FontSize: 11,
           TextColor: #cccccc

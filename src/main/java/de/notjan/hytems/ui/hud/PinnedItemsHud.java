@@ -39,7 +39,7 @@ public class PinnedItemsHud extends CustomUIHud {
 
     @Override
     protected void build(@Nonnull UICommandBuilder cmd) {
-        cmd.append("hytems/hud/PinnedItems.ui");
+        cmd.append(HytemsUiTemplates.PINNED_ITEMS_HUD);
         updatePinnedItems(cmd);
     }
     
@@ -50,12 +50,7 @@ public class PinnedItemsHud extends CustomUIHud {
 
         for (int itemIndex = 0; itemIndex < pinnedItems.size(); itemIndex++) {
             String itemId = pinnedItems.get(itemIndex);
-            int childIndex = itemIndex * 2;
-            buildPinnedItemBox(cmd, itemId, childIndex);
-
-            if (itemIndex < pinnedItems.size() - 1) {
-                cmd.appendInline("#PinnedItemsList", "Group { Anchor: (Height: 6); }");
-            }
+            buildPinnedItemBox(cmd, itemId, itemIndex);
         }
     }
     
@@ -90,7 +85,7 @@ public class PinnedItemsHud extends CustomUIHud {
         }
         
         if (hasDrops) {
-            displayDrops(cmd, selector + " #DropsList", dropSources);
+            displayDrops(cmd, selector, dropSources);
         }
     }
     
@@ -103,8 +98,8 @@ public class PinnedItemsHud extends CustomUIHud {
             
             Map<String, Integer> playerInventory = PinnedItemsInventoryTracker.scanPlayerInventory(store, ref);
             
-            for (int i = 0; i < ingredients.size(); i++) {
-                MaterialQuantity ingredient = ingredients.get(i);
+            int renderedIndex = 0;
+            for (MaterialQuantity ingredient : ingredients) {
                 if (ingredient == null) continue;
                 
                 String ingredientId = ingredient.getItemId();
@@ -119,11 +114,11 @@ public class PinnedItemsHud extends CustomUIHud {
                 }
                 
                 String countColor = inventoryCount >= quantity ? "#4CAF50" : "#F44336";
-                cmd.append(listSelector, HytemsUiTemplates.PINNED_HUD_INGREDIENT_ENTRY);
-                
-                String rowSelector = listSelector + "[" + i + "]";
+                String rowSelector = listSelector + "[" + renderedIndex + "]";
                 
                 if (ingredientId != null) {
+                    cmd.append(listSelector, HytemsUiTemplates.PINNED_HUD_INGREDIENT_ENTRY);
+                    renderedIndex++;
                     Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
                     cmd.set(rowSelector + " #IconBackground.Background", ItemUiSupport.rarityBackground(ingredientItem));
                     cmd.set(rowSelector + " #ItemIcon.ItemId", ingredientId);
@@ -139,6 +134,10 @@ public class PinnedItemsHud extends CustomUIHud {
                     try {
                         ResourceType resourceType = (ResourceType) ResourceType.getAssetMap().getAsset(resourceTypeId);
                         if (resourceType != null) {
+                            cmd.append(listSelector, HytemsUiTemplates.PINNED_HUD_INGREDIENT_ENTRY);
+                            renderedIndex++;
+                            cmd.set(rowSelector + " #IconBackground.Background", ItemUiSupport.RARITY_DEFAULT_BACKGROUND);
+                            cmd.set(rowSelector + " #ItemIcon.Visible", false);
                             cmd.set(rowSelector + " #ResourceIcon.AssetPath", resourceType.getIcon());
                             cmd.set(rowSelector + " #ResourceIcon.Visible", true);
                             
@@ -160,8 +159,9 @@ public class PinnedItemsHud extends CustomUIHud {
         }
     }
     
-    private void displayDrops(@Nonnull UICommandBuilder cmd, @Nonnull String listSelector, @Nonnull List<String> dropSources) {
+    private void displayDrops(@Nonnull UICommandBuilder cmd, @Nonnull String itemSelector, @Nonnull List<String> dropSources) {
         try {
+            String listSelector = itemSelector + " #DropsList";
             Map<String, Map<String, List<Integer>>> mobGrouping = new LinkedHashMap<>();
             Map<String, Map<String, List<String>>> cropGrouping = new LinkedHashMap<>();
             int otherSourcesCount = 0;
@@ -209,8 +209,6 @@ public class PinnedItemsHud extends CustomUIHud {
                     configureZoneBadge(cmd, badgeSelector, zone, "Z" + zoneNumber);
                     badgeIndex++;
 
-                    cmd.appendInline(badgesSelector, "Group { Anchor: (Width: 2); }");
-                    badgeIndex++;
                 }
                 dropIndex++;
             }
@@ -219,19 +217,9 @@ public class PinnedItemsHud extends CustomUIHud {
             int remainingDrops = totalDropSources - dropIndex;
             
             if (remainingDrops > 0) {
-                cmd.appendInline(listSelector,
-                        "Label {\n" +
-                                "  Text: \"\";\n" +
-                                "  Anchor: (Height: 16);\n" +
-                                "  Padding: (Top: 4);\n" +
-                                "  Style: (\n" +
-                                "    FontSize: 12,\n" +
-                                "    TextColor: #888888\n" +
-                                "  );\n" +
-                                "}"
-                );
                 String suffix = remainingDrops == 1 ? "" : "s";
-                cmd.set(listSelector + "[" + dropIndex + "].Text", "... and " + remainingDrops + " other drop" + suffix + " (/h)");
+                cmd.set(itemSelector + " #MoreDropsLabel.Visible", true);
+                cmd.set(itemSelector + " #MoreDropsLabel.Text", "... and " + remainingDrops + " other drop" + suffix + " (/h)");
             }
         } catch (Exception e) {
             System.err.println("[Hytems] Error displaying drops: " + e.getMessage());

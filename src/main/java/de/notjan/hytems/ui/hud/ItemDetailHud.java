@@ -44,7 +44,7 @@ public class ItemDetailHud extends CustomUIHud {
     public void build(@Nonnull UICommandBuilder cmd) {
         if (!visible) return;
 
-        cmd.append("hytems/ui/ItemDetail.ui");
+        cmd.append(HytemsUiTemplates.ITEM_DETAIL);
         updateDetailPanel(cmd);
     }
 
@@ -109,40 +109,47 @@ public class ItemDetailHud extends CustomUIHud {
             return;
         }
 
-        for (int i = 0; i < ingredients.size(); i++) {
-            appendIngredient(cmd, "#IngredientsList[" + i + "]", ingredients.get(i));
+        int renderedIndex = 0;
+        for (MaterialQuantity ingredient : ingredients) {
+            if (appendIngredient(cmd, "#IngredientsList[" + renderedIndex + "]", ingredient)) {
+                renderedIndex++;
+            }
         }
     }
 
-    private void appendIngredient(@Nonnull UICommandBuilder cmd, @Nonnull String rowSelector, @Nonnull MaterialQuantity ingredient) {
+    private boolean appendIngredient(@Nonnull UICommandBuilder cmd, @Nonnull String rowSelector, @Nonnull MaterialQuantity ingredient) {
         String ingredientId = ingredient.getItemId();
         String resourceTypeId = ingredient.getResourceTypeId();
-        if (ingredientId == null && resourceTypeId == null) return;
-
-        cmd.append("#IngredientsList", HytemsUiTemplates.INGREDIENT_ENTRY);
+        if (ingredientId == null && resourceTypeId == null) return false;
 
         if (ingredientId != null) {
+            cmd.append("#IngredientsList", HytemsUiTemplates.INGREDIENT_ENTRY);
             Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
             cmd.set(rowSelector + " #IconBackground.Background", ItemUiSupport.rarityBackground(ingredientItem));
             cmd.set(rowSelector + " #ItemIcon.ItemId", ingredientId);
             cmd.set(rowSelector + " #ItemIcon.Visible", true);
             cmd.set(rowSelector + " #Quantity.Text", "x" + ingredient.getQuantity());
             cmd.set(rowSelector + " #IngredientName.Text", ItemUiSupport.translatedName(playerRef, ingredientItem, ingredientId));
-            return;
+            return true;
         }
 
         try {
             ResourceType resourceType = (ResourceType) ResourceType.getAssetMap().getAsset(resourceTypeId);
             if (resourceType != null) {
+                cmd.append("#IngredientsList", HytemsUiTemplates.INGREDIENT_ENTRY);
+                cmd.set(rowSelector + " #IconBackground.Background", ItemUiSupport.RARITY_DEFAULT_BACKGROUND);
+                cmd.set(rowSelector + " #ItemIcon.Visible", false);
                 cmd.set(rowSelector + " #ResourceIcon.AssetPath", resourceType.getIcon());
                 cmd.set(rowSelector + " #ResourceIcon.Visible", true);
                 cmd.set(rowSelector + " #Quantity.Text", "x" + ingredient.getQuantity());
                 cmd.set(rowSelector + " #IngredientName.Text", "Any " + TextFormatters.resourceTypeName(resourceTypeId));
+                return true;
             }
         } catch (Exception e) {
             System.err.println("[Hytems] Error loading resource type: " + resourceTypeId);
             e.printStackTrace();
         }
+        return false;
     }
 
     private void showNoRecipe(@Nonnull UICommandBuilder cmd) {

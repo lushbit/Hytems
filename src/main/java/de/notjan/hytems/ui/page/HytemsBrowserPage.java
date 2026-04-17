@@ -1005,17 +1005,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     }
 
     private List<Map.Entry<String, Item>> getBodyGridEntries() {
-        if (favoriteItems.isEmpty()) {
-            return filteredItems;
-        }
-
-        List<Map.Entry<String, Item>> bodyItems = new ArrayList<>();
-        for (Map.Entry<String, Item> entry : filteredItems) {
-            if (!favoriteItems.contains(entry.getKey())) {
-                bodyItems.add(entry);
-            }
-        }
-        return bodyItems;
+        return filteredItems;
     }
 
     private void renderItemButton(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events,

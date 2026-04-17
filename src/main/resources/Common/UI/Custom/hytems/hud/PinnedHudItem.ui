@@ -1,96 +1,102 @@
 Group {
   LayoutMode: Top;
   Anchor: (Width: 280);
-  Background: #1e1e1e(0.7);
-  Padding: (Left: 8, Right: 8, Top: 8, Bottom: 14);
+  Padding: (Bottom: 8);
 
-  Group #Header {
-    LayoutMode: Left;
-    Anchor: (Height: 44);
-    Padding: (Bottom: 8);
+  Group {
+    LayoutMode: Top;
+    Anchor: (Width: 280);
+    Background: #1e1e1e(0.7);
+    Padding: (Left: 8, Right: 8, Top: 8, Bottom: 14);
 
-    Group #RarityBackground {
-      Anchor: (Width: 40, Height: 40);
-      Background: "hytems/textures/rarity_default.png";
-      LayoutMode: Center;
+    Group #Header {
+      LayoutMode: Left;
+      Anchor: (Height: 44);
+      Padding: (Bottom: 8);
 
-      ItemIcon #ItemIcon {
-        Anchor: (Width: 36, Height: 36);
-        Visible: true;
+      Group #RarityBackground {
+        Anchor: (Width: 40, Height: 40);
+        Background: "hytems/textures/rarity_default.png";
+        LayoutMode: Center;
+
+        ItemIcon #ItemIcon {
+          Anchor: (Width: 36, Height: 36);
+          Visible: true;
+        }
+      }
+
+      Group {
+        Anchor: (Width: 8);
+      }
+
+      Label #ItemName {
+        FlexWeight: 1;
+        Style: (
+          FontSize: 14,
+          TextColor: #ffffff,
+          VerticalAlignment: Center,
+          RenderBold: true
+        );
       }
     }
 
-    Group {
-      Anchor: (Width: 8);
-    }
-
-    Label #ItemName {
-      FlexWeight: 1;
+    Label #RecipeTitle {
+      Text: "Recipe:";
+      Anchor: (Height: 20);
+      Padding: (Top: 4, Bottom: 4);
+      Visible: false;
       Style: (
-        FontSize: 14,
-        TextColor: #ffffff,
-        VerticalAlignment: Center,
+        FontSize: 13,
+        TextColor: #66ccff,
         RenderBold: true
       );
     }
-  }
 
-  Label #RecipeTitle {
-    Text: "Recipe:";
-    Anchor: (Height: 20);
-    Padding: (Top: 4, Bottom: 4);
-    Visible: false;
-    Style: (
-      FontSize: 13,
-      TextColor: #66ccff,
-      RenderBold: true
-    );
-  }
+    Group #IngredientsList {
+      LayoutMode: Top;
+      Padding: (Top: 8);
+      Visible: false;
+    }
 
-  Group #IngredientsList {
-    LayoutMode: Top;
-    Padding: (Top: 8);
-    Visible: false;
-  }
+    Label #DropsTitle {
+      Text: "Drops from:";
+      Anchor: (Height: 20);
+      Padding: (Top: 6, Bottom: 4);
+      Visible: false;
+      Style: (
+        FontSize: 13,
+        TextColor: #66ccff,
+        RenderBold: true
+      );
+    }
 
-  Label #DropsTitle {
-    Text: "Drops from:";
-    Anchor: (Height: 20);
-    Padding: (Top: 6, Bottom: 4);
-    Visible: false;
-    Style: (
-      FontSize: 13,
-      TextColor: #66ccff,
-      RenderBold: true
-    );
-  }
+    Group #DropsList {
+      LayoutMode: Top;
+      Padding: (Top: 8);
+      Visible: false;
+    }
 
-  Group #DropsList {
-    LayoutMode: Top;
-    Padding: (Top: 8);
-    Visible: false;
-  }
+    Label #MoreDropsLabel {
+      Text: "";
+      Anchor: (Height: 16);
+      Padding: (Top: 4);
+      Visible: false;
+      Style: (
+        FontSize: 12,
+        TextColor: #888888
+      );
+    }
 
-  Label #MoreDropsLabel {
-    Text: "";
-    Anchor: (Height: 16);
-    Padding: (Top: 4);
-    Visible: false;
-    Style: (
-      FontSize: 12,
-      TextColor: #888888
-    );
-  }
-
-  Label #EmptyInfo {
-    Text: "No recipe or drops available";
-    Anchor: (Height: 16);
-    Padding: (Top: 2);
-    Visible: false;
-    Style: (
-      FontSize: 9,
-      TextColor: #888888,
-      HorizontalAlignment: Center
-    );
+    Label #EmptyInfo {
+      Text: "No recipe or drops available";
+      Anchor: (Height: 16);
+      Padding: (Top: 2);
+      Visible: false;
+      Style: (
+        FontSize: 9,
+        TextColor: #888888,
+        HorizontalAlignment: Center
+      );
+    }
   }
 }

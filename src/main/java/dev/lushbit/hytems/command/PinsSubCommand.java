@@ -1,4 +1,4 @@
-package de.notjan.hytems.command;
+package dev.lushbit.hytems.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -9,7 +9,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import de.notjan.hytems.ui.page.PinsManagementPage;
+import dev.lushbit.hytems.ui.page.PinsManagementPage;
 
 import javax.annotation.Nonnull;
 

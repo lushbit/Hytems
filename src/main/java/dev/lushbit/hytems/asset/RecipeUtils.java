@@ -1,4 +1,4 @@
-package de.notjan.hytems.asset;
+package dev.lushbit.hytems.asset;
 
 import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;

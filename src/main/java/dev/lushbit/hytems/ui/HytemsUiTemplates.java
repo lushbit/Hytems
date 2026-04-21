@@ -1,4 +1,4 @@
-package de.notjan.hytems.ui;
+package dev.lushbit.hytems.ui;
 
 public final class HytemsUiTemplates {
     public static final String ITEM_BROWSER = "hytems/ui/ItemBrowser.ui";

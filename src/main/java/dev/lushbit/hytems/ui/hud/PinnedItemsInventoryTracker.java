@@ -1,4 +1,4 @@
-package de.notjan.hytems.ui.hud;
+package dev.lushbit.hytems.ui.hud;
 
 import com.buuz135.mhud.MultipleHUD;
 import com.hypixel.hytale.component.ArchetypeChunk;
@@ -10,7 +10,7 @@ import com.hypixel.hytale.server.core.inventory.InventoryComponent;
 import com.hypixel.hytale.server.core.inventory.InventoryChangeEvent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import de.notjan.hytems.HytemsPlugin;
+import dev.lushbit.hytems.HytemsPlugin;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;

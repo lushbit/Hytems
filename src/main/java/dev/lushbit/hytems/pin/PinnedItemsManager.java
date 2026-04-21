@@ -1,9 +1,9 @@
-package de.notjan.hytems.pin;
+package dev.lushbit.hytems.pin;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import de.notjan.hytems.ui.hud.PinnedItemsInventoryTracker;
+import dev.lushbit.hytems.ui.hud.PinnedItemsInventoryTracker;
 
 import java.io.IOException;
 import java.io.Reader;

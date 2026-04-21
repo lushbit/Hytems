@@ -1,4 +1,4 @@
-package de.notjan.hytems.ui;
+package dev.lushbit.hytems.ui;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

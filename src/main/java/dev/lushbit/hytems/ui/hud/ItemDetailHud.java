@@ -1,4 +1,4 @@
-package de.notjan.hytems.ui.hud;
+package dev.lushbit.hytems.ui.hud;
 
 import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
@@ -8,11 +8,11 @@ import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import de.notjan.hytems.HytemsPlugin;
-import de.notjan.hytems.asset.RecipeUtils;
-import de.notjan.hytems.ui.HytemsUiTemplates;
-import de.notjan.hytems.ui.ItemUiSupport;
-import de.notjan.hytems.ui.TextFormatters;
+import dev.lushbit.hytems.HytemsPlugin;
+import dev.lushbit.hytems.asset.RecipeUtils;
+import dev.lushbit.hytems.ui.HytemsUiTemplates;
+import dev.lushbit.hytems.ui.ItemUiSupport;
+import dev.lushbit.hytems.ui.TextFormatters;
 
 import javax.annotation.Nonnull;
 import java.util.List;

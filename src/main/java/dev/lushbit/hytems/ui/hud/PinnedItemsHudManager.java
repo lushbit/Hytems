@@ -1,4 +1,4 @@
-package de.notjan.hytems.ui.hud;
+package dev.lushbit.hytems.ui.hud;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;

@@ -1,9 +1,9 @@
-package de.notjan.hytems.asset;
+package dev.lushbit.hytems.asset;
 
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
-import de.notjan.hytems.HytemsPlugin;
-import de.notjan.hytems.ui.ItemUiSupport;
+import dev.lushbit.hytems.HytemsPlugin;
+import dev.lushbit.hytems.ui.ItemUiSupport;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Method;

@@ -1,4 +1,4 @@
-package de.notjan.hytems.ui;
+package dev.lushbit.hytems.ui;
 
 import com.hypixel.hytale.protocol.Color;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;

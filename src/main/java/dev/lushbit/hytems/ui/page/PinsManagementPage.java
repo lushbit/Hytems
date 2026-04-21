@@ -1,4 +1,4 @@
-package de.notjan.hytems.ui.page;
+package dev.lushbit.hytems.ui.page;
 
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -14,9 +14,9 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import de.notjan.hytems.HytemsPlugin;
-import de.notjan.hytems.ui.HytemsUiTemplates;
-import de.notjan.hytems.ui.ItemUiSupport;
+import dev.lushbit.hytems.HytemsPlugin;
+import dev.lushbit.hytems.ui.HytemsUiTemplates;
+import dev.lushbit.hytems.ui.ItemUiSupport;
 
 import javax.annotation.Nonnull;
 import java.util.List;

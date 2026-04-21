@@ -1,11 +1,11 @@
 {
-  "Group": "de.notjan",
+  "Group": "dev.lushbit",
   "Name": "Hytems",
   "Version": "1.6.0",
   "Description": "View items and their recipes in Hytale just like in JEI!",
-  "Authors": [{"Name": "NotJan"}],
+  "Authors": [{"Name": "lushbit"}],
   "ServerVersion": "2026.03.26-89796e57b",
-  "Main": "de.notjan.hytems.HytemsPlugin",
+  "Main": "dev.lushbit.hytems.HytemsPlugin",
   "LoadOrder": "POSTWORLD",
   "IncludesAssetPack": true,
   "Dependencies": {

@@ -1,4 +1,4 @@
-package de.notjan.hytems.asset;
+package dev.lushbit.hytems.asset;
 
 import javax.annotation.Nonnull;
 import java.util.regex.Matcher;

@@ -45,8 +45,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private static final int BODY_ROWS_PER_PAGE = ROWS_PER_PAGE - FAVORITE_ROWS;
     private static final int ITEMS_PER_PAGE = ITEMS_PER_ROW * BODY_ROWS_PER_PAGE;
     private static final int GRID_LABEL_MAX_CHARS = 16;
-    private static final int GRID_HEIGHT_WITH_FAVORITES = 744;
-    private static final int GRID_HEIGHT_WITHOUT_FAVORITES = 633;
+    private static final int GRID_HEIGHT = 744;
     private static final int INFO_CONTAINER_MAX_HEIGHT = 822;
     private static final int INFO_CONTAINER_MIN_HEIGHT = 220;
     private static final int INFO_CONTAINER_PADDING_VERTICAL = 28;
@@ -60,6 +59,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private static final int DROP_SECTION_BASE_HEIGHT = 62;
     private static final int LIST_ROW_HEIGHT = 50;
     private static final int DROP_ROW_HEIGHT = 40;
+    private static final int SEARCH_HISTORY_MAX_ITEMS = 12;
 
     private enum InfoTab {
         RECIPES,
@@ -74,6 +74,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     private List<Map.Entry<String, Item>> filteredItems = new ArrayList<>();
     private Set<String> favoriteItems = new LinkedHashSet<>();
+    private List<String> searchHistoryItems = new ArrayList<>();
 
     private Ref<EntityStore> pageRef;
     private Store<EntityStore> pageStore;
@@ -84,15 +85,16 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         super(playerRef, lifetime, BrowserData.CODEC);
         this.playerRef = playerRef;
         this.itemSearchService = new ItemSearchService(playerRef);
-        this.favoriteItems = new LinkedHashSet<>(HytemsPlugin.pinnedItemsManager.getFavoriteItems(playerRef));
+        this.favoriteItems = new LinkedHashSet<>(HytemsPlugin.playerDataManager.getFavoriteItems(playerRef));
+        this.searchHistoryItems = sanitizeHistory(HytemsPlugin.playerDataManager.getSearchHistoryItems(playerRef));
 
-        String lastViewedItem = HytemsPlugin.pinnedItemsManager.getLastViewedItem(playerRef);
+        String lastViewedItem = HytemsPlugin.playerDataManager.getLastViewedItem(playerRef);
         if (isKnownItem(lastViewedItem)) {
             this.selectedItemId = lastViewedItem;
             this.dropsItemId = lastViewedItem;
         }
 
-        InfoTab lastViewedTab = parseInfoTab(HytemsPlugin.pinnedItemsManager.getLastViewedTab(playerRef));
+        InfoTab lastViewedTab = parseInfoTab(HytemsPlugin.playerDataManager.getLastViewedTab(playerRef));
         if (lastViewedTab != null) {
             this.activeInfoTab = lastViewedTab;
         }
@@ -117,6 +119,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         cmd.append(HytemsUiTemplates.ITEM_BROWSER);
         cmd.append("#InfoPanelSlot", HytemsUiTemplates.BROWSER_INFO_PANEL);
+        cmd.append("#SearchHistorySlot", HytemsUiTemplates.SEARCH_HISTORY);
         cmd.set("#SearchInput.Value", this.searchQuery);
 
         events.addEventBinding(
@@ -153,10 +156,12 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 EventData.of("InfoTab", "drops"),
                 false
         );
+        bindSearchHistoryEvents(events);
 
         filterItems();
         clampCurrentPage();
         ensureDetailItemAvailable();
+        renderSearchHistory(cmd);
         renderItems(cmd, events);
         updateSearchInputColor(cmd);
         renderActiveInfoPanel(cmd, events);
@@ -173,10 +178,11 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         boolean needsInfoUpdate = false;
         boolean needsSearchUpdate = false;
         boolean needsTabUpdate = false;
+        boolean needsHistoryUpdate = false;
 
         if (data.toggleFavorite != null && !data.toggleFavorite.isEmpty()) {
-            HytemsPlugin.pinnedItemsManager.toggleFavorite(this.playerRef, data.toggleFavorite);
-            this.favoriteItems = new LinkedHashSet<>(HytemsPlugin.pinnedItemsManager.getFavoriteItems(this.playerRef));
+            HytemsPlugin.playerDataManager.toggleFavorite(this.playerRef, data.toggleFavorite);
+            this.favoriteItems = new LinkedHashSet<>(HytemsPlugin.playerDataManager.getFavoriteItems(this.playerRef));
             needsUpdate = true;
             needsGridUpdate = true;
             needsInfoUpdate = true;
@@ -208,6 +214,20 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         if (data.selectedItem != null && !data.selectedItem.isEmpty()) {
             if (selectDetailItem(data.selectedItem, true)) {
+                recordSearchHistoryItem(data.selectedItem);
+                needsHistoryUpdate = true;
+                needsUpdate = true;
+                needsInfoUpdate = true;
+            }
+        }
+
+        if (data.historyIndex != null && !data.historyIndex.isEmpty()) {
+            String historyItemId = getSearchHistoryItemByIndex(data.historyIndex);
+            if (selectDetailItem(historyItemId, true)) {
+                if (historyItemId != null && !historyItemId.isEmpty()) {
+                    recordSearchHistoryItem(historyItemId);
+                    needsHistoryUpdate = true;
+                }
                 needsUpdate = true;
                 needsInfoUpdate = true;
             }
@@ -248,7 +268,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
 
         if (data.pinItem != null && !data.pinItem.isEmpty()) {
-            HytemsPlugin.pinnedItemsManager.togglePin(this.playerRef, data.pinItem);
+            HytemsPlugin.playerDataManager.togglePin(this.playerRef, data.pinItem);
             updatePinnedItemsHud();
             needsUpdate = true;
             needsGridUpdate = true;
@@ -270,6 +290,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
             if (needsSearchUpdate) {
                 updateSearchInputColor(cmd);
+            }
+            if (needsHistoryUpdate) {
+                renderSearchHistory(cmd);
             }
             if (needsInfoUpdate) {
                 ensureDetailItemAvailable();
@@ -442,7 +465,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private void updateItemActionIcons(@Nonnull UICommandBuilder cmd, @Nonnull String pinEmptySelector,
                                        @Nonnull String pinFilledSelector, @Nonnull String favoriteEmptySelector,
                                        @Nonnull String favoriteFilledSelector, @Nonnull String itemId) {
-        boolean pinned = HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, itemId);
+        boolean pinned = HytemsPlugin.playerDataManager.isPinned(this.playerRef, itemId);
         boolean favorite = favoriteItems.contains(itemId);
 
         ItemUiSupport.setButtonIcon(cmd, pinEmptySelector, ItemUiSupport.ICON_PIN_EMPTY);
@@ -846,7 +869,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             return;
         }
 
-        String storedItem = HytemsPlugin.pinnedItemsManager.getLastViewedItem(this.playerRef);
+        String storedItem = HytemsPlugin.playerDataManager.getLastViewedItem(this.playerRef);
         if (isKnownItem(storedItem)) {
             this.selectedItemId = storedItem;
             this.dropsItemId = storedItem;
@@ -871,7 +894,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         this.selectedItemId = itemId;
         this.dropsItemId = itemId;
         if (persist) {
-            HytemsPlugin.pinnedItemsManager.setLastViewedItem(this.playerRef, itemId);
+            HytemsPlugin.playerDataManager.setLastViewedItem(this.playerRef, itemId);
         }
         return true;
     }
@@ -879,7 +902,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private void selectInfoTab(@Nonnull InfoTab tab, boolean persist) {
         this.activeInfoTab = tab;
         if (persist) {
-            HytemsPlugin.pinnedItemsManager.setLastViewedTab(this.playerRef, tab.name().toLowerCase(Locale.ENGLISH));
+            HytemsPlugin.playerDataManager.setLastViewedTab(this.playerRef, tab.name().toLowerCase(Locale.ENGLISH));
         }
     }
 
@@ -929,6 +952,94 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
+    private void recordSearchHistoryItem(@Nonnull String itemId) {
+        if (!isKnownItem(itemId)) {
+            return;
+        }
+
+        this.searchHistoryItems.remove(itemId);
+        this.searchHistoryItems.add(0, itemId);
+        if (this.searchHistoryItems.size() > SEARCH_HISTORY_MAX_ITEMS) {
+            this.searchHistoryItems = new ArrayList<>(this.searchHistoryItems.subList(0, SEARCH_HISTORY_MAX_ITEMS));
+        }
+
+        HytemsPlugin.playerDataManager.recordSearchHistoryItem(this.playerRef, itemId);
+    }
+
+    private String getSearchHistoryItemByIndex(@Nonnull String indexValue) {
+        int index;
+        try {
+            index = Integer.parseInt(indexValue);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+
+        if (index < 0 || index >= this.searchHistoryItems.size()) {
+            return null;
+        }
+        return this.searchHistoryItems.get(index);
+    }
+
+    private void bindSearchHistoryEvents(@Nonnull UIEventBuilder events) {
+        String base = "#SearchHistorySlot[0]";
+        for (int i = 0; i < SEARCH_HISTORY_MAX_ITEMS; i++) {
+            events.addEventBinding(
+                    CustomUIEventBindingType.Activating,
+                    base + " #HistorySlot" + i + " #InteractButton" + i,
+                    EventData.of("HistoryIndex", Integer.toString(i)),
+                    false
+            );
+        }
+    }
+
+    private void renderSearchHistory(@Nonnull UICommandBuilder cmd) {
+        String base = "#SearchHistorySlot[0]";
+        List<String> validHistory = sanitizeHistory(this.searchHistoryItems);
+        if (validHistory.size() != this.searchHistoryItems.size()) {
+            this.searchHistoryItems = validHistory;
+        }
+
+        boolean hasHistory = !validHistory.isEmpty();
+        cmd.set(base + " #HistoryEmptyLabel.Visible", !hasHistory);
+        cmd.set(base + " #HistoryRow.Visible", hasHistory);
+
+        for (int i = 0; i < SEARCH_HISTORY_MAX_ITEMS; i++) {
+            String slot = base + " #HistorySlot" + i;
+            String icon = slot + " #ItemIcon" + i;
+            String rarityBg = slot + " #RarityBackground" + i;
+
+            if (i < validHistory.size()) {
+                String itemId = validHistory.get(i);
+                Item item = HytemsPlugin.ITEMS.get(itemId);
+                cmd.set(slot + ".Visible", true);
+                cmd.set(icon + ".ItemId", itemId);
+                cmd.set(rarityBg + ".Background", ItemUiSupport.rarityBackground(item));
+            } else {
+                cmd.set(slot + ".Visible", false);
+                cmd.set(icon + ".ItemId", "");
+                cmd.set(rarityBg + ".Background", ItemUiSupport.RARITY_DEFAULT_BACKGROUND);
+            }
+        }
+    }
+
+    private List<String> sanitizeHistory(List<String> rawHistory) {
+        List<String> validHistory = new ArrayList<>();
+        if (rawHistory == null || rawHistory.isEmpty()) {
+            return validHistory;
+        }
+
+        for (String itemId : rawHistory) {
+            if (!isKnownItem(itemId) || validHistory.contains(itemId)) {
+                continue;
+            }
+            validHistory.add(itemId);
+            if (validHistory.size() >= SEARCH_HISTORY_MAX_ITEMS) {
+                break;
+            }
+        }
+        return validHistory;
+    }
+
     private String translatedName(Item item, String itemId) {
         return ItemUiSupport.translatedName(playerRef, item, itemId);
     }
@@ -944,8 +1055,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         int endIndex = Math.min(startIndex + ITEMS_PER_PAGE, bodyItems.size());
         boolean hasItems = !bodyItems.isEmpty();
         boolean hasFavorites = !favorites.isEmpty();
-        cmd.set("#ItemGrid[0] #FavoritesHeader.Visible", hasFavorites);
-        cmd.set("#ItemGrid[0] #FavoritesRow.Visible", hasFavorites);
+        cmd.set("#ItemGrid[0] #FavoritesHeader.Visible", true);
+        cmd.set("#ItemGrid[0] #FavoritesRow.Visible", true);
+        cmd.set("#ItemGrid[0] #FavoritesRowColumns.Visible", hasFavorites);
+        cmd.set("#ItemGrid[0] #NoFavoritesLabel.Visible", !hasFavorites);
         cmd.set("#ItemGrid[0] #NoItemsRow.Visible", !hasItems);
         updateGridHeight(cmd, hasFavorites);
 
@@ -971,9 +1084,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     }
 
     private void updateGridHeight(@Nonnull UICommandBuilder cmd, boolean hasFavorites) {
-        int height = hasFavorites ? GRID_HEIGHT_WITH_FAVORITES : GRID_HEIGHT_WITHOUT_FAVORITES;
         Anchor anchor = new Anchor();
-        anchor.setHeight(Value.of(height));
+        anchor.setHeight(Value.of(GRID_HEIGHT));
         cmd.setObject("#GridSection.Anchor", anchor);
         cmd.setObject("#ItemGrid[0].Anchor", anchor);
     }
@@ -1018,7 +1130,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         cmd.set(selector + " #ItemName.Style.TextColor", "#ffffff");
         cmd.set(selector + " #RarityBackground.Background", rarityBg);
         cmd.set(selector + " #PinnedMarker.Background", ItemUiSupport.ICON_PIN_FILLED);
-        cmd.set(selector + " #PinnedMarker.Visible", HytemsPlugin.pinnedItemsManager.isPinned(this.playerRef, itemId));
+        cmd.set(selector + " #PinnedMarker.Visible", HytemsPlugin.playerDataManager.isPinned(this.playerRef, itemId));
         cmd.set(selector + " #FavoriteMarker.Background", ItemUiSupport.ICON_STAR_FILLED);
         cmd.set(selector + " #FavoriteMarker.Visible", favoriteItems.contains(itemId));
 
@@ -1128,6 +1240,11 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         (data, value) -> data.infoTab = value,
                         data -> data.infoTab
                 )
+                .addField(
+                        new KeyedCodec<>("HistoryIndex", Codec.STRING),
+                        (data, value) -> data.historyIndex = value,
+                        data -> data.historyIndex
+                )
                 .build();
 
         private String searchQuery;
@@ -1144,6 +1261,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         private String toggleFavoritesCollapse;
         private String isFavSectionStr;
         private String infoTab;
+        private String historyIndex;
     }
 }
+
+
 

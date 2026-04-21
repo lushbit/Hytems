@@ -32,7 +32,7 @@ public class PinnedItemsInventoryTracker {
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         
         if (player == null || playerRef == null) return;
-        if (HytemsPlugin.pinnedItemsManager.getPinnedCount(playerRef) == 0) return;
+        if (HytemsPlugin.playerDataManager.getPinnedCount(playerRef) == 0) return;
         
         UUID playerId = playerRef.getUuid();
         if (!shouldUpdate(playerId)) return;
@@ -67,7 +67,7 @@ public class PinnedItemsInventoryTracker {
     public static void refreshHud(PlayerRef playerRef, Store<EntityStore> store, Ref<EntityStore> ref) {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player != null) {
-            PinnedItemsHud hud = new PinnedItemsHud(playerRef, HytemsPlugin.pinnedItemsManager, store, ref);
+            PinnedItemsHud hud = new PinnedItemsHud(playerRef, HytemsPlugin.playerDataManager, store, ref);
             MultipleHUD.getInstance().setCustomHud(player, playerRef, "hytems_pinned_items", hud);
         }
     }
@@ -77,3 +77,4 @@ public class PinnedItemsInventoryTracker {
         cachedInventories.remove(playerId);
     }
 }
+

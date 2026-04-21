@@ -35,7 +35,7 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
                       @Nonnull UIEventBuilder events, @Nonnull Store<EntityStore> store) {
         cmd.append(HytemsUiTemplates.PINS_MANAGEMENT);
 
-        List<String> pinnedItems = HytemsPlugin.pinnedItemsManager.getPinnedItems(playerRef);
+        List<String> pinnedItems = HytemsPlugin.playerDataManager.getPinnedItems(playerRef);
 
         if (pinnedItems.isEmpty()) {
             cmd.set("#EmptyState.Visible", true);
@@ -134,13 +134,13 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
 
         switch (action) {
             case "delete":
-                changed = HytemsPlugin.pinnedItemsManager.removePin(playerRef, itemId);
+                changed = HytemsPlugin.playerDataManager.removePin(playerRef, itemId);
                 break;
             case "moveLeft":
-                changed = HytemsPlugin.pinnedItemsManager.movePinUp(playerRef, itemId);
+                changed = HytemsPlugin.playerDataManager.movePinUp(playerRef, itemId);
                 break;
             case "moveRight":
-                changed = HytemsPlugin.pinnedItemsManager.movePinDown(playerRef, itemId);
+                changed = HytemsPlugin.playerDataManager.movePinDown(playerRef, itemId);
                 break;
         }
 
@@ -171,3 +171,4 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
         }
     }
 }
+

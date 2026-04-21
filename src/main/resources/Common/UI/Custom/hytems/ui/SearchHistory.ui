@@ -1,0 +1,317 @@
+Group {
+  Anchor: (Width: 760, Height: 81);
+  LayoutMode: Top;
+
+  Group #HistoryHeader {
+    Anchor: (Height: 18);
+    LayoutMode: Left;
+
+    Group {
+      Anchor: (Width: 8, Height: 12);
+      Background: "../../Common/DropdownPressedCaret.png";
+    }
+
+    Group {
+      Anchor: (Width: 4);
+    }
+
+    Label {
+      Anchor: (Height: 18);
+      Text: "Search History";
+      Style: (
+        FontSize: 12,
+        TextColor: #b4c8c9,
+        VerticalAlignment: Center,
+        RenderUppercase: true,
+        RenderBold: true
+      );
+    }
+  }
+
+  Group {
+    Anchor: (Height: 63);
+    LayoutMode: Center;
+
+    Label #HistoryEmptyLabel {
+      Anchor: (Height: 22);
+      Text: "No history - start searching!";
+      Visible: false;
+      Style: (
+        FontSize: 14,
+        TextColor: #9aa4af,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center,
+        RenderBold: true
+      );
+    }
+
+    Group #HistoryRow {
+      Anchor: (Width: 760, Height: 63);
+      LayoutMode: Left;
+
+      Group #HistorySlot0 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground0 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon0 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton0 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+
+      Group #HistorySlot1 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground1 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon1 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton1 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+
+      Group #HistorySlot2 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground2 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon2 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton2 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+
+      Group #HistorySlot3 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground3 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon3 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton3 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+
+      Group #HistorySlot4 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground4 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon4 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton4 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+
+      Group #HistorySlot5 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground5 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon5 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton5 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+
+      Group #HistorySlot6 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground6 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon6 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton6 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+
+      Group #HistorySlot7 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground7 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon7 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton7 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+
+      Group #HistorySlot8 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground8 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon8 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton8 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+
+      Group #HistorySlot9 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground9 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon9 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton9 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+
+      Group #HistorySlot10 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground10 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon10 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton10 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+
+      Group #HistorySlot11 {
+        Anchor: (Width: 63, Height: 63);
+        LayoutMode: Center;
+        Visible: false;
+        Group #RarityBackground11 {
+          Anchor: (Width: 61, Height: 61);
+          Background: "hytems/textures/rarity_default.png";
+          Group { Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0); LayoutMode: Center;
+            ItemIcon #ItemIcon11 { Anchor: (Width: 44, Height: 44); Visible: true; }
+          }
+          Button #InteractButton11 {
+            Anchor: (Top: 2, Bottom: 2, Left: 2, Right: 2);
+            Background: #000000(0);
+            Style: ButtonStyle(
+              Default: (Background: #000000(0)),
+              Hovered: (Background: #7db0db(0.2)),
+              Pressed: (Background: #7db0db(0.3))
+            );
+          }
+        }
+      }
+    }
+  }
+}

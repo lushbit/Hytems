@@ -5,6 +5,7 @@ public final class HytemsUiTemplates {
     public static final String ITEM_CARD = "hytems/ui/ItemCard.ui";
     public static final String ITEM_DETAIL = "hytems/ui/ItemDetail.ui";
     public static final String ITEM_GRID = "hytems/ui/ItemGrid.ui";
+    public static final String SEARCH_HISTORY = "hytems/ui/SearchHistory.ui";
     public static final String BROWSER_INFO_PANEL = "hytems/ui/BrowserInfoPanel.ui";
     public static final String ITEM_DROPS_DETAIL = "hytems/ui/ItemDropsDetail.ui";
     public static final String INGREDIENT_ENTRY = "hytems/ui/IngredientEntry.ui";

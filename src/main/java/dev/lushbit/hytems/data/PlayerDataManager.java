@@ -1,4 +1,4 @@
-package dev.lushbit.hytems.pin;
+package dev.lushbit.hytems.data;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -13,13 +13,15 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class PinnedItemsManager {
+public class PlayerDataManager {
     private static final int MAX_PINNED_ITEMS = 3;
     private static final int MAX_FAVORITE_ITEMS = 8;
+    private static final int MAX_SEARCH_HISTORY_ITEMS = 12;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     
     private final Map<UUID, LinkedHashSet<String>> playerPinnedItems = new ConcurrentHashMap<>();
     private final Map<UUID, LinkedHashSet<String>> playerFavoriteItems = new ConcurrentHashMap<>();
+    private final Map<UUID, LinkedList<String>> playerSearchHistoryItems = new ConcurrentHashMap<>();
     private final Map<UUID, String> playerLastViewedItems = new ConcurrentHashMap<>();
     private final Map<UUID, String> playerLastViewedTabs = new ConcurrentHashMap<>();
     private final Set<UUID> loadedPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -51,6 +53,21 @@ public class PinnedItemsManager {
                     if (data.favoriteItems != null && !data.favoriteItems.isEmpty()) {
                         playerFavoriteItems.put(uuid, new LinkedHashSet<>(data.favoriteItems));
                     }
+                    if (data.searchHistoryItems != null && !data.searchHistoryItems.isEmpty()) {
+                        LinkedList<String> history = new LinkedList<>();
+                        for (String itemId : data.searchHistoryItems) {
+                            if (itemId == null || itemId.isEmpty() || history.contains(itemId)) {
+                                continue;
+                            }
+                            history.add(itemId);
+                            if (history.size() >= MAX_SEARCH_HISTORY_ITEMS) {
+                                break;
+                            }
+                        }
+                        if (!history.isEmpty()) {
+                            playerSearchHistoryItems.put(uuid, history);
+                        }
+                    }
                     if (data.lastViewedItem != null && !data.lastViewedItem.isEmpty()) {
                         playerLastViewedItems.put(uuid, data.lastViewedItem);
                     }
@@ -78,6 +95,7 @@ public class PinnedItemsManager {
 
         LinkedHashSet<String> pinned = playerPinnedItems.get(uuid);
         LinkedHashSet<String> favorites = playerFavoriteItems.get(uuid);
+        LinkedList<String> searchHistory = playerSearchHistoryItems.get(uuid);
         String lastViewedItem = playerLastViewedItems.get(uuid);
         String lastViewedTab = playerLastViewedTabs.get(uuid);
 
@@ -85,6 +103,7 @@ public class PinnedItemsManager {
 
         if ((pinned == null || pinned.isEmpty())
                 && (favorites == null || favorites.isEmpty())
+                && (searchHistory == null || searchHistory.isEmpty())
                 && (lastViewedItem == null || lastViewedItem.isEmpty())
                 && (lastViewedTab == null || lastViewedTab.isEmpty())) {
             try {
@@ -98,6 +117,7 @@ public class PinnedItemsManager {
         PlayerData data = new PlayerData();
         data.pinnedItems = pinned != null ? new ArrayList<>(pinned) : new ArrayList<>();
         data.favoriteItems = favorites != null ? new ArrayList<>(favorites) : new ArrayList<>();
+        data.searchHistoryItems = searchHistory != null ? new ArrayList<>(searchHistory) : new ArrayList<>();
         data.lastViewedItem = lastViewedItem;
         data.lastViewedTab = lastViewedTab;
         
@@ -149,6 +169,30 @@ public class PinnedItemsManager {
 
     public void setFavoriteItems(PlayerRef playerRef, Collection<String> items) {
         setItems(playerRef, items, playerFavoriteItems);
+    }
+
+    public List<String> getSearchHistoryItems(PlayerRef playerRef) {
+        LinkedList<String> historyItems = playerSearchHistoryItems.get(playerRef.getUuid());
+        return historyItems != null ? new ArrayList<>(historyItems) : new ArrayList<>();
+    }
+
+    public void recordSearchHistoryItem(PlayerRef playerRef, String itemId) {
+        if (itemId == null || itemId.isEmpty()) {
+            return;
+        }
+
+        UUID uuid = playerRef.getUuid();
+        loadedPlayers.add(uuid);
+
+        LinkedList<String> historyItems = playerSearchHistoryItems.computeIfAbsent(uuid, k -> new LinkedList<>());
+        historyItems.remove(itemId);
+        historyItems.addFirst(itemId);
+
+        while (historyItems.size() > MAX_SEARCH_HISTORY_ITEMS) {
+            historyItems.removeLast();
+        }
+
+        saveData(playerRef);
     }
 
     public String getLastViewedItem(PlayerRef playerRef) {
@@ -266,6 +310,7 @@ public class PinnedItemsManager {
         saveDataForUuid(uuid);
         playerPinnedItems.remove(uuid);
         playerFavoriteItems.remove(uuid);
+        playerSearchHistoryItems.remove(uuid);
         playerLastViewedItems.remove(uuid);
         playerLastViewedTabs.remove(uuid);
         loadedPlayers.remove(uuid);
@@ -275,7 +320,9 @@ public class PinnedItemsManager {
     private static class PlayerData {
         List<String> pinnedItems;
         List<String> favoriteItems;
+        List<String> searchHistoryItems;
         String lastViewedItem;
         String lastViewedTab;
     }
 }
+

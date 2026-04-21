@@ -27,7 +27,7 @@ import dev.lushbit.hytems.asset.RecipeManager;
 import dev.lushbit.hytems.command.HytemsCommand;
 import dev.lushbit.hytems.ui.hud.PinnedItemsInventoryTracker;
 import dev.lushbit.hytems.ui.hud.PinnedItemsHudManager;
-import dev.lushbit.hytems.pin.PinnedItemsManager;
+import dev.lushbit.hytems.data.PlayerDataManager;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -40,7 +40,7 @@ public class HytemsPlugin extends JavaPlugin {
     public static Map<String, ItemQuality> QUALITIES = new HashMap<>();
     public static final RecipeManager recipeManager = new RecipeManager();
     public static final DropListRegistry dropListRegistry = new DropListRegistry();
-    public static final PinnedItemsManager pinnedItemsManager = new PinnedItemsManager();
+    public static final PlayerDataManager playerDataManager = new PlayerDataManager();
     public static final PinnedItemsHudManager pinnedItemsHudManager = new PinnedItemsHudManager();
 
     public HytemsPlugin(@Nonnull JavaPluginInit init) {
@@ -51,7 +51,7 @@ public class HytemsPlugin extends JavaPlugin {
     protected void setup() {
         super.setup();
 
-        pinnedItemsManager.setDataDirectory(this.getDataDirectory());
+        playerDataManager.setDataDirectory(this.getDataDirectory());
 
         this.getCommandRegistry().registerCommand(new HytemsCommand());
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, this::onItemAssetLoad);
@@ -60,11 +60,11 @@ public class HytemsPlugin extends JavaPlugin {
         this.getEventRegistry().register(LoadedAssetsEvent.class, ItemDropList.class, this::onDropListAssetLoad);
 
         this.getEventRegistry().register(PlayerConnectEvent.class, event -> {
-            pinnedItemsManager.loadData(event.getPlayerRef());
+            playerDataManager.loadData(event.getPlayerRef());
         });
 
         this.getEventRegistry().register(PlayerDisconnectEvent.class, event -> {
-            pinnedItemsManager.cleanup(event.getPlayerRef());
+            playerDataManager.cleanup(event.getPlayerRef());
         });
 
         this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, event -> {
@@ -79,7 +79,7 @@ public class HytemsPlugin extends JavaPlugin {
 
             PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
 
-            if (playerRef != null && pinnedItemsManager.getPinnedCount(playerRef) > 0) {
+            if (playerRef != null && playerDataManager.getPinnedCount(playerRef) > 0) {
                 pinnedItemsHudManager.registerPlayer(playerRef, store, ref);
             }
         });
@@ -99,7 +99,7 @@ public class HytemsPlugin extends JavaPlugin {
 
     @Override
     protected void shutdown() {
-        pinnedItemsManager.saveAll();
+        playerDataManager.saveAll();
         super.shutdown();
     }
 
@@ -131,3 +131,4 @@ public class HytemsPlugin extends JavaPlugin {
         this.getLogger().at(Level.INFO).log("Loaded %d item qualities for Hytems browser", QUALITIES.size());
     }
 }
+

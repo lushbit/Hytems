@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.lushbit.hytems.HytemsPlugin;
 import dev.lushbit.hytems.asset.DropSourceParser;
 import dev.lushbit.hytems.asset.RecipeUtils;
-import dev.lushbit.hytems.pin.PinnedItemsManager;
+import dev.lushbit.hytems.data.PlayerDataManager;
 import dev.lushbit.hytems.ui.HytemsUiTemplates;
 import dev.lushbit.hytems.ui.ItemUiSupport;
 import dev.lushbit.hytems.ui.TextFormatters;
@@ -23,16 +23,16 @@ import java.util.*;
 
 public class PinnedItemsHud extends CustomUIHud {
     
-    private final PinnedItemsManager pinnedItemsManager;
+    private final PlayerDataManager playerDataManager;
     private final PlayerRef playerRef;
     private final Store<EntityStore> store;
     private final Ref<EntityStore> ref;
     
-    public PinnedItemsHud(@Nonnull PlayerRef playerRef, @Nonnull PinnedItemsManager pinnedItemsManager, 
+    public PinnedItemsHud(@Nonnull PlayerRef playerRef, @Nonnull PlayerDataManager playerDataManager,
                           @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
         super(playerRef);
         this.playerRef = playerRef;
-        this.pinnedItemsManager = pinnedItemsManager;
+        this.playerDataManager = playerDataManager;
         this.store = store;
         this.ref = ref;
     }
@@ -44,7 +44,7 @@ public class PinnedItemsHud extends CustomUIHud {
     }
     
     public void updatePinnedItems(@Nonnull UICommandBuilder cmd) {
-        List<String> pinnedItems = pinnedItemsManager.getPinnedItems(playerRef);
+        List<String> pinnedItems = playerDataManager.getPinnedItems(playerRef);
         
         cmd.clear("#PinnedItemsList");
 
@@ -239,3 +239,4 @@ public class PinnedItemsHud extends CustomUIHud {
     }
 
 }
+

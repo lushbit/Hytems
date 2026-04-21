@@ -32,7 +32,7 @@ Group {
     Background: (TexturePath: "../../Common/ContainerPatch.png", Border: 23);
 
     Group {
-      Anchor: (Height: 6);
+      Anchor: (Height: 2);
     }
 
     Group #MainContent {
@@ -64,7 +64,7 @@ Group {
       Group #CenterBrowserPanel {
         Anchor: (Width: 844);
         LayoutMode: Top;
-        Padding: (Full: 8);
+        Padding: (Top: 0, Left: 8, Right: 8, Bottom: 8);
 
         Group #GridSection {
           Anchor: (Height: 744);
@@ -94,7 +94,7 @@ Group {
 
               $C.@SecondaryTextButton #PrevPageButton {
                 @Text = "PREV";
-                @Anchor = (Width: 84, Height: 28);
+                @Anchor = (Width: 84, Height: 28, Top: 4);
               }
 
               Group {
@@ -124,7 +124,7 @@ Group {
 
               $C.@SecondaryTextButton #NextPageButton {
                 @Text = "NEXT";
-                @Anchor = (Width: 84, Height: 28);
+                @Anchor = (Width: 84, Height: 28, Top: 4);
               }
             }
           }
@@ -146,34 +146,52 @@ Group {
           FlexWeight: 1;
         }
 
-        Group #SearchSection {
-          LayoutMode: Center;
-          Anchor: (Height: 46);
+        Group #BottomSearchBlock {
+          Anchor: (Height: 137);
+          LayoutMode: Top;
 
-          Group #SearchFrame {
-            Anchor: (Width: 760, Height: 42);
+          Group #SearchHistorySection {
+            Anchor: (Height: 81);
             LayoutMode: Center;
-            Padding: (Full: 2);
-            Background: $C.@InputBoxBackground;
 
-            Group {
-              Anchor: (Width: 752, Height: 38);
+            Group #SearchHistorySlot {
+              Anchor: (Width: 760, Height: 81);
+            }
+          }
+
+          Group {
+            Anchor: (Height: 10);
+          }
+
+          Group #SearchSection {
+            LayoutMode: Center;
+            Anchor: (Height: 46);
+
+            Group #SearchFrame {
+              Anchor: (Width: 760, Height: 42);
               LayoutMode: Center;
+              Padding: (Full: 2);
+              Background: $C.@InputBoxBackground;
 
-              CompactTextField #SearchInput {
-                Anchor: (Width: 744, Height: 38);
-                CollapsedWidth: 744;
-                ExpandedWidth: 744;
-                PlaceholderText: "Search items...";
-                Style: (FontSize: 14, TextColor: #ffffff);
-                PlaceholderStyle: (TextColor: #6e7da1, FontSize: 14);
-                Padding: (Horizontal: 12, Left: 36, Right: 38);
-                Decoration: (
-                  Default: (
-                    Icon: (Texture: "../../Common/SearchIcon.png", Width: 16, Height: 16, Offset: 10),
-                    ClearButtonStyle: $C.@ClearButtonStyle
-                  )
-                );
+              Group {
+                Anchor: (Width: 752, Height: 38);
+                LayoutMode: Center;
+
+                CompactTextField #SearchInput {
+                  Anchor: (Width: 744, Height: 38);
+                  CollapsedWidth: 744;
+                  ExpandedWidth: 744;
+                  PlaceholderText: "Search items...";
+                  Style: (FontSize: 14, TextColor: #ffffff);
+                  PlaceholderStyle: (TextColor: #6e7da1, FontSize: 14);
+                  Padding: (Horizontal: 12, Left: 36, Right: 38);
+                  Decoration: (
+                    Default: (
+                      Icon: (Texture: "../../Common/SearchIcon.png", Width: 16, Height: 16, Offset: 10),
+                      ClearButtonStyle: $C.@ClearButtonStyle
+                    )
+                  );
+                }
               }
             }
           }

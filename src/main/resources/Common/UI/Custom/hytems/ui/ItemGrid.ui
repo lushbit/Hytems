@@ -12,7 +12,7 @@ Group {
       Padding: (Left: 4);
 
       Group {
-        Anchor: (Width: 13, Height: 20);
+        Anchor: (Width: 10, Height: 16);
         Background: "../../Common/DropdownPressedCaret.png";
       }
 
@@ -41,6 +41,20 @@ Group {
     Group #FavoritesRowColumns {
       Anchor: (Top: 0, Bottom: 0, Width: 760);
       LayoutMode: Left;
+      Visible: true;
+    }
+
+    Label #NoFavoritesLabel {
+      Text: "No favorites yet";
+      Anchor: (Height: 22);
+      Visible: false;
+      Style: (
+        FontSize: 13,
+        TextColor: #9aa4af,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center,
+        RenderBold: true
+      );
     }
   }
 
@@ -54,7 +68,7 @@ Group {
       Padding: (Left: 4);
 
       Group {
-        Anchor: (Width: 13, Height: 20);
+        Anchor: (Width: 10, Height: 16);
         Background: "../../Common/DropdownPressedCaret.png";
       }
 

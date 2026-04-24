@@ -55,7 +55,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private static final int DETAILS_SECTION_HEIGHT = 104;
     private static final int EMPTY_RECIPE_SECTION_HEIGHT = 91;
     private static final int EMPTY_DROPS_SECTION_HEIGHT = 91;
-    private static final int RECIPE_SECTION_BASE_HEIGHT = 206;
+    private static final int RECIPE_SECTION_BASE_HEIGHT = 214;
+    private static final int RECIPE_SECTION_NO_STATION_BASE_HEIGHT = 96;
+    private static final int CRAFTING_STATION_SECTION_HEIGHT = 108;
     private static final int DROP_SECTION_BASE_HEIGHT = 62;
     private static final int LIST_ROW_HEIGHT = 50;
     private static final int DROP_ROW_HEIGHT = 40;
@@ -366,9 +368,12 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             if (selectedItemId != null && !selectedItemId.isEmpty()) {
                 List<CraftingRecipe> recipes = HytemsPlugin.recipeManager.getCraftingRecipes(selectedItemId);
                 if (recipes != null && recipes.size() == 1) {
+                    int baseHeight = hasVisibleCraftingStation(recipes.get(0))
+                            ? RECIPE_SECTION_BASE_HEIGHT
+                            : RECIPE_SECTION_NO_STATION_BASE_HEIGHT;
                     List<MaterialQuantity> ingredients = RecipeUtils.getInputs(recipes.get(0));
                     if (ingredients != null && !ingredients.isEmpty() && ingredients.size() <= 6) {
-                        recipeSectionHeight = RECIPE_SECTION_BASE_HEIGHT + (ingredients.size() * LIST_ROW_HEIGHT);
+                        recipeSectionHeight = baseHeight + (ingredients.size() * LIST_ROW_HEIGHT);
                     }
                 }
             }
@@ -590,15 +595,37 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             if (benchReqs != null && benchReqs.length > 0) {
                 BenchRequirement bench = benchReqs[0];
                 int tier = bench.requiredTierLevel;
-                Item stationItem = HytemsPlugin.ITEMS.get(bench.id);
-                String stationName = translatedName(stationItem, bench.id);
+                String stationItemId = resolveBenchItemId(bench.id);
+                setCraftingStationSectionVisible(cmd, stationItemId != null);
 
-                cmd.set("#StationName.Text", stationName);
-                if (tier > 0) {
-                    cmd.set("#StationTier.Text", "Tier " + tier);
+                if (stationItemId == null) {
+                    cmd.set("#StationPathButton.Visible", false);
+                    cmd.set("#StationIcon.Visible", false);
+                    cmd.set("#StationAssetIcon.Visible", false);
                 } else {
-                    cmd.set("#StationTier.Text", "Any tier");
+                    Item stationItem = HytemsPlugin.ITEMS.get(stationItemId);
+                    String stationName = translatedName(stationItem, stationItemId);
+                    if (stationName.equals(stationItemId)) {
+                        stationName = benchDisplayName(stationItemId);
+                    }
+
+                    cmd.set("#StationName.Text", stationName);
+                    cmd.set("#StationIcon.ItemId", stationItemId);
+                    setStationIcon(cmd, stationItem);
+                    cmd.set("#StationIconBackground.Background", ItemUiSupport.rarityBackground(stationItem));
+                    cmd.set("#StationPathButton.Visible", true);
+                    bindItemPathButton(events, "#StationPathButton", stationItemId);
+                    if (tier > 0) {
+                        cmd.set("#StationTier.Text", "Tier " + tier);
+                    } else {
+                        cmd.set("#StationTier.Text", "Any tier");
+                    }
                 }
+            } else {
+                setCraftingStationSectionVisible(cmd, false);
+                cmd.set("#StationPathButton.Visible", false);
+                cmd.set("#StationIcon.Visible", false);
+                cmd.set("#StationAssetIcon.Visible", false);
             }
 
             cmd.clear("#IngredientsList");
@@ -944,6 +971,157 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         return itemId != null && !itemId.isEmpty() && HytemsPlugin.ITEMS.containsKey(itemId);
     }
 
+    private boolean hasVisibleCraftingStation(CraftingRecipe recipe) {
+        BenchRequirement[] benchReqs = recipe.getBenchRequirement();
+        if (benchReqs == null || benchReqs.length == 0) {
+            return false;
+        }
+        return resolveBenchItemId(benchReqs[0].id) != null;
+    }
+
+    private void setCraftingStationSectionVisible(@Nonnull UICommandBuilder cmd, boolean visible) {
+        Anchor anchor = new Anchor();
+        anchor.setHeight(Value.of(visible ? CRAFTING_STATION_SECTION_HEIGHT : 0));
+        cmd.set("#CraftingStationSection.Visible", visible);
+        cmd.setObject("#CraftingStationSection.Anchor", anchor);
+    }
+
+    private void setStationIcon(@Nonnull UICommandBuilder cmd, Item stationItem) {
+        String iconPath = stationItem == null ? null : stationItem.getIcon();
+        boolean hasIconPath = iconPath != null && !iconPath.isEmpty();
+
+        cmd.set("#StationIcon.Visible", !hasIconPath);
+        cmd.set("#StationAssetIcon.Visible", hasIconPath);
+        if (hasIconPath) {
+            cmd.set("#StationAssetIcon.AssetPath", iconPath);
+        }
+    }
+
+    private String resolveBenchItemId(String benchId) {
+        if (benchId == null || benchId.isEmpty()) {
+            return null;
+        }
+
+        String strippedBenchId = stripNamespace(benchId);
+        String stationCore = stationCoreName(strippedBenchId);
+        List<String> candidates = List.of(
+                canonicalBenchItemId(stationCore),
+                benchId,
+                strippedBenchId,
+                "Bench_" + stationCore,
+                "Bench_" + stationCore.replace("Workbench", "WorkBench"),
+                "Bench_" + stationCore.replace("Armor", "Armour"),
+                "Bench_" + stationCore.replace("Armour", "Armor")
+        );
+
+        for (String candidate : candidates) {
+            String itemId = findKnownItemId(candidate);
+            if (itemId != null && isCraftingStationItemId(itemId)) {
+                return itemId;
+            }
+        }
+
+        String normalizedStationCore = normalizeLookupKey(stationCore);
+        String fallback = null;
+        int fallbackScore = Integer.MIN_VALUE;
+
+        for (String itemId : HytemsPlugin.ITEMS.keySet()) {
+            if (!isCraftingStationItemId(itemId)) {
+                continue;
+            }
+
+            String normalizedItemCore = normalizeLookupKey(stationCoreName(stripNamespace(itemId)));
+            int score = stationMatchScore(normalizedStationCore, normalizedItemCore, itemId);
+            if (score > fallbackScore) {
+                fallback = itemId;
+                fallbackScore = score;
+            }
+        }
+
+        return fallbackScore > 0 ? fallback : null;
+    }
+
+    private String canonicalBenchItemId(String stationCore) {
+        if (stationCore.equalsIgnoreCase("Workbench") || stationCore.equalsIgnoreCase("WorkBench")) {
+            return "Bench_WorkBench";
+        }
+        return "Bench_" + stationCore;
+    }
+
+    private String findKnownItemId(String candidate) {
+        if (candidate == null || candidate.isEmpty()) {
+            return null;
+        }
+
+        if (isKnownItem(candidate)) {
+            return candidate;
+        }
+
+        String normalizedCandidate = normalizeLookupKey(candidate);
+        for (String itemId : HytemsPlugin.ITEMS.keySet()) {
+            if (normalizeLookupKey(itemId).equals(normalizedCandidate)) {
+                return itemId;
+            }
+        }
+
+        return null;
+    }
+
+    private String stripNamespace(String value) {
+        return value.contains(":") ? value.substring(value.indexOf(":") + 1) : value;
+    }
+
+    private String stationCoreName(String value) {
+        String core = stripNamespace(value);
+        if (core.startsWith("Bench_")) {
+            core = core.substring("Bench_".length());
+        }
+        if (core.endsWith("_Bench")) {
+            core = core.substring(0, core.length() - "_Bench".length());
+        }
+        return core;
+    }
+
+    private String benchDisplayName(String stationItemId) {
+        return TextFormatters.benchName(stationCoreName(stationItemId));
+    }
+
+    private String normalizeLookupKey(String value) {
+        String stripped = stripNamespace(value).toLowerCase(Locale.ENGLISH);
+        StringBuilder normalized = new StringBuilder(stripped.length());
+        for (int i = 0; i < stripped.length(); i++) {
+            char c = stripped.charAt(i);
+            if (Character.isLetterOrDigit(c)) {
+                normalized.append(c);
+            }
+        }
+        return normalized.toString();
+    }
+
+    private boolean isCraftingStationItemId(String itemId) {
+        String stripped = stripNamespace(itemId);
+        return stripped.startsWith("Bench_") || stripped.equals("Bench_WorkBench");
+    }
+
+    private int stationMatchScore(String normalizedStationCore, String normalizedItemCore, String itemId) {
+        if (normalizedStationCore.isEmpty() || normalizedItemCore.isEmpty()) {
+            return 0;
+        }
+
+        int score = 0;
+        if (normalizedItemCore.equals(normalizedStationCore)) {
+            score += 40;
+        }
+        if (normalizedItemCore.contains(normalizedStationCore)) {
+            score += 20;
+        }
+        if (normalizedStationCore.contains(normalizedItemCore)) {
+            score += 16;
+        }
+
+        return score - Math.max(0, stripNamespace(itemId).length() - normalizedStationCore.length()) / 24;
+    }
+
     private void clampCurrentPage() {
         int totalPages = getTotalPages();
         if (this.currentPage < 0) {
@@ -1065,7 +1243,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     }
 
     private String translatedName(Item item, String itemId) {
-        return ItemUiSupport.translatedName(playerRef, item, itemId);
+        String name = ItemUiSupport.translatedName(playerRef, item, itemId);
+        return name.equals(itemId) ? TextFormatters.itemName(itemId) : name;
     }
 
     private void renderItems(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {

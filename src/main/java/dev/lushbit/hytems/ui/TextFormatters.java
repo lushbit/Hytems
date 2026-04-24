@@ -18,6 +18,23 @@ public final class TextFormatters {
         return humanize(stripNamespace(resourceTypeId));
     }
 
+    public static String itemName(String itemId) {
+        if (itemId == null) return "Unknown Item";
+        String name = stripNamespace(itemId);
+        if (name.startsWith("Bench_")) {
+            return benchName(name.substring("Bench_".length()));
+        }
+        return humanize(name);
+    }
+
+    public static String benchName(String benchCore) {
+        if (benchCore == null || benchCore.isEmpty()) return "Unknown Bench";
+        if (benchCore.equalsIgnoreCase("Workbench") || benchCore.equalsIgnoreCase("WorkBench")) {
+            return "Workbench";
+        }
+        return humanize(benchCore) + " Bench";
+    }
+
     public static String mobName(String mobType) {
         return mobType == null ? "Unknown" : humanize(mobType);
     }

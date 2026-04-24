@@ -1,8 +1,8 @@
 Group {
   LayoutMode: Top;
   Anchor: (Height: 40);
-  Padding: (Bottom: 8, Top: 8);
-  Background: #1e1e1e(0.8);
+  Padding: (Left: 6, Right: 8, Bottom: 6, Top: 6);
+  Background: #182331(0.78);
 
   Label #SourceName {
     Text: "";
@@ -10,7 +10,7 @@ Group {
     Padding: (Left: 8);
     Style: (
       FontSize: 14,
-      TextColor: #ffffff,
+      TextColor: #d8e2ec,
       VerticalAlignment: Center,
       RenderBold: true
     );

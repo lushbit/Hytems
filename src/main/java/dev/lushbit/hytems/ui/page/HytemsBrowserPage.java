@@ -212,6 +212,15 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
         }
 
+        if (data.itemPath != null && !data.itemPath.isEmpty()) {
+            if (selectDetailItem(data.itemPath, true)) {
+                recordSearchHistoryItem(data.itemPath);
+                needsHistoryUpdate = true;
+                needsUpdate = true;
+                needsInfoUpdate = true;
+            }
+        }
+
         if (data.selectedItem != null && !data.selectedItem.isEmpty()) {
             if (selectDetailItem(data.selectedItem, true)) {
                 recordSearchHistoryItem(data.selectedItem);
@@ -462,6 +471,16 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         );
     }
 
+    private void bindItemPathButton(@Nonnull UIEventBuilder events, @Nonnull String selector,
+                                    @Nonnull String itemId) {
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                selector,
+                EventData.of("ItemPath", itemId),
+                false
+        );
+    }
+
     private void updateItemActionIcons(@Nonnull UICommandBuilder cmd, @Nonnull String pinEmptySelector,
                                        @Nonnull String pinFilledSelector, @Nonnull String favoriteEmptySelector,
                                        @Nonnull String favoriteFilledSelector, @Nonnull String itemId) {
@@ -524,7 +543,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                     cmd.set("#DetailDurability.Text", "N/A");
                 }
 
-                loadRecipes(cmd, selectedItemId);
+                loadRecipes(cmd, events, selectedItemId);
             } else {
                 cmd.set("#DetailMaxStack.Text", "N/A");
                 cmd.set("#DetailDurability.Text", "N/A");
@@ -540,7 +559,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
-    private void loadRecipes(@Nonnull UICommandBuilder cmd, @Nonnull String itemId) {
+    private void loadRecipes(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events, @Nonnull String itemId) {
         try {
             List<CraftingRecipe> allRecipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
 
@@ -550,7 +569,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             } else {
                 cmd.set("#NoRecipeContainer.Visible", false);
                 cmd.set("#RecipeContent.Visible", true);
-                displayRecipes(cmd, allRecipes);
+                displayRecipes(cmd, events, allRecipes);
             }
         } catch (Exception e) {
             System.err.println("[Hytems] Error loading recipes for " + itemId + ": " + e.getMessage());
@@ -560,7 +579,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
-    private void displayRecipes(@Nonnull UICommandBuilder cmd, @Nonnull List<CraftingRecipe> recipes) {
+    private void displayRecipes(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events,
+                                @Nonnull List<CraftingRecipe> recipes) {
         try {
             if (recipes.isEmpty()) return;
 
@@ -582,7 +602,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
 
             cmd.clear("#IngredientsList");
-            displaySingleRecipe(cmd, firstRecipe);
+            displaySingleRecipe(cmd, events, firstRecipe);
         } catch (Exception e) {
             System.err.println("[Hytems] Error displaying recipes: " + e.getMessage());
             e.printStackTrace();
@@ -591,7 +611,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
-    private void displaySingleRecipe(@Nonnull UICommandBuilder cmd, @Nonnull CraftingRecipe recipe) {
+    private void displaySingleRecipe(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events,
+                                     @Nonnull CraftingRecipe recipe) {
         try {
             List<MaterialQuantity> ingredients = RecipeUtils.getInputs(recipe);
 
@@ -626,6 +647,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
                         String ingredientName = translatedName(ingredientItem, ingredientId);
                         cmd.set(rowSelector + " #IngredientName.Text", ingredientName);
+                        cmd.set(rowSelector + " #PathButton.Visible", true);
+                        bindItemPathButton(events, rowSelector + " #PathButton", ingredientId);
                     } else {
                         ResourceType resourceType = (ResourceType) ResourceType.getAssetMap().getAsset(resourceTypeId);
                         if (resourceType != null) {
@@ -639,6 +662,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                             String resourceTypeName = TextFormatters.resourceTypeName(resourceTypeId);
                             cmd.set(rowSelector + " #Quantity.Text", "x" + quantity);
                             cmd.set(rowSelector + " #IngredientName.Text", "Any " + resourceTypeName);
+                            cmd.set(rowSelector + " #PathButton.Visible", false);
                         }
                     }
 
@@ -1196,6 +1220,11 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         data -> data.selectedItem
                 )
                 .addField(
+                        new KeyedCodec<>("ItemPath", Codec.STRING),
+                        (data, value) -> data.itemPath = value,
+                        data -> data.itemPath
+                )
+                .addField(
                         new KeyedCodec<>("ShowDrops", Codec.STRING),
                         (data, value) -> data.showDrops = value,
                         data -> data.showDrops
@@ -1252,6 +1281,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         private String clearSearch;
         private String closeGUI;
         private String selectedItem;
+        private String itemPath;
         private String showDrops;
         private String closeDetail;
         private String closeDropPanel;

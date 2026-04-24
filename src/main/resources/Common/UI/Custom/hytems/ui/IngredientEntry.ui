@@ -1,10 +1,9 @@
 Group {
-  LayoutMode: Left;
   Anchor: (Height: 50);
-  Padding: (Bottom: 6);
+  Background: #182331(0.78);
 
   Group #IconBackground {
-    Anchor: (Width: 44, Height: 44);
+    Anchor: (Left: 8, Top: 3, Width: 44, Height: 44);
     Background: "hytems/textures/rarity_default.png";
     LayoutMode: Center;
 
@@ -19,12 +18,8 @@ Group {
     }
   }
 
-  Group {
-    Anchor: (Width: 8);
-  }
-
   Label #Quantity {
-    Anchor: (Width: 40);
+    Anchor: (Left: 60, Top: 0, Bottom: 0, Width: 40);
     Style: (
       FontSize: 12,
       TextColor: #ffaa00,
@@ -34,11 +29,23 @@ Group {
   }
 
   Label #IngredientName {
-    FlexWeight: 1;
+    Anchor: (Left: 108, Right: 12, Top: 0, Bottom: 0);
     Style: (
       FontSize: 12,
-      TextColor: #cccccc,
+      TextColor: #d8e2ec,
       VerticalAlignment: Center
     );
+  }
+
+  Button #PathButton {
+    Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+    Background: #000000(0);
+    Padding: (Full: 0);
+    Style: ButtonStyle(
+      Default: (Background: #000000(0)),
+      Hovered: (Background: #7db0db(0.2)),
+      Pressed: (Background: #7db0db(0.3))
+    );
+    Visible: true;
   }
 }

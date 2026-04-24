@@ -7,11 +7,11 @@ Group #DropDetailContent {
     LayoutMode: Left;
     Anchor: (Height: 124);
     Padding: (Full: 10);
-    Background: #252525(0.8);
+    Background: #172331(0.88);
 
     Group {
       Anchor: (Width: 70, Height: 70);
-      Background: #ffffff(0.01);
+      Background: #ffffff(0.04);
       LayoutMode: Center;
 
       ItemIcon #DropDetailItemIcon {
@@ -115,12 +115,11 @@ Group #DropDetailContent {
 
   Group #DropsContainer {
     LayoutMode: Top;
-    Background: #252525(0.8);
-    Padding: (Full: 12);
 
     Label #DropsTitle {
       Text: "Obtained From";
       Anchor: (Height: 24);
+      Padding: (Left: 8);
       Style: (
         FontSize: 16,
         TextColor: #96a9be,
@@ -161,7 +160,6 @@ Group #DropDetailContent {
 
         Group #DropSourcesList {
           LayoutMode: Top;
-          Background: #1e1e1e(0.8);
         }
       }
     }
@@ -174,7 +172,7 @@ Group #DropDetailContent {
   Group #DetailsContainer {
     LayoutMode: Top;
     Padding: (Full: 12);
-    Background: #252525(0.8);
+    Background: #16202c(0.86);
 
     Label #DetailsTitle {
       Text: "Item Information";

@@ -6,7 +6,7 @@ import java.util.*;
 
 public class DropListRegistry {
     private final Map<String, ItemDropList> dropLists = new LinkedHashMap<>();
-    private final Map<String, List<String>> itemDropSources = new HashMap<>();
+    private final Map<String, Set<String>> itemDropSources = new HashMap<>();
 
     public void reload(Map<String, ItemDropList> newDropLists) {
         this.dropLists.clear();
@@ -24,6 +24,10 @@ public class DropListRegistry {
     }
 
     private void indexDropListContents(ItemDropList dropList, String dropListId) {
+        if (shouldIgnoreDropSource(dropListId)) {
+            return;
+        }
+
         try {
             Object container = dropList.getContainer();
             if (container != null) {
@@ -42,16 +46,16 @@ public class DropListRegistry {
                 Collection<?> items = (Collection<?>) container;
                 for (Object item : items) {
                     String itemId = extractItemIdFromDrop(item);
-                    if (itemId != null) {
-                        itemDropSources.computeIfAbsent(itemId, k -> new ArrayList<>()).add(dropListId);
+                    if (itemId != null && !shouldIgnoreDroppedItem(itemId)) {
+                        itemDropSources.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(dropListId);
                     }
                 }
             } else if (container.getClass().isArray()) {
                 Object[] items = (Object[]) container;
                 for (Object item : items) {
                     String itemId = extractItemIdFromDrop(item);
-                    if (itemId != null) {
-                        itemDropSources.computeIfAbsent(itemId, k -> new ArrayList<>()).add(dropListId);
+                    if (itemId != null && !shouldIgnoreDroppedItem(itemId)) {
+                        itemDropSources.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(dropListId);
                     }
                 }
             } else {
@@ -92,8 +96,8 @@ public class DropListRegistry {
                 List<?> drops = (List<?>) result;
                 for (Object drop : drops) {
                     String itemId = extractItemIdFromDrop(drop);
-                    if (itemId != null) {
-                        itemDropSources.computeIfAbsent(itemId, k -> new ArrayList<>()).add(dropListId);
+                    if (itemId != null && !shouldIgnoreDroppedItem(itemId)) {
+                        itemDropSources.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(dropListId);
                     }
                 }
             }
@@ -103,7 +107,7 @@ public class DropListRegistry {
     }
 
     public List<String> getDropSourcesForItem(String itemId) {
-        List<String> sources = itemDropSources.get(itemId);
+        Set<String> sources = itemDropSources.get(itemId);
         return sources != null ? new ArrayList<>(sources) : Collections.emptyList();
     }
 
@@ -113,5 +117,28 @@ public class DropListRegistry {
 
     public int size() {
         return dropLists.size();
+    }
+
+    private boolean shouldIgnoreDropSource(String dropListId) {
+        if (dropListId == null || dropListId.isEmpty()) {
+            return true;
+        }
+
+        String normalized = dropListId.replace('\\', '/');
+        String lower = normalized.toLowerCase(Locale.ENGLISH);
+        return lower.startsWith("*")
+                || lower.contains("state_definitions")
+                || lower.contains("gathering_breaking_droplist")
+                || lower.contains("breaking_droplist")
+                || lower.contains("droplist_container");
+    }
+
+    private boolean shouldIgnoreDroppedItem(String itemId) {
+        if (itemId == null || itemId.isEmpty()) {
+            return true;
+        }
+
+        String lower = itemId.toLowerCase(Locale.ENGLISH);
+        return lower.endsWith("_half");
     }
 }

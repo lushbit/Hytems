@@ -14,6 +14,7 @@ import dev.lushbit.hytems.HytemsPlugin;
 import dev.lushbit.hytems.asset.DropSourceParser;
 import dev.lushbit.hytems.asset.RecipeUtils;
 import dev.lushbit.hytems.data.PlayerDataManager;
+import dev.lushbit.hytems.ui.DropSourceSummaries;
 import dev.lushbit.hytems.ui.HytemsUiTemplates;
 import dev.lushbit.hytems.ui.ItemUiSupport;
 import dev.lushbit.hytems.ui.TextFormatters;
@@ -162,44 +163,22 @@ public class PinnedItemsHud extends CustomUIHud {
     private void displayDrops(@Nonnull UICommandBuilder cmd, @Nonnull String itemSelector, @Nonnull List<String> dropSources) {
         try {
             String listSelector = itemSelector + " #DropsList";
-            Map<String, Map<String, List<Integer>>> mobGrouping = new LinkedHashMap<>();
-            Map<String, Map<String, List<String>>> cropGrouping = new LinkedHashMap<>();
-            int otherSourcesCount = 0;
-            
-            for (String dropSourceId : dropSources) {
-                DropSourceParser.ParsedDropSource parsed = DropSourceParser.parse(dropSourceId);
-                
-                if (parsed.isMobSource()) {
-                    mobGrouping.computeIfAbsent(parsed.mobType, k -> new LinkedHashMap<>())
-                            .computeIfAbsent(parsed.zone != null ? parsed.zone : "Unknown", k -> new ArrayList<>())
-                            .add(parsed.tier);
-                } else if (parsed.isCropSource()) {
-                    cropGrouping.computeIfAbsent(parsed.cropType, k -> new LinkedHashMap<>())
-                            .computeIfAbsent(parsed.cropZone != null ? parsed.cropZone : "Unknown", k -> new ArrayList<>())
-                            .add(parsed.cropStage);
-                } else {
-                    otherSourcesCount++;
-                }
-            }
-            
+            List<DropSourceSummaries.DisplayDropSource> mobSummaries = DropSourceSummaries.summarizeMobDrops(dropSources);
+            int totalDropSources = DropSourceSummaries.summarize(dropSources).size();
             int dropIndex = 0;
             int maxDrops = 3;
-            
-            for (Map.Entry<String, Map<String, List<Integer>>> mobEntry : mobGrouping.entrySet()) {
+
+            for (DropSourceSummaries.DisplayDropSource summary : mobSummaries) {
                 if (dropIndex >= maxDrops) break;
-                
-                String mobType = mobEntry.getKey();
-                Map<String, List<Integer>> zoneData = mobEntry.getValue();
-                String displayName = TextFormatters.mobName(mobType);
-                
+
                 cmd.append(listSelector, HytemsUiTemplates.PINNED_HUD_DROP_ROW);
                 String rowSelector = listSelector + "[" + dropIndex + "]";
                 String badgesSelector = rowSelector + " #ZoneBadges";
-                cmd.set(rowSelector + " #SourceName.Text", displayName);
+                cmd.set(rowSelector + " #SourceName.Text", summary.fullLabel());
 
-                List<Map.Entry<String, List<Integer>>> sortedZones = new ArrayList<>(zoneData.entrySet());
+                List<Map.Entry<String, List<Integer>>> sortedZones = new ArrayList<>(summary.zoneData.entrySet());
                 sortedZones.sort((a, b) -> DropSourceParser.compareZones(a.getKey(), b.getKey()));
-                
+
                 int badgeIndex = 0;
                 for (Map.Entry<String, List<Integer>> entry : sortedZones) {
                     String zone = entry.getKey();
@@ -212,10 +191,8 @@ public class PinnedItemsHud extends CustomUIHud {
                 }
                 dropIndex++;
             }
-            
-            int totalDropSources = mobGrouping.size() + cropGrouping.size() + otherSourcesCount;
             int remainingDrops = totalDropSources - dropIndex;
-            
+
             if (remainingDrops > 0) {
                 String suffix = remainingDrops == 1 ? "" : "s";
                 cmd.set(itemSelector + " #MoreDropsLabel.Visible", true);

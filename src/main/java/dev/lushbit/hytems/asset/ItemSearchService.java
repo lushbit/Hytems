@@ -7,12 +7,16 @@ import dev.lushbit.hytems.ui.ItemUiSupport;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public final class ItemSearchService {
@@ -22,14 +26,32 @@ public final class ItemSearchService {
             "material", "materials", "resource", "resources",
             "furniture", "craftable", "ingredient", "ingredients"
     ));
+    private static final Map<String, List<Map.Entry<String, Item>>> BASE_RESULTS_CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, Integer> BASE_RESULTS_ITEM_COUNT = new ConcurrentHashMap<>();
 
     private final PlayerRef playerRef;
+    private final Map<String, String> translatedNameCache = new HashMap<>();
 
     public ItemSearchService(@Nonnull PlayerRef playerRef) {
         this.playerRef = playerRef;
     }
 
+    public static void prewarmBaseResults(@Nonnull PlayerRef playerRef, @Nonnull Map<String, Item> items) {
+        String cacheKey = baseCacheKey(playerRef);
+        Integer cachedCount = BASE_RESULTS_ITEM_COUNT.get(cacheKey);
+        if (cachedCount != null && cachedCount == items.size() && BASE_RESULTS_CACHE.containsKey(cacheKey)) {
+            return;
+        }
+
+        ItemSearchService service = new ItemSearchService(playerRef);
+        service.buildBaseResults(items, cacheKey);
+    }
+
     public List<Map.Entry<String, Item>> filter(@Nonnull Map<String, Item> items, @Nonnull String searchQuery) {
+        if (searchQuery.isEmpty()) {
+            return getBaseResults(items);
+        }
+
         return items.entrySet().stream()
                 .filter(entry -> !isFromTodoBench(entry.getKey()))
                 .filter(entry -> matchesQuery(entry, searchQuery))
@@ -143,7 +165,36 @@ public final class ItemSearchService {
     }
 
     private String translatedName(Map.Entry<String, Item> entry) {
-        return ItemUiSupport.translatedName(playerRef, entry.getValue(), entry.getKey());
+        return translatedName(entry.getKey(), entry.getValue());
+    }
+
+    private String translatedName(String itemId, Item item) {
+        return translatedNameCache.computeIfAbsent(
+                itemId,
+                ignored -> ItemUiSupport.translatedName(playerRef, item, itemId)
+        );
+    }
+
+    private List<Map.Entry<String, Item>> getBaseResults(Map<String, Item> items) {
+        String cacheKey = baseCacheKey(this.playerRef);
+        Integer cachedCount = BASE_RESULTS_ITEM_COUNT.get(cacheKey);
+        List<Map.Entry<String, Item>> cachedResults = BASE_RESULTS_CACHE.get(cacheKey);
+        if (cachedCount != null && cachedCount == items.size() && cachedResults != null && !cachedResults.isEmpty()) {
+            return cachedResults;
+        }
+
+        return buildBaseResults(items, cacheKey);
+    }
+
+    private List<Map.Entry<String, Item>> buildBaseResults(Map<String, Item> items, String cacheKey) {
+        List<Map.Entry<String, Item>> baseResults = new ArrayList<>(items.entrySet());
+        baseResults.removeIf(entry -> isFromTodoBench(entry.getKey()));
+        baseResults.sort((a, b) -> translatedName(a).compareToIgnoreCase(translatedName(b)));
+
+        List<Map.Entry<String, Item>> immutableResults = Collections.unmodifiableList(baseResults);
+        BASE_RESULTS_CACHE.put(cacheKey, immutableResults);
+        BASE_RESULTS_ITEM_COUNT.put(cacheKey, items.size());
+        return immutableResults;
     }
 
     private boolean containsAny(String value, String... needles) {
@@ -173,5 +224,9 @@ public final class ItemSearchService {
             }
             return new CategoryQuery(queryAfterAt.toLowerCase(Locale.ENGLISH), "");
         }
+    }
+
+    private static String baseCacheKey(@Nonnull PlayerRef playerRef) {
+        return String.valueOf(playerRef.getLanguage());
     }
 }

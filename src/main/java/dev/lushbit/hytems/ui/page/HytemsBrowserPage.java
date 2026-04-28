@@ -24,12 +24,14 @@ import dev.lushbit.hytems.HytemsPlugin;
 import dev.lushbit.hytems.asset.DropSourceParser;
 import dev.lushbit.hytems.asset.ItemSearchService;
 import dev.lushbit.hytems.asset.RecipeUtils;
+import dev.lushbit.hytems.ui.DropSourceSummaries;
 import dev.lushbit.hytems.ui.HytemsUiTemplates;
 import dev.lushbit.hytems.ui.ItemUiSupport;
 import dev.lushbit.hytems.ui.TextFormatters;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,7 +62,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private static final int CRAFTING_STATION_SECTION_HEIGHT = 108;
     private static final int DROP_SECTION_BASE_HEIGHT = 62;
     private static final int LIST_ROW_HEIGHT = 50;
-    private static final int DROP_ROW_HEIGHT = 40;
+    private static final int DROP_ROW_COMPACT_HEIGHT = 40;
+    private static final int DROP_ROW_HEIGHT = 56;
     private static final int SEARCH_HISTORY_MAX_ITEMS = 12;
 
     private enum InfoTab {
@@ -82,6 +85,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private Store<EntityStore> pageStore;
     private final PlayerRef playerRef;
     private final ItemSearchService itemSearchService;
+    private String cachedRecipeItemId;
+    private List<CraftingRecipe> cachedRecipes = Collections.emptyList();
+    private String cachedDropItemId;
+    private List<DropSourceSummaries.DisplayDropSource> cachedDropSummaries = Collections.emptyList();
 
     public HytemsBrowserPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime) {
         super(playerRef, lifetime, BrowserData.CODEC);
@@ -366,7 +373,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         try {
             if (selectedItemId != null && !selectedItemId.isEmpty()) {
-                List<CraftingRecipe> recipes = HytemsPlugin.recipeManager.getCraftingRecipes(selectedItemId);
+                List<CraftingRecipe> recipes = getCachedRecipes(selectedItemId);
                 if (recipes != null && recipes.size() == 1) {
                     int baseHeight = hasVisibleCraftingStation(recipes.get(0))
                             ? RECIPE_SECTION_BASE_HEIGHT
@@ -395,8 +402,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         try {
             if (dropsItemId != null && !dropsItemId.isEmpty()) {
-                List<String> dropSources = HytemsPlugin.dropListRegistry.getDropSourcesForItem(dropsItemId);
-                int sourceRows = countDropSourceRows(dropSources);
+                int sourceRows = getCachedDropSummaries(dropsItemId).size();
                 if (sourceRows > 0) {
                     dropsSectionHeight = DROP_SECTION_BASE_HEIGHT + (sourceRows * DROP_ROW_HEIGHT);
                 }
@@ -412,29 +418,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 + SECTION_GAP
                 + DETAILS_SECTION_HEIGHT
                 + INFO_CONTAINER_SCROLL_BUFFER;
-    }
-
-    private int countDropSourceRows(List<String> dropSources) {
-        if (dropSources == null || dropSources.isEmpty()) {
-            return 0;
-        }
-
-        Set<String> mobRows = new LinkedHashSet<>();
-        Set<String> cropRows = new LinkedHashSet<>();
-        int otherRows = 0;
-
-        for (String dropSourceId : dropSources) {
-            DropSourceParser.ParsedDropSource parsed = DropSourceParser.parse(dropSourceId);
-            if (parsed.isMobSource()) {
-                mobRows.add(parsed.mobType);
-            } else if (parsed.isCropSource()) {
-                cropRows.add(parsed.cropType);
-            } else {
-                otherRows++;
-            }
-        }
-
-        return mobRows.size() + cropRows.size() + otherRows;
     }
 
     private void updateTabVisualState(@Nonnull UICommandBuilder cmd) {
@@ -566,7 +549,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     private void loadRecipes(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events, @Nonnull String itemId) {
         try {
-            List<CraftingRecipe> allRecipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
+            List<CraftingRecipe> allRecipes = getCachedRecipes(itemId);
 
             if (allRecipes == null || allRecipes.isEmpty() || allRecipes.size() > 1) {
                 cmd.set("#NoRecipeContainer.Visible", true);
@@ -758,14 +741,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 cmd.set("#DropDetailDurability.Text", "N/A");
             }
 
-            List<String> dropSources = HytemsPlugin.dropListRegistry.getDropSourcesForItem(dropsItemId);
-            if (dropSources == null || dropSources.isEmpty()) {
+            List<DropSourceSummaries.DisplayDropSource> dropSummaries = getCachedDropSummaries(dropsItemId);
+            if (dropSummaries.isEmpty()) {
                 cmd.set("#NoDropsContainer.Visible", true);
                 cmd.set("#DropsContent.Visible", false);
             } else {
                 cmd.set("#NoDropsContainer.Visible", false);
                 cmd.set("#DropsContent.Visible", true);
-                displayDropSources(cmd, dropSources);
+                displayDropSources(cmd, dropSummaries);
             }
         } catch (Exception e) {
             System.err.println("[Hytems] Error rendering drops panel: " + e.getMessage());
@@ -775,53 +758,23 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
-    private void displayDropSources(@Nonnull UICommandBuilder cmd, @Nonnull List<String> dropSources) {
+    private void displayDropSources(@Nonnull UICommandBuilder cmd,
+                                    @Nonnull List<DropSourceSummaries.DisplayDropSource> dropSummaries) {
         try {
             cmd.clear("#DropSourcesList");
-
-            Map<String, Map<String, List<Integer>>> mobGrouping = new LinkedHashMap<>();
-            Map<String, Map<String, List<String>>> cropGrouping = new LinkedHashMap<>();
-            List<String> otherSources = new ArrayList<>();
-
-            for (String dropSourceId : dropSources) {
-                DropSourceParser.ParsedDropSource parsed = DropSourceParser.parse(dropSourceId);
-
-                if (parsed.isMobSource()) {
-                    mobGrouping.computeIfAbsent(parsed.mobType, k -> new LinkedHashMap<>())
-                            .computeIfAbsent(parsed.zone != null ? parsed.zone : "Unknown", k -> new ArrayList<>())
-                            .add(parsed.tier);
-                } else if (parsed.isCropSource()) {
-                    cropGrouping.computeIfAbsent(parsed.cropType, k -> new LinkedHashMap<>())
-                            .computeIfAbsent(parsed.cropZone != null ? parsed.cropZone : "Unknown", k -> new ArrayList<>())
-                            .add(parsed.cropStage);
-                } else {
-                    otherSources.add(dropSourceId);
-                }
-            }
-
             int index = 0;
-            for (Map.Entry<String, Map<String, List<Integer>>> mobEntry : mobGrouping.entrySet()) {
-                String mobType = mobEntry.getKey();
-                Map<String, List<Integer>> zoneData = mobEntry.getValue();
-                String displayName = TextFormatters.mobName(mobType);
-
-                if (zoneData.size() >= 2) {
-                    index = addDropSourceRowMultiZone(cmd, index, displayName, zoneData);
+            for (DropSourceSummaries.DisplayDropSource summary : dropSummaries) {
+                if (summary.hasZoneData()) {
+                    index = addDropSourceRowWithZoneBoxes(
+                            cmd,
+                            index,
+                            summary.primaryLabel(),
+                            summary.secondaryLabel(),
+                            summary.zoneData
+                    );
                 } else {
-                    String zoneInfo = formatZoneInfo(zoneData);
-                    index = addDropSourceRow(cmd, index, displayName, zoneInfo);
+                    index = addSimpleDropSourceRow(cmd, index, summary.primaryLabel(), summary.secondaryLabel());
                 }
-            }
-
-            for (Map.Entry<String, Map<String, List<String>>> cropEntry : cropGrouping.entrySet()) {
-                String cropType = cropEntry.getKey();
-                String displayName = TextFormatters.cropName(cropType);
-                index = addCropSourceRow(cmd, index, displayName);
-            }
-
-            for (String source : otherSources) {
-                String displayName = TextFormatters.dropSourceName(source);
-                index = addSimpleDropSourceRow(cmd, index, displayName);
             }
         } catch (Exception e) {
             System.err.println("[Hytems] Error displaying drop sources: " + e.getMessage());
@@ -829,24 +782,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
-    private int addDropSourceRow(UICommandBuilder cmd, int index, String displayName, String zoneInfo) {
-        Map<String, List<Integer>> zoneData = new LinkedHashMap<>();
-        if (!zoneInfo.isEmpty()) {
-            String[] parts = zoneInfo.split(":");
-            if (parts.length > 0) {
-                String zonePart = parts[0].trim();
-                zoneData.put(zonePart, new ArrayList<>());
-            }
-        }
-
-        return addDropSourceRowWithZoneBoxes(cmd, index, displayName, zoneData);
-    }
-
-    private int addDropSourceRowMultiZone(UICommandBuilder cmd, int index, String displayName, Map<String, List<Integer>> zoneData) {
-        return addDropSourceRowWithZoneBoxes(cmd, index, displayName, zoneData);
-    }
-
-    private int addDropSourceRowWithZoneBoxes(UICommandBuilder cmd, int index, String displayName, Map<String, List<Integer>> zoneData) {
+    private int addDropSourceRowWithZoneBoxes(UICommandBuilder cmd, int index, String displayName,
+                                              String secondaryLabel, Map<String, List<Integer>> zoneData) {
         List<Map.Entry<String, List<Integer>>> sortedZones = new ArrayList<>(zoneData.entrySet());
         sortedZones.sort((a, b) -> DropSourceParser.compareZones(a.getKey(), b.getKey()));
 
@@ -854,6 +791,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         String rowSelector = "#DropSourcesList[" + index + "]";
         String badgesSelector = rowSelector + " #ZoneBadges";
         cmd.set(rowSelector + " #SourceName.Text", displayName);
+        cmd.set(rowSelector + " #SourceContext.Text", secondaryLabel);
+        cmd.set(rowSelector + " #SourceContext.Visible", secondaryLabel != null && !secondaryLabel.isEmpty());
+        setDropRowHeight(cmd, rowSelector, secondaryLabel != null && !secondaryLabel.isEmpty() ? DROP_ROW_HEIGHT : DROP_ROW_COMPACT_HEIGHT);
 
         for (int i = 0; i < sortedZones.size(); i++) {
             Map.Entry<String, List<Integer>> entry = sortedZones.get(i);
@@ -879,33 +819,47 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         cmd.set(badgeSelector + " #ZoneLabel.Text", label);
     }
 
-    private int addSimpleDropSourceRow(UICommandBuilder cmd, int index, String displayName) {
+    private int addSimpleDropSourceRow(UICommandBuilder cmd, int index, String displayName, String secondaryLabel) {
         cmd.append("#DropSourcesList", HytemsUiTemplates.SIMPLE_DROP_SOURCE_ROW);
-        cmd.set("#DropSourcesList[" + index + "] #SourceName.Text", displayName);
+        String rowSelector = "#DropSourcesList[" + index + "]";
+        cmd.set(rowSelector + " #SourceName.Text", displayName);
+        cmd.set(rowSelector + " #SourceContext.Text", secondaryLabel);
+        cmd.set(rowSelector + " #SourceContext.Visible", secondaryLabel != null && !secondaryLabel.isEmpty());
+        setDropRowHeight(cmd, rowSelector, secondaryLabel != null && !secondaryLabel.isEmpty() ? DROP_ROW_HEIGHT : DROP_ROW_COMPACT_HEIGHT);
         return index + 1;
     }
 
-    private int addCropSourceRow(UICommandBuilder cmd, int index, String displayName) {
-        return addSimpleDropSourceRow(cmd, index, displayName);
+    private void setDropRowHeight(@Nonnull UICommandBuilder cmd, @Nonnull String rowSelector, int height) {
+        Anchor anchor = new Anchor();
+        anchor.setHeight(Value.of(height));
+        cmd.setObject(rowSelector + ".Anchor", anchor);
     }
 
-    private String formatZoneInfo(Map<String, List<Integer>> zoneData) {
-        List<String> zoneParts = new ArrayList<>();
-        for (Map.Entry<String, List<Integer>> entry : zoneData.entrySet()) {
-            String zone = entry.getKey();
-            List<Integer> tiers = entry.getValue();
-
-            String zoneName = TextFormatters.zoneName(zone);
-            String tierRange = TextFormatters.tierRange(tiers);
-
-            if (!tierRange.isEmpty()) {
-                zoneParts.add(zoneName + ": " + tierRange);
-            } else {
-                zoneParts.add(zoneName);
-            }
+    private List<CraftingRecipe> getCachedRecipes(String itemId) {
+        if (itemId == null || itemId.isEmpty()) {
+            return Collections.emptyList();
+        }
+        if (itemId.equals(this.cachedRecipeItemId)) {
+            return this.cachedRecipes;
         }
 
-        return String.join(", ", zoneParts);
+        this.cachedRecipeItemId = itemId;
+        this.cachedRecipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
+        return this.cachedRecipes;
+    }
+
+    private List<DropSourceSummaries.DisplayDropSource> getCachedDropSummaries(String itemId) {
+        if (itemId == null || itemId.isEmpty()) {
+            return Collections.emptyList();
+        }
+        if (itemId.equals(this.cachedDropItemId)) {
+            return this.cachedDropSummaries;
+        }
+
+        this.cachedDropItemId = itemId;
+        List<String> dropSources = HytemsPlugin.dropListRegistry.getDropSourcesForItem(itemId);
+        this.cachedDropSummaries = DropSourceSummaries.summarize(dropSources);
+        return this.cachedDropSummaries;
     }
 
     private void filterItems() {

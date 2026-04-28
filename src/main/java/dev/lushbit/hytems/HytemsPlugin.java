@@ -23,8 +23,11 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.lushbit.hytems.asset.DropListRegistry;
+import dev.lushbit.hytems.asset.ItemSearchService;
+import dev.lushbit.hytems.asset.PrefabDropMetadataRegistry;
 import dev.lushbit.hytems.asset.RecipeManager;
 import dev.lushbit.hytems.command.HytemsCommand;
+import dev.lushbit.hytems.ui.ItemUiSupport;
 import dev.lushbit.hytems.ui.hud.PinnedItemsInventoryTracker;
 import dev.lushbit.hytems.ui.hud.PinnedItemsHudManager;
 import dev.lushbit.hytems.data.PlayerDataManager;
@@ -81,6 +84,11 @@ public class HytemsPlugin extends JavaPlugin {
 
             if (playerRef != null && playerDataManager.getPinnedCount(playerRef) > 0) {
                 pinnedItemsHudManager.registerPlayer(playerRef, store, ref);
+            }
+            if (playerRef != null) {
+                ItemUiSupport.prewarmTranslations(playerRef, ITEMS);
+                ItemSearchService.prewarmBaseResults(playerRef, ITEMS);
+                PrefabDropMetadataRegistry.prewarm();
             }
         });
 

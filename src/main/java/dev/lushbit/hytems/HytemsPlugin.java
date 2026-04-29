@@ -2,6 +2,7 @@ package dev.lushbit.hytems;
 
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
@@ -11,7 +12,6 @@ import com.hypixel.hytale.component.system.EntityEventSystem;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
-import com.hypixel.hytale.assetstore.map.IndexedLookupTableAssetMap;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemQuality;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
@@ -27,10 +27,10 @@ import dev.lushbit.hytems.asset.ItemSearchService;
 import dev.lushbit.hytems.asset.PrefabDropMetadataRegistry;
 import dev.lushbit.hytems.asset.RecipeManager;
 import dev.lushbit.hytems.command.HytemsCommand;
-import dev.lushbit.hytems.ui.ItemUiSupport;
-import dev.lushbit.hytems.ui.hud.PinnedItemsInventoryTracker;
-import dev.lushbit.hytems.ui.hud.PinnedItemsHudManager;
 import dev.lushbit.hytems.data.PlayerDataManager;
+import dev.lushbit.hytems.ui.ItemUiSupport;
+import dev.lushbit.hytems.ui.hud.PinnedItemsHudManager;
+import dev.lushbit.hytems.ui.hud.PinnedItemsInventoryTracker;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -139,4 +139,3 @@ public class HytemsPlugin extends JavaPlugin {
         this.getLogger().at(Level.INFO).log("Loaded %d item qualities for Hytems browser", QUALITIES.size());
     }
 }
-

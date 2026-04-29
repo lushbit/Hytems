@@ -27,6 +27,7 @@ import dev.lushbit.hytems.asset.RecipeUtils;
 import dev.lushbit.hytems.ui.DropSourceSummaries;
 import dev.lushbit.hytems.ui.HytemsUiTemplates;
 import dev.lushbit.hytems.ui.ItemUiSupport;
+import dev.lushbit.hytems.ui.MobPortraitResolver;
 import dev.lushbit.hytems.ui.TextFormatters;
 
 import javax.annotation.Nonnull;
@@ -48,22 +49,24 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private static final int ITEMS_PER_PAGE = ITEMS_PER_ROW * BODY_ROWS_PER_PAGE;
     private static final int GRID_LABEL_MAX_CHARS = 16;
     private static final int GRID_HEIGHT = 744;
-    private static final int INFO_CONTAINER_MAX_HEIGHT = 822;
+    private static final int INFO_CONTAINER_MAX_HEIGHT = 876;
     private static final int INFO_CONTAINER_MIN_HEIGHT = 220;
     private static final int INFO_CONTAINER_PADDING_VERTICAL = 28;
-    private static final int INFO_CONTAINER_SCROLL_BUFFER = 12;
+    private static final int INFO_CONTAINER_SCROLL_BUFFER = 24;
     private static final int ITEM_HEADER_HEIGHT = 124;
     private static final int SECTION_GAP = 12;
-    private static final int DETAILS_SECTION_HEIGHT = 104;
+    private static final int DETAILS_SECTION_HEIGHT = 116;
     private static final int EMPTY_RECIPE_SECTION_HEIGHT = 91;
-    private static final int EMPTY_DROPS_SECTION_HEIGHT = 91;
+    private static final int EMPTY_DROPS_SECTION_HEIGHT = 67;
     private static final int RECIPE_SECTION_BASE_HEIGHT = 214;
     private static final int RECIPE_SECTION_NO_STATION_BASE_HEIGHT = 96;
     private static final int CRAFTING_STATION_SECTION_HEIGHT = 108;
-    private static final int DROP_SECTION_BASE_HEIGHT = 62;
+    private static final int DROP_SECTION_BASE_HEIGHT = 32;
     private static final int LIST_ROW_HEIGHT = 50;
     private static final int DROP_ROW_COMPACT_HEIGHT = 40;
     private static final int DROP_ROW_HEIGHT = 56;
+    private static final int MOB_DROPS_SECTION_HEIGHT = 220;
+    private static final int OTHER_DROPS_SECTION_BASE_HEIGHT = 30;
     private static final int SEARCH_HISTORY_MAX_ITEMS = 12;
 
     private enum InfoTab {
@@ -75,6 +78,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private int currentPage = 0;
     private String selectedItemId = null;
     private String dropsItemId = null;
+    private int currentMobDropIndex = 0;
     private InfoTab activeInfoTab = InfoTab.RECIPES;
 
     private List<Map.Entry<String, Item>> filteredItems = new ArrayList<>();
@@ -280,6 +284,13 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
         }
 
+        if (data.mobDropAction != null && !data.mobDropAction.isEmpty()) {
+            if (handleMobDropAction(data.mobDropAction)) {
+                needsUpdate = true;
+                needsInfoUpdate = true;
+            }
+        }
+
         if (data.closeGUI != null && "true".equals(data.closeGUI)) {
             this.close();
             return;
@@ -379,7 +390,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                             ? RECIPE_SECTION_BASE_HEIGHT
                             : RECIPE_SECTION_NO_STATION_BASE_HEIGHT;
                     List<MaterialQuantity> ingredients = RecipeUtils.getInputs(recipes.get(0));
-                    if (ingredients != null && !ingredients.isEmpty() && ingredients.size() <= 6) {
+                    if (ingredients != null && !ingredients.isEmpty()) {
                         recipeSectionHeight = baseHeight + (ingredients.size() * LIST_ROW_HEIGHT);
                     }
                 }
@@ -402,9 +413,24 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         try {
             if (dropsItemId != null && !dropsItemId.isEmpty()) {
-                int sourceRows = getCachedDropSummaries(dropsItemId).size();
-                if (sourceRows > 0) {
-                    dropsSectionHeight = DROP_SECTION_BASE_HEIGHT + (sourceRows * DROP_ROW_HEIGHT);
+                List<DropSourceSummaries.DisplayDropSource> dropSummaries = getCachedDropSummaries(dropsItemId);
+                List<DropSourceSummaries.DisplayDropSource> mobDrops = filterDropSummariesByKind(
+                        dropSummaries,
+                        DropSourceParser.DropSourceKind.MOB
+                );
+                List<DropSourceSummaries.DisplayDropSource> otherDrops = filterNonMobDropSummaries(dropSummaries);
+
+                if (!mobDrops.isEmpty() || !otherDrops.isEmpty()) {
+                    dropsSectionHeight = DROP_SECTION_BASE_HEIGHT;
+                    if (!mobDrops.isEmpty()) {
+                        dropsSectionHeight += MOB_DROPS_SECTION_HEIGHT;
+                    }
+                    if (!otherDrops.isEmpty()) {
+                        if (dropsSectionHeight > 0) {
+                            dropsSectionHeight += mobDrops.isEmpty() ? 0 : SECTION_GAP;
+                        }
+                        dropsSectionHeight += estimateOtherDropsSectionHeight(otherDrops);
+                    }
                 }
             }
         } catch (Exception ignored) {
@@ -418,6 +444,15 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 + SECTION_GAP
                 + DETAILS_SECTION_HEIGHT
                 + INFO_CONTAINER_SCROLL_BUFFER;
+    }
+
+    private int estimateOtherDropsSectionHeight(@Nonnull List<DropSourceSummaries.DisplayDropSource> otherDrops) {
+        int height = OTHER_DROPS_SECTION_BASE_HEIGHT;
+        for (DropSourceSummaries.DisplayDropSource summary : otherDrops) {
+            boolean hasSecondaryLabel = summary.secondaryLabel() != null && !summary.secondaryLabel().isEmpty();
+            height += hasSecondaryLabel ? DROP_ROW_HEIGHT : DROP_ROW_COMPACT_HEIGHT;
+        }
+        return height;
     }
 
     private void updateTabVisualState(@Nonnull UICommandBuilder cmd) {
@@ -626,7 +661,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         try {
             List<MaterialQuantity> ingredients = RecipeUtils.getInputs(recipe);
 
-            if (ingredients == null || ingredients.isEmpty() || ingredients.size() > 6) {
+            if (ingredients == null || ingredients.isEmpty()) {
                 cmd.set("#NoRecipeContainer.Visible", true);
                 cmd.set("#RecipeContent.Visible", false);
                 return;
@@ -742,13 +777,20 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
 
             List<DropSourceSummaries.DisplayDropSource> dropSummaries = getCachedDropSummaries(dropsItemId);
-            if (dropSummaries.isEmpty()) {
+            List<DropSourceSummaries.DisplayDropSource> mobDrops = filterDropSummariesByKind(
+                    dropSummaries,
+                    DropSourceParser.DropSourceKind.MOB
+            );
+            List<DropSourceSummaries.DisplayDropSource> otherDrops = filterNonMobDropSummaries(dropSummaries);
+
+            if (mobDrops.isEmpty() && otherDrops.isEmpty()) {
                 cmd.set("#NoDropsContainer.Visible", true);
                 cmd.set("#DropsContent.Visible", false);
             } else {
                 cmd.set("#NoDropsContainer.Visible", false);
                 cmd.set("#DropsContent.Visible", true);
-                displayDropSources(cmd, dropSummaries);
+                renderMobDropsSection(cmd, events, mobDrops);
+                renderOtherDropsSection(cmd, !mobDrops.isEmpty(), otherDrops);
             }
         } catch (Exception e) {
             System.err.println("[Hytems] Error rendering drops panel: " + e.getMessage());
@@ -758,22 +800,76 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
+    private void renderMobDropsSection(@Nonnull UICommandBuilder cmd,
+                                       @Nonnull UIEventBuilder events,
+                                       @Nonnull List<DropSourceSummaries.DisplayDropSource> mobDrops) {
+        boolean hasMobDrops = !mobDrops.isEmpty();
+        cmd.set("#MobDropsSection.Visible", hasMobDrops);
+        if (!hasMobDrops) {
+            return;
+        }
+
+        this.currentMobDropIndex = Math.floorMod(this.currentMobDropIndex, mobDrops.size());
+        DropSourceSummaries.DisplayDropSource currentMobDrop = mobDrops.get(this.currentMobDropIndex);
+        cmd.set("#MobDropName.Text", currentMobDrop.primaryLabel());
+        cmd.set("#MobDropCounter.Text", (this.currentMobDropIndex + 1) + " / " + mobDrops.size());
+        setMobDropPortrait(cmd, currentMobDrop.previewSource.mobType);
+        boolean showCarouselControls = mobDrops.size() > 1;
+        cmd.set("#MobDropPrevButton.Visible", showCarouselControls);
+        cmd.set("#MobDropNextButton.Visible", showCarouselControls);
+
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#MobDropPrevButton",
+                EventData.of("MobDropAction", "prev"),
+                false
+        );
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#MobDropNextButton",
+                EventData.of("MobDropAction", "next"),
+                false
+        );
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#MobDropInteractButton",
+                EventData.of("MobDropAction", "open"),
+                false
+        );
+    }
+
+    private void renderOtherDropsSection(@Nonnull UICommandBuilder cmd,
+                                         boolean hasMobDrops,
+                                         @Nonnull List<DropSourceSummaries.DisplayDropSource> otherDrops) {
+        boolean hasOtherDrops = !otherDrops.isEmpty();
+        cmd.set("#OtherDropsSpacer.Visible", hasMobDrops && hasOtherDrops);
+        cmd.set("#OtherDropsSection.Visible", hasOtherDrops);
+        if (!hasOtherDrops) {
+            cmd.clear("#OtherDropSourcesList");
+            return;
+        }
+
+        displayDropSources(cmd, "#OtherDropSourcesList", otherDrops);
+    }
+
     private void displayDropSources(@Nonnull UICommandBuilder cmd,
+                                    @Nonnull String listSelector,
                                     @Nonnull List<DropSourceSummaries.DisplayDropSource> dropSummaries) {
         try {
-            cmd.clear("#DropSourcesList");
+            cmd.clear(listSelector);
             int index = 0;
             for (DropSourceSummaries.DisplayDropSource summary : dropSummaries) {
                 if (summary.hasZoneData()) {
                     index = addDropSourceRowWithZoneBoxes(
                             cmd,
+                            listSelector,
                             index,
                             summary.primaryLabel(),
                             summary.secondaryLabel(),
                             summary.zoneData
                     );
                 } else {
-                    index = addSimpleDropSourceRow(cmd, index, summary.primaryLabel(), summary.secondaryLabel());
+                    index = addSimpleDropSourceRow(cmd, listSelector, index, summary.primaryLabel(), summary.secondaryLabel());
                 }
             }
         } catch (Exception e) {
@@ -782,13 +878,13 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
-    private int addDropSourceRowWithZoneBoxes(UICommandBuilder cmd, int index, String displayName,
+    private int addDropSourceRowWithZoneBoxes(UICommandBuilder cmd, String listSelector, int index, String displayName,
                                               String secondaryLabel, Map<String, List<Integer>> zoneData) {
         List<Map.Entry<String, List<Integer>>> sortedZones = new ArrayList<>(zoneData.entrySet());
         sortedZones.sort((a, b) -> DropSourceParser.compareZones(a.getKey(), b.getKey()));
 
-        cmd.append("#DropSourcesList", HytemsUiTemplates.DROP_SOURCE_ROW);
-        String rowSelector = "#DropSourcesList[" + index + "]";
+        cmd.append(listSelector, HytemsUiTemplates.DROP_SOURCE_ROW);
+        String rowSelector = listSelector + "[" + index + "]";
         String badgesSelector = rowSelector + " #ZoneBadges";
         cmd.set(rowSelector + " #SourceName.Text", displayName);
         cmd.set(rowSelector + " #SourceContext.Text", secondaryLabel);
@@ -819,9 +915,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         cmd.set(badgeSelector + " #ZoneLabel.Text", label);
     }
 
-    private int addSimpleDropSourceRow(UICommandBuilder cmd, int index, String displayName, String secondaryLabel) {
-        cmd.append("#DropSourcesList", HytemsUiTemplates.SIMPLE_DROP_SOURCE_ROW);
-        String rowSelector = "#DropSourcesList[" + index + "]";
+    private int addSimpleDropSourceRow(UICommandBuilder cmd, String listSelector, int index, String displayName,
+                                       String secondaryLabel) {
+        cmd.append(listSelector, HytemsUiTemplates.SIMPLE_DROP_SOURCE_ROW);
+        String rowSelector = listSelector + "[" + index + "]";
         cmd.set(rowSelector + " #SourceName.Text", displayName);
         cmd.set(rowSelector + " #SourceContext.Text", secondaryLabel);
         cmd.set(rowSelector + " #SourceContext.Visible", secondaryLabel != null && !secondaryLabel.isEmpty());
@@ -896,12 +993,66 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             return false;
         }
 
+        boolean itemChanged = !itemId.equals(this.selectedItemId) || !itemId.equals(this.dropsItemId);
         this.selectedItemId = itemId;
         this.dropsItemId = itemId;
+        if (itemChanged) {
+            this.currentMobDropIndex = 0;
+        }
         if (persist) {
             HytemsPlugin.playerDataManager.setLastViewedItem(this.playerRef, itemId);
         }
         return true;
+    }
+
+    private boolean handleMobDropAction(@Nonnull String action) {
+        List<DropSourceSummaries.DisplayDropSource> mobDrops = filterDropSummariesByKind(
+                getCachedDropSummaries(this.dropsItemId),
+                DropSourceParser.DropSourceKind.MOB
+        );
+        if (mobDrops.isEmpty()) {
+            this.currentMobDropIndex = 0;
+            return false;
+        }
+
+        switch (action.toLowerCase(Locale.ENGLISH)) {
+            case "prev":
+                this.currentMobDropIndex = Math.floorMod(this.currentMobDropIndex - 1, mobDrops.size());
+                return true;
+            case "next":
+                this.currentMobDropIndex = Math.floorMod(this.currentMobDropIndex + 1, mobDrops.size());
+                return true;
+            case "open":
+                return false;
+            default:
+                return false;
+        }
+    }
+
+    private List<DropSourceSummaries.DisplayDropSource> filterDropSummariesByKind(
+            @Nonnull List<DropSourceSummaries.DisplayDropSource> summaries,
+            @Nonnull DropSourceParser.DropSourceKind kind
+    ) {
+        List<DropSourceSummaries.DisplayDropSource> filtered = new ArrayList<>();
+        for (DropSourceSummaries.DisplayDropSource summary : summaries) {
+            if (summary.kind == kind && (kind != DropSourceParser.DropSourceKind.MOB
+                    || DropSourceSummaries.shouldDisplayInMobCarousel(summary))) {
+                filtered.add(summary);
+            }
+        }
+        return filtered;
+    }
+
+    private List<DropSourceSummaries.DisplayDropSource> filterNonMobDropSummaries(
+            @Nonnull List<DropSourceSummaries.DisplayDropSource> summaries
+    ) {
+        List<DropSourceSummaries.DisplayDropSource> filtered = new ArrayList<>();
+        for (DropSourceSummaries.DisplayDropSource summary : summaries) {
+            if (DropSourceSummaries.shouldDisplayInOtherDrops(summary)) {
+                filtered.add(summary);
+            }
+        }
+        return filtered;
     }
 
     private void selectInfoTab(@Nonnull InfoTab tab, boolean persist) {
@@ -938,6 +1089,19 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         anchor.setHeight(Value.of(visible ? CRAFTING_STATION_SECTION_HEIGHT : 0));
         cmd.set("#CraftingStationSection.Visible", visible);
         cmd.setObject("#CraftingStationSection.Anchor", anchor);
+    }
+
+    private void setMobDropPortrait(@Nonnull UICommandBuilder cmd, String mobType) {
+        String portraitPath = MobPortraitResolver.resolvePortraitPath(mobType);
+        boolean hasPortrait = portraitPath != null && !portraitPath.isEmpty();
+
+        cmd.set("#MobDropPortrait.Visible", hasPortrait);
+        cmd.set("#MobDropPortraitFallback.Visible", !hasPortrait);
+        if (hasPortrait) {
+            cmd.set("#MobDropPortrait.Background", portraitPath);
+        } else {
+            cmd.set("#MobDropPortrait.Background", "#000000(0)");
+        }
     }
 
     private void setStationIcon(@Nonnull UICommandBuilder cmd, Item stationItem) {
@@ -1407,6 +1571,11 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         (data, value) -> data.historyIndex = value,
                         data -> data.historyIndex
                 )
+                .addField(
+                        new KeyedCodec<>("MobDropAction", Codec.STRING),
+                        (data, value) -> data.mobDropAction = value,
+                        data -> data.mobDropAction
+                )
                 .build();
 
         private String searchQuery;
@@ -1425,6 +1594,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         private String isFavSectionStr;
         private String infoTab;
         private String historyIndex;
+        private String mobDropAction;
     }
 }
 

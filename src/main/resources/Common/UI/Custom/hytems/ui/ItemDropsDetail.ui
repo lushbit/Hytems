@@ -151,15 +151,174 @@ Group #DropDetailContent {
       LayoutMode: Top;
       Visible: false;
 
-      Group #DropsSection {
+      Group #MobDropsSection {
         LayoutMode: Top;
+        Padding: (Full: 12);
+        Background: #16202c(0.86);
+        Visible: false;
 
-        Group {
-          Anchor: (Height: 6);
+        Label #MobDropsTitle {
+          Text: "Mob Drops";
+          Anchor: (Height: 22);
+          Style: (
+            FontSize: 15,
+            TextColor: #96a9be,
+            RenderBold: true
+          );
         }
 
-        Group #DropSourcesList {
+        Group {
+          Anchor: (Height: 10);
+        }
+
+        Group #MobDropCarousel {
+          LayoutMode: Left;
+          Anchor: (Height: 164);
+
+          Group {
+            Anchor: (Width: 92, Height: 164);
+            LayoutMode: Center;
+
+            $C.@SmallSecondaryTextButton #MobDropPrevButton {
+              @Text = "PREV";
+              @Anchor = (Width: 84, Height: 32);
+            }
+          }
+
+          Group {
+            Anchor: (Width: 12);
+          }
+
+          Group #MobDropCard {
+            FlexWeight: 1;
+            LayoutMode: Top;
+            Padding: (Full: 10);
+            Background: #182331(0.78);
+
+            Group #MobDropImageArea {
+              Anchor: (Height: 92);
+              LayoutMode: Center;
+
+              Group #MobDropImageFrame {
+                Anchor: (Width: 92, Height: 92);
+                Background: #1a2836(0.86);
+
+                Group {
+                  Anchor: (Top: 6, Bottom: 6, Left: 6, Right: 6);
+                  LayoutMode: Center;
+
+                  Group #MobDropPortrait {
+                    Anchor: (Width: 72, Height: 72);
+                    Background: #000000(0);
+                    Visible: false;
+                  }
+
+                  Label #MobDropPortraitFallback {
+                    Text: "No portrait";
+                    Anchor: (Width: 72, Height: 24);
+                    Style: (
+                      FontSize: 9,
+                      TextColor: #6f8598,
+                      HorizontalAlignment: Center,
+                      VerticalAlignment: Center,
+                      RenderUppercase: true
+                    );
+                    Visible: false;
+                  }
+                }
+
+                Button #MobDropInteractButton {
+                  Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+                  Background: #000000(0);
+                  Padding: (Full: 0);
+                  Style: ButtonStyle(
+                    Default: (Background: #000000(0)),
+                    Hovered: (Background: #7db0db(0.18)),
+                    Pressed: (Background: #7db0db(0.28))
+                  );
+                }
+              }
+            }
+
+            Group {
+              Anchor: (Height: 10);
+            }
+
+            Label #MobDropName {
+              Text: "";
+              Anchor: (Height: 22);
+              Style: (
+                FontSize: 14,
+                TextColor: #d8e2ec,
+                HorizontalAlignment: Center,
+                VerticalAlignment: Center,
+                RenderBold: true
+              );
+            }
+
+            Group {
+              Anchor: (Height: 4);
+            }
+
+            Label #MobDropCounter {
+              Text: "";
+              Anchor: (Height: 16);
+              Style: (
+                FontSize: 10,
+                TextColor: #8fa4ba,
+                HorizontalAlignment: Center,
+                VerticalAlignment: Center,
+                RenderBold: true
+              );
+            }
+          }
+
+          Group {
+            Anchor: (Width: 12);
+          }
+
+          Group {
+            Anchor: (Width: 92, Height: 164);
+            LayoutMode: Center;
+
+            $C.@SmallSecondaryTextButton #MobDropNextButton {
+              @Text = "NEXT";
+              @Anchor = (Width: 84, Height: 32);
+            }
+          }
+        }
+      }
+
+      Group #OtherDropsSpacer {
+        Anchor: (Height: 12);
+        Visible: false;
+      }
+
+      Group #OtherDropsSection {
+        LayoutMode: Top;
+        Visible: false;
+
+        Label #OtherDropsTitle {
+          Text: "Other Drops";
+          Anchor: (Height: 24);
+          Padding: (Left: 8);
+          Style: (
+            FontSize: 16,
+            TextColor: #96a9be,
+            RenderBold: true
+          );
+        }
+
+        Group #OtherDropsListSection {
           LayoutMode: Top;
+
+          Group {
+            Anchor: (Height: 6);
+          }
+
+          Group #OtherDropSourcesList {
+            LayoutMode: Top;
+          }
         }
       }
     }

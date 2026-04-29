@@ -13,14 +13,30 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public final class DropSourceSummaries {
+    private static final Set<String> EXCLUDED_DROP_SOURCE_NAMES = Set.of(
+            "wildlife",
+            "flying wildlife",
+            "swimming wildlife"
+    );
+
     private DropSourceSummaries() {
     }
 
     public static List<DisplayDropSource> summarizeMobDrops(List<String> dropSources) {
         List<DisplayDropSource> summaries = summarize(dropSources);
         return summaries.stream()
-                .filter(summary -> summary.kind == DropSourceParser.DropSourceKind.MOB)
+                .filter(DropSourceSummaries::shouldDisplayInMobCarousel)
                 .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    public static boolean shouldDisplayInMobCarousel(@Nonnull DisplayDropSource summary) {
+        return summary.kind == DropSourceParser.DropSourceKind.MOB
+                && !isExcludedDropSource(summary);
+    }
+
+    public static boolean shouldDisplayInOtherDrops(@Nonnull DisplayDropSource summary) {
+        return summary.kind != DropSourceParser.DropSourceKind.MOB
+                && !isExcludedDropSource(summary);
     }
 
     public static List<DisplayDropSource> summarize(List<String> dropSources) {
@@ -182,6 +198,31 @@ public final class DropSourceSummaries {
             return hasCombatVariant || matchingVariants >= 3;
         });
         return filtered;
+    }
+
+    private static boolean isExcludedDropSource(@Nonnull DisplayDropSource summary) {
+        String normalizedDisplayName = summary.displayName.toLowerCase(Locale.ENGLISH).trim();
+        if (EXCLUDED_DROP_SOURCE_NAMES.contains(normalizedDisplayName)) {
+            return true;
+        }
+
+        String mobType = summary.previewSource != null ? summary.previewSource.mobType : null;
+        if (mobType != null && EXCLUDED_DROP_SOURCE_NAMES.contains(
+                TextFormatters.mobName(mobType).toLowerCase(Locale.ENGLISH).trim())) {
+            return true;
+        }
+
+        String rawName = summary.previewSource != null ? summary.previewSource.rawName : null;
+        if (rawName == null || rawName.isEmpty()) {
+            return false;
+        }
+
+        String normalizedRawName = rawName
+                .replaceFirst("(?i)^drops?_", "")
+                .replace('_', ' ')
+                .toLowerCase(Locale.ENGLISH)
+                .trim();
+        return EXCLUDED_DROP_SOURCE_NAMES.contains(normalizedRawName);
     }
 
     private static boolean isLifecycleVariant(String token) {

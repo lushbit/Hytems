@@ -175,6 +175,19 @@ public final class TextFormatters {
         return humanize(value);
     }
 
+    public static String compactStructureLootName(String containerDisplayName) {
+        if (containerDisplayName == null || containerDisplayName.isEmpty()) {
+            return "Structure Loot";
+        }
+
+        String value = containerDisplayName.trim();
+        value = value.replaceAll("(?i)\\s+loot$", "");
+        value = value.replaceAll("(?i)^(small|medium|large|epic|rare|common|uncommon|legendary)\\s+", "");
+        value = value.replaceAll("(?i)\\s+(small|medium|large|epic|rare|common|uncommon|legendary)$", "");
+
+        return value.isEmpty() ? "Structure Loot" : value;
+    }
+
     public static String dropSourceName(String dropSourceId) {
         if (dropSourceId == null) return "Unknown";
 

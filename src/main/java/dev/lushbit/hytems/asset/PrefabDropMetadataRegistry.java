@@ -4,17 +4,17 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.hypixel.hytale.assetstore.AssetMap;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
+import dev.lushbit.hytems.HytemsPlugin;
 import dev.lushbit.hytems.ui.TextFormatters;
 
 import javax.annotation.Nonnull;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -25,8 +25,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+import java.util.stream.Stream;
 
 public final class PrefabDropMetadataRegistry {
     private static final Pattern PREFAB_DROP_ID_PATTERN = Pattern.compile("Zone\\d+_[A-Za-z]+_Tier\\d+");
@@ -34,13 +33,14 @@ public final class PrefabDropMetadataRegistry {
 
     private static volatile Map<String, PrefabDropMetadata> cachedMetadata = Collections.emptyMap();
     private static volatile boolean loaded;
+    private static volatile boolean loading;
 
     private PrefabDropMetadataRegistry() {
     }
 
     @Nonnull
     public static PrefabDropMetadata lookup(String dropSourceId) {
-        ensureLoaded();
+        ensureLoadedAsync();
         if (dropSourceId == null || dropSourceId.isEmpty()) {
             return EMPTY;
         }
@@ -50,44 +50,50 @@ public final class PrefabDropMetadataRegistry {
         return metadata != null ? metadata : EMPTY;
     }
 
-    public static void prewarm() {
-        ensureLoaded();
+    public static void startAsyncPreload() {
+        ensureLoadedAsync();
     }
 
-    private static void ensureLoaded() {
-        if (loaded) {
-            return;
-        }
+    private static void ensureLoadedAsync() {
+        if (loaded || loading) return;
 
         synchronized (PrefabDropMetadataRegistry.class) {
-            if (loaded) {
-                return;
-            }
+            if (loaded || loading) return;
+            loading = true;
 
-            try {
-                cachedMetadata = Collections.unmodifiableMap(loadMetadata());
-            } catch (Exception e) {
-                System.err.println("[Hytems] Failed to load prefab drop metadata: " + e.getMessage());
-                cachedMetadata = Collections.emptyMap();
-            }
-            loaded = true;
+            Thread loaderThread = new Thread(() -> {
+                try {
+                    cachedMetadata = Collections.unmodifiableMap(loadMetadata());
+                } catch (Exception e) {
+                    System.err.println("[Hytems] Failed to load prefab drop metadata: " + e.getMessage());
+                    cachedMetadata = Collections.emptyMap();
+                } finally {
+                    loaded = true;
+                    loading = false;
+                }
+            }, "Hytems-PrefabDropMetadataLoader");
+            loaderThread.setDaemon(true);
+            loaderThread.start();
         }
     }
 
-    private static Map<String, PrefabDropMetadata> loadMetadata() throws IOException {
-        Path assetsPath = resolveAssetsZipPath();
-        if (assetsPath == null) {
+    private static Map<String, PrefabDropMetadata> loadMetadata() {
+        AssetMap<String, ItemDropList> dropMap = ItemDropList.getAssetMap();
+        if (dropMap == null || dropMap.getAssetMap() == null || dropMap.getAssetMap().isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Set<Path> serverRoots = collectServerRoots(dropMap);
+        if (serverRoots.isEmpty()) {
             return Collections.emptyMap();
         }
 
         Map<String, String> containerByDropId = new LinkedHashMap<>();
-        Map<String, String> itemTranslations = new LinkedHashMap<>();
         Map<String, Set<String>> structuresByDropId = new LinkedHashMap<>();
 
-        try (ZipFile zip = new ZipFile(assetsPath.toFile())) {
-            loadItemTranslations(zip, itemTranslations);
-            loadSpawnerMappings(zip, containerByDropId);
-            loadPrefabStructureMappings(zip, structuresByDropId);
+        for (Path serverRoot : serverRoots) {
+            loadSpawnerMappings(serverRoot, containerByDropId);
+            loadPrefabStructureMappings(serverRoot, structuresByDropId);
         }
 
         Map<String, PrefabDropMetadata> metadata = new LinkedHashMap<>();
@@ -97,7 +103,7 @@ public final class PrefabDropMetadataRegistry {
 
         for (String dropId : knownDropIds) {
             String containerItemId = containerByDropId.get(dropId);
-            String containerName = translatedItemName(itemTranslations, containerItemId);
+            String containerName = translatedItemName(containerItemId);
             List<String> structureLabels = new ArrayList<>(structuresByDropId.getOrDefault(dropId, Collections.emptySet()));
             structureLabels.sort(String.CASE_INSENSITIVE_ORDER);
             metadata.put(dropId.toLowerCase(Locale.ENGLISH), new PrefabDropMetadata(containerName, structureLabels));
@@ -106,131 +112,137 @@ public final class PrefabDropMetadataRegistry {
         return metadata;
     }
 
-    private static Path resolveAssetsZipPath() {
-        List<Path> candidates = List.of(
-                Paths.get("server", "Assets.zip"),
-                Paths.get("Assets.zip")
-        );
+    private static Set<Path> collectServerRoots(AssetMap<String, ItemDropList> dropMap) {
+        Set<Path> roots = new LinkedHashSet<>();
+        for (String dropId : dropMap.getAssetMap().keySet()) {
+            if (dropId == null) {
+                continue;
+            }
+            Path path = dropMap.getPath(dropId);
+            Path root = findServerRoot(path);
+            if (root != null && Files.exists(root)) {
+                roots.add(root);
+            }
+        }
+        return roots;
+    }
 
-        for (Path candidate : candidates) {
-            if (Files.exists(candidate)) {
-                return candidate;
+    private static Path findServerRoot(Path path) {
+        if (path == null) {
+            return null;
+        }
+        Path normalized = path.normalize();
+        for (Path cursor = normalized; cursor != null; cursor = cursor.getParent()) {
+            if ("Server".equalsIgnoreCase(String.valueOf(cursor.getFileName()))) {
+                return cursor;
             }
         }
         return null;
     }
 
-    private static void loadItemTranslations(ZipFile zip, Map<String, String> itemTranslations) throws IOException {
-        ZipEntry entry = zip.getEntry("Server/Languages/en-US/server.lang");
-        if (entry == null) {
+    private static void loadSpawnerMappings(Path serverRoot, Map<String, String> containerByDropId) {
+        Path spawnersDir = serverRoot.resolve("Item").resolve("Block").resolve("Spawners").resolve("New");
+        if (!Files.isDirectory(spawnersDir)) {
             return;
         }
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(zip.getInputStream(entry), StandardCharsets.UTF_8))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                int equalsIndex = line.indexOf('=');
-                if (equalsIndex < 0) {
-                    continue;
-                }
+        try (Stream<Path> files = Files.walk(spawnersDir)) {
+            files.filter(Files::isRegularFile)
+                    .filter(path -> path.toString().toLowerCase(Locale.ENGLISH).endsWith(".json"))
+                    .forEach(path -> {
+                        try (InputStreamReader reader = new InputStreamReader(Files.newInputStream(path), StandardCharsets.UTF_8)) {
+                            JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
+                            JsonArray entries = root.has("Entries") ? root.getAsJsonArray("Entries") : null;
+                            if (entries == null) {
+                                return;
+                            }
 
-                String key = line.substring(0, equalsIndex).trim();
-                if (!key.startsWith("items.") || !key.endsWith(".name")) {
-                    continue;
-                }
+                            for (JsonElement element : entries) {
+                                if (!element.isJsonObject()) {
+                                    continue;
+                                }
 
-                String itemId = key.substring("items.".length(), key.length() - ".name".length());
-                String value = line.substring(equalsIndex + 1).trim();
-                if (!itemId.isEmpty() && !value.isEmpty()) {
-                    itemTranslations.put(itemId.toLowerCase(Locale.ENGLISH), value);
-                }
-            }
+                                JsonObject object = element.getAsJsonObject();
+                                String containerName = getString(object, "Name");
+                                JsonObject components = getObject(object, "Components");
+                                JsonObject nestedComponents = getObject(components, "Components");
+                                JsonObject itemContainerBlock = getObject(nestedComponents, "ItemContainerBlock");
+                                String dropListId = getString(itemContainerBlock, "Droplist");
+
+                                if (dropListId != null && containerName != null
+                                        && !dropListId.isEmpty() && !containerName.isEmpty()) {
+                                    containerByDropId.put(dropListId, containerName);
+                                }
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    });
+        } catch (IOException ignored) {
         }
     }
 
-    private static void loadSpawnerMappings(ZipFile zip, Map<String, String> containerByDropId) throws IOException {
-        for (ZipEntry entry : Collections.list(zip.entries())) {
-            String path = entry.getName();
-            if (!path.startsWith("Server/Item/Block/Spawners/New/") || !path.endsWith(".json")) {
-                continue;
-            }
+    private static void loadPrefabStructureMappings(Path serverRoot, Map<String, Set<String>> structuresByDropId) {
+        Path prefabsDir = serverRoot.resolve("Prefabs");
+        if (!Files.isDirectory(prefabsDir)) {
+            return;
+        }
 
-            try (InputStream input = zip.getInputStream(entry);
-                 InputStreamReader reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
-                JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
-                JsonArray entries = root.has("Entries") ? root.getAsJsonArray("Entries") : null;
-                if (entries == null) {
-                    continue;
-                }
+        try (Stream<Path> files = Files.walk(prefabsDir)) {
+            files.filter(Files::isRegularFile)
+                    .filter(path -> path.toString().toLowerCase(Locale.ENGLISH).endsWith(".prefab.json"))
+                    .forEach(path -> {
+                        try {
+                            String text = Files.readString(path, StandardCharsets.UTF_8);
+                            Matcher matcher = PREFAB_DROP_ID_PATTERN.matcher(text);
+                            Set<String> matches = new LinkedHashSet<>();
+                            while (matcher.find()) {
+                                matches.add(matcher.group());
+                            }
 
-                for (JsonElement element : entries) {
-                    if (!element.isJsonObject()) {
-                        continue;
-                    }
+                            if (matches.isEmpty()) {
+                                return;
+                            }
 
-                    JsonObject object = element.getAsJsonObject();
-                    String containerName = getString(object, "Name");
-                    JsonObject components = getObject(object, "Components");
-                    JsonObject nestedComponents = getObject(components, "Components");
-                    JsonObject itemContainerBlock = getObject(nestedComponents, "ItemContainerBlock");
-                    String dropListId = getString(itemContainerBlock, "Droplist");
+                            String relative = serverRoot.relativize(path).toString().replace('\\', '/');
+                            String structureLabel = structureLabelFromPrefabPath(relative);
+                            if (structureLabel == null || structureLabel.isEmpty()) {
+                                return;
+                            }
 
-                    if (dropListId != null && containerName != null && !dropListId.isEmpty() && !containerName.isEmpty()) {
-                        containerByDropId.put(dropListId, containerName);
-                    }
-                }
-            } catch (Exception ignored) {
-            }
+                            for (String dropId : matches) {
+                                structuresByDropId.computeIfAbsent(dropId, ignored -> new LinkedHashSet<>()).add(structureLabel);
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    });
+        } catch (IOException ignored) {
         }
     }
 
-    private static void loadPrefabStructureMappings(ZipFile zip, Map<String, Set<String>> structuresByDropId) throws IOException {
-        for (ZipEntry entry : Collections.list(zip.entries())) {
-            String path = entry.getName();
-            if (!path.startsWith("Server/Prefabs/") || !path.endsWith(".prefab.json")) {
-                continue;
-            }
-
-            String text;
-            try (InputStream input = zip.getInputStream(entry);
-                 InputStreamReader reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
-                text = readAll(reader);
-            }
-
-            Matcher matcher = PREFAB_DROP_ID_PATTERN.matcher(text);
-            Set<String> matches = new LinkedHashSet<>();
-            while (matcher.find()) {
-                matches.add(matcher.group());
-            }
-
-            if (matches.isEmpty()) {
-                continue;
-            }
-
-            String structureLabel = structureLabelFromPrefabPath(path);
-            if (structureLabel == null || structureLabel.isEmpty()) {
-                continue;
-            }
-
-            for (String dropId : matches) {
-                structuresByDropId.computeIfAbsent(dropId, ignored -> new LinkedHashSet<>()).add(structureLabel);
-            }
-        }
-    }
-
-    private static String translatedItemName(Map<String, String> itemTranslations, String itemId) {
+    private static String translatedItemName(String itemId) {
         if (itemId == null || itemId.isEmpty()) {
             return null;
         }
 
-        String translated = itemTranslations.get(itemId.toLowerCase(Locale.ENGLISH));
-        return translated != null ? translated : TextFormatters.itemName(itemId);
+        if (HytemsPlugin.ITEMS != null) {
+            String exact = itemId;
+            if (HytemsPlugin.ITEMS.containsKey(exact)) {
+                return TextFormatters.itemName(exact);
+            }
+
+            String namespaced = itemId.contains(":") ? itemId : "Hytale:" + itemId;
+            if (HytemsPlugin.ITEMS.containsKey(namespaced)) {
+                return TextFormatters.itemName(namespaced);
+            }
+        }
+
+        return TextFormatters.itemName(itemId);
     }
 
     private static String structureLabelFromPrefabPath(String path) {
         String normalized = path.replace('\\', '/');
         String[] parts = normalized.split("/");
-        if (parts.length < 3) {
+        if (parts.length < 2) {
             return null;
         }
 
@@ -245,9 +257,12 @@ public final class PrefabDropMetadataRegistry {
         }
         if (normalized.contains("/Monuments/Encounter/")) {
             if (normalized.contains("/Outpost")) {
-                return "Encounter Outpost";
+                return "World Encounter - Outpost";
             }
-            return "Encounter Monument";
+            if (normalized.contains("/Camp/") || normalized.contains("_Camp_")) {
+                return "World Encounter - Camp";
+            }
+            return "World Encounter - Monument";
         }
         if (normalized.contains("/Npc/")) {
             String faction = segmentAfter(parts, "Npc");
@@ -256,15 +271,6 @@ public final class PrefabDropMetadataRegistry {
         }
 
         return null;
-    }
-
-    private static boolean pathContainsAny(String path, String... fragments) {
-        for (String fragment : fragments) {
-            if (path.contains(fragment)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static String segmentAfter(String[] parts, String segmentName) {
@@ -288,16 +294,6 @@ public final class PrefabDropMetadataRegistry {
             normalized = normalized.substring(0, normalized.length() - 5);
         }
         return normalized;
-    }
-
-    private static String readAll(InputStreamReader reader) throws IOException {
-        StringBuilder builder = new StringBuilder();
-        char[] buffer = new char[4096];
-        int read;
-        while ((read = reader.read(buffer)) >= 0) {
-            builder.append(buffer, 0, read);
-        }
-        return builder.toString();
     }
 
     private static JsonObject getObject(JsonObject parent, String memberName) {

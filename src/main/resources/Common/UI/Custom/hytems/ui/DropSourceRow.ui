@@ -31,7 +31,7 @@ Group {
 
   Label #SourceContext {
     Text: "";
-    Anchor: (Height: 16);
+    Anchor: (Height: 28);
     Padding: (Left: 8, Right: 8);
     Style: (
       FontSize: 10,

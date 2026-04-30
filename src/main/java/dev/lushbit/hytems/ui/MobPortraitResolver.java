@@ -1,25 +1,10 @@
 package dev.lushbit.hytems.ui;
 
-import javax.annotation.Nonnull;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 public final class MobPortraitResolver {
-    private static final String ARCHIVE_PREFIX = "Common/UI/Custom/Pages/Memories/npcs/";
-    private static final String UI_PREFIX = "Pages/Memories/npcs/";
-
-    private static final Object LOAD_LOCK = new Object();
-    private static volatile boolean loaded;
-    private static final Map<String, String> portraitsByNormalizedId = new LinkedHashMap<>();
+    private static final String BASE_PATH = "hytems/ui/Assets/MobPortraits/";
 
     private MobPortraitResolver() {
     }
@@ -29,69 +14,12 @@ public final class MobPortraitResolver {
             return null;
         }
 
-        ensureLoaded();
-        if (portraitsByNormalizedId.isEmpty()) {
+        List<String> candidates = buildCandidates(mobType);
+        if (candidates.isEmpty()) {
             return null;
         }
 
-        for (String candidate : buildCandidates(mobType)) {
-            String directMatch = portraitsByNormalizedId.get(normalizeKey(candidate));
-            if (directMatch != null) {
-                return directMatch;
-            }
-        }
-
-        String bestMatch = findPrefixMatch(buildCandidates(mobType));
-        return bestMatch;
-    }
-
-    private static void ensureLoaded() {
-        if (loaded) {
-            return;
-        }
-
-        synchronized (LOAD_LOCK) {
-            if (loaded) {
-                return;
-            }
-
-            Path assetsZip = locateAssetsZip();
-            if (assetsZip != null) {
-                try (ZipFile zipFile = new ZipFile(assetsZip.toFile())) {
-                    for (ZipEntry entry : java.util.Collections.list(zipFile.entries())) {
-                        String entryName = entry.getName();
-                        if (!entryName.startsWith(ARCHIVE_PREFIX) || !entryName.toLowerCase(Locale.ENGLISH).endsWith(".png")) {
-                            continue;
-                        }
-
-                        String fileName = entryName.substring(entryName.lastIndexOf('/') + 1);
-                        String stem = fileName.substring(0, fileName.length() - 4);
-                        portraitsByNormalizedId.putIfAbsent(normalizeKey(stem), UI_PREFIX + stem + ".png");
-                    }
-                } catch (Exception ignored) {
-                }
-            }
-
-            loaded = true;
-        }
-    }
-
-    private static Path locateAssetsZip() {
-        for (Path candidate : candidateAssetsZipPaths()) {
-            if (Files.exists(candidate)) {
-                return candidate;
-            }
-        }
-        return null;
-    }
-
-    private static List<Path> candidateAssetsZipPaths() {
-        List<Path> candidates = new ArrayList<>();
-        candidates.add(Paths.get("Assets.zip"));
-        candidates.add(Paths.get("server", "Assets.zip"));
-        candidates.add(Paths.get("..", "Assets.zip"));
-        candidates.add(Paths.get("..", "server", "Assets.zip"));
-        return candidates;
+        return BASE_PATH + candidates.get(0) + ".png";
     }
 
     private static List<String> buildCandidates(String mobType) {
@@ -119,54 +47,33 @@ public final class MobPortraitResolver {
         return candidates;
     }
 
-    private static void addCandidate(Collection<String> candidates, String value) {
-        if (value == null || value.isEmpty() || candidates.contains(value)) {
+    private static void addCandidate(List<String> candidates, String value) {
+        if (value == null || value.isEmpty()) {
             return;
         }
-        candidates.add(value);
+        String normalized = normalizeCandidate(value);
+        if (!normalized.isEmpty() && !candidates.contains(normalized)) {
+            candidates.add(normalized);
+        }
     }
 
-    private static String findPrefixMatch(List<String> candidates) {
-        String bestPath = null;
-        int bestScore = -1;
-
-        for (String candidate : candidates) {
-            String normalizedCandidate = normalizeKey(candidate);
-            if (normalizedCandidate.isEmpty()) {
-                continue;
-            }
-            for (Map.Entry<String, String> entry : portraitsByNormalizedId.entrySet()) {
-                String normalizedPortrait = entry.getKey();
-                if (!normalizedCandidate.startsWith(normalizedPortrait) && !normalizedPortrait.startsWith(normalizedCandidate)) {
-                    continue;
-                }
-                int score = Math.min(normalizedCandidate.length(), normalizedPortrait.length());
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestPath = entry.getValue();
-                }
-            }
+    private static String normalizeCandidate(String value) {
+        String raw = stripNamespace(value).replace('\\', '/').trim();
+        if (raw.isEmpty()) {
+            return "";
         }
 
-        return bestPath;
+        if (raw.contains("/")) {
+            String[] parts = raw.split("/");
+            raw = parts[parts.length - 1];
+        }
+
+        return raw.replaceAll("[^A-Za-z0-9_]", "");
     }
 
     private static String stripNamespace(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.contains(":") ? value.substring(value.indexOf(':') + 1) : value;
-    }
-
-    private static String normalizeKey(@Nonnull String value) {
-        String stripped = stripNamespace(value).toLowerCase(Locale.ENGLISH);
-        StringBuilder normalized = new StringBuilder(stripped.length());
-        for (int i = 0; i < stripped.length(); i++) {
-            char c = stripped.charAt(i);
-            if (Character.isLetterOrDigit(c)) {
-                normalized.append(c);
-            }
-        }
-        return normalized.toString();
+        return value != null && value.contains(":")
+                ? value.substring(value.indexOf(':') + 1)
+                : value;
     }
 }

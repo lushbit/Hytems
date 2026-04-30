@@ -88,7 +88,6 @@ public class HytemsPlugin extends JavaPlugin {
             if (playerRef != null) {
                 ItemUiSupport.prewarmTranslations(playerRef, ITEMS);
                 ItemSearchService.prewarmBaseResults(playerRef, ITEMS);
-                PrefabDropMetadataRegistry.prewarm();
             }
         });
 
@@ -128,6 +127,7 @@ public class HytemsPlugin extends JavaPlugin {
         Map<String, ItemDropList> dropLists = event.getAssetMap().getAssetMap();
         if (dropLists != null && !dropLists.isEmpty()) {
             dropListRegistry.reload(dropLists);
+            PrefabDropMetadataRegistry.startAsyncPreload();
             this.getLogger().at(Level.INFO).log("Loaded %d drop lists for Hytems browser", dropListRegistry.size());
         } else {
             this.getLogger().at(Level.WARNING).log("[Hytems] No drop lists in LoadedAssetsEvent");

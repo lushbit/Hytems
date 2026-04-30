@@ -300,10 +300,10 @@ Group #DropDetailContent {
 
         Label #OtherDropsTitle {
           Text: "Other Drops";
-          Anchor: (Height: 24);
-          Padding: (Left: 8);
+          Anchor: (Height: 22);
+          Padding: (Left: 6);
           Style: (
-            FontSize: 16,
+            FontSize: 15,
             TextColor: #96a9be,
             RenderBold: true
           );

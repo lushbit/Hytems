@@ -130,7 +130,11 @@ public final class DropSourceSummaries {
             case STRUCTURE:
                 PrefabDropMetadataRegistry.PrefabDropMetadata metadata = PrefabDropMetadataRegistry.lookup(parsed.rawName);
                 if (metadata.hasContainerDisplayName()) {
-                    return metadata.containerDisplayName() + " Loot";
+                    String compact = TextFormatters.compactStructureLootName(metadata.containerDisplayName());
+                    if ("Structure Loot".equalsIgnoreCase(compact)) {
+                        return compact;
+                    }
+                    return compact + " Loot";
                 }
                 return TextFormatters.structureName(parsed.sourceName);
             case CONTAINER:
@@ -287,13 +291,7 @@ public final class DropSourceSummaries {
 
             List<String> labels = new ArrayList<>(this.structureLabels);
             labels.sort(String.CASE_INSENSITIVE_ORDER);
-            if (labels.size() == 1) {
-                return this.displayName + " (" + labels.get(0) + ")";
-            }
-            if (labels.size() == 2) {
-                return this.displayName + " (" + labels.get(0) + ", " + labels.get(1) + ")";
-            }
-            return this.displayName + " (" + labels.get(0) + ", " + labels.get(1) + " +" + (labels.size() - 2) + ")";
+            return this.displayName + " (" + String.join(", ", labels) + ")";
         }
 
         public String primaryLabel() {
@@ -307,10 +305,7 @@ public final class DropSourceSummaries {
 
             List<String> labels = new ArrayList<>(this.structureLabels);
             labels.sort(String.CASE_INSENSITIVE_ORDER);
-            if (labels.size() <= 2) {
-                return String.join(", ", labels);
-            }
-            return labels.get(0) + ", " + labels.get(1) + " +" + (labels.size() - 2);
+            return String.join(", ", labels);
         }
 
         public boolean hasZoneData() {

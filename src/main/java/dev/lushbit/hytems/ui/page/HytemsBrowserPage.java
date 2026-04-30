@@ -64,7 +64,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private static final int DROP_SECTION_BASE_HEIGHT = 32;
     private static final int LIST_ROW_HEIGHT = 50;
     private static final int DROP_ROW_COMPACT_HEIGHT = 40;
-    private static final int DROP_ROW_HEIGHT = 56;
+    private static final int DROP_ROW_HEIGHT = 68;
     private static final int MOB_DROPS_SECTION_HEIGHT = 220;
     private static final int OTHER_DROPS_SECTION_BASE_HEIGHT = 30;
     private static final int SEARCH_HISTORY_MAX_ITEMS = 12;
@@ -887,9 +887,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         String rowSelector = listSelector + "[" + index + "]";
         String badgesSelector = rowSelector + " #ZoneBadges";
         cmd.set(rowSelector + " #SourceName.Text", displayName);
-        cmd.set(rowSelector + " #SourceContext.Text", secondaryLabel);
-        cmd.set(rowSelector + " #SourceContext.Visible", secondaryLabel != null && !secondaryLabel.isEmpty());
-        setDropRowHeight(cmd, rowSelector, secondaryLabel != null && !secondaryLabel.isEmpty() ? DROP_ROW_HEIGHT : DROP_ROW_COMPACT_HEIGHT);
+        String formattedSecondary = formatSecondaryLabelForTwoLines(secondaryLabel);
+        cmd.set(rowSelector + " #SourceContext.Text", formattedSecondary);
+        cmd.set(rowSelector + " #SourceContext.Visible", formattedSecondary != null && !formattedSecondary.isEmpty());
+        setDropRowHeight(cmd, rowSelector, formattedSecondary != null && !formattedSecondary.isEmpty() ? DROP_ROW_HEIGHT : DROP_ROW_COMPACT_HEIGHT);
 
         for (int i = 0; i < sortedZones.size(); i++) {
             Map.Entry<String, List<Integer>> entry = sortedZones.get(i);
@@ -920,9 +921,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         cmd.append(listSelector, HytemsUiTemplates.SIMPLE_DROP_SOURCE_ROW);
         String rowSelector = listSelector + "[" + index + "]";
         cmd.set(rowSelector + " #SourceName.Text", displayName);
-        cmd.set(rowSelector + " #SourceContext.Text", secondaryLabel);
-        cmd.set(rowSelector + " #SourceContext.Visible", secondaryLabel != null && !secondaryLabel.isEmpty());
-        setDropRowHeight(cmd, rowSelector, secondaryLabel != null && !secondaryLabel.isEmpty() ? DROP_ROW_HEIGHT : DROP_ROW_COMPACT_HEIGHT);
+        String formattedSecondary = formatSecondaryLabelForTwoLines(secondaryLabel);
+        cmd.set(rowSelector + " #SourceContext.Text", formattedSecondary);
+        cmd.set(rowSelector + " #SourceContext.Visible", formattedSecondary != null && !formattedSecondary.isEmpty());
+        setDropRowHeight(cmd, rowSelector, formattedSecondary != null && !formattedSecondary.isEmpty() ? DROP_ROW_HEIGHT : DROP_ROW_COMPACT_HEIGHT);
         return index + 1;
     }
 
@@ -930,6 +932,59 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         Anchor anchor = new Anchor();
         anchor.setHeight(Value.of(height));
         cmd.setObject(rowSelector + ".Anchor", anchor);
+    }
+
+    private String formatSecondaryLabelForTwoLines(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return trimmed;
+        }
+
+        final int firstLineLimit = 58;
+        if (trimmed.length() <= firstLineLimit) {
+            return trimmed;
+        }
+
+        String[] parts = trimmed.split(",\\s+");
+        if (parts.length <= 1) {
+            int split = trimmed.lastIndexOf(' ', firstLineLimit);
+            if (split > 0 && split < trimmed.length() - 1) {
+                return trimmed.substring(0, split) + "\n" + trimmed.substring(split + 1);
+            }
+            return trimmed;
+        }
+
+        StringBuilder firstLine = new StringBuilder();
+        StringBuilder secondLine = new StringBuilder();
+        for (String part : parts) {
+            if (firstLine.length() == 0) {
+                firstLine.append(part);
+                continue;
+            }
+
+            String candidate = firstLine + ", " + part;
+            if (candidate.length() <= firstLineLimit || secondLine.length() == 0) {
+                if (candidate.length() <= firstLineLimit) {
+                    firstLine.append(", ").append(part);
+                } else {
+                    secondLine.append(part);
+                }
+            } else {
+                secondLine.append(", ").append(part);
+            }
+        }
+
+        if (secondLine.length() == 0) {
+            return firstLine.toString();
+        }
+        String firstLineText = firstLine.toString();
+        if (!firstLineText.endsWith(",")) {
+            firstLineText = firstLineText + ",";
+        }
+        return firstLineText + "\n" + secondLine;
     }
 
     private List<CraftingRecipe> getCachedRecipes(String itemId) {

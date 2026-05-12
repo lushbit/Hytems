@@ -134,7 +134,9 @@ public final class MobMetadataRegistry {
                 || normalized.equals("blanktemplate")
                 || normalized.contains("component")
                 || normalized.contains("dungeon")
+                || normalized.contains("edible")
                 || normalized.equals("emptyrole")
+                || normalized.contains("goblindukephase")
                 || normalized.contains("tamed")
                 || normalized.contains("static")
                 || normalized.contains("template")
@@ -352,15 +354,23 @@ public final class MobMetadataRegistry {
         for (DropAccumulator acc : merged.values()) {
             String known = findKnownItemId(acc.itemId);
             if (known == null) continue;
+            if (shouldHideMobDropItem(known)) continue;
             drops.add(new DropEntry(known, TextFormatters.itemName(known), quantity(acc.min, acc.max), chance(acc.chance)));
         }
         drops.sort(Comparator.comparing(DropEntry::displayName, String.CASE_INSENSITIVE_ORDER));
         return drops;
     }
 
+    private static boolean shouldHideMobDropItem(String itemId) {
+        String normalized = normalizeKey(itemId);
+        return normalized.contains("ediblerat")
+                || normalized.contains("ediblegoblinscrapper")
+                || normalized.contains("goblinscrapper");
+    }
+
     private static void extractDrops(ItemDropContainer container, Map<String, DropAccumulator> out, Set<String> seenDropLists, double chance) {
         if (container == null) return;
-        double weightedChance = chance * Math.max(0.0d, Math.min(1.0d, container.getWeight()));
+        double weightedChance = chance * normalizeChanceWeight(container.getWeight());
         if (container instanceof SingleItemDropContainer single) {
             addDrop(out, single.getDrop(), weightedChance);
             return;
@@ -376,7 +386,9 @@ public final class MobMetadataRegistry {
             Object weighted = readField(container, "containers");
             if (weighted instanceof IWeightedMap<?> map) {
                 map.forEachEntry((child, weight) -> {
-                    if (child instanceof ItemDropContainer childContainer) extractDrops(childContainer, out, seenDropLists, weightedChance * weight);
+                    if (child instanceof ItemDropContainer childContainer) {
+                        extractDrops(childContainer, out, seenDropLists, weightedChance * normalizeChanceWeight(weight));
+                    }
                 });
             }
             return;
@@ -393,6 +405,16 @@ public final class MobMetadataRegistry {
         for (ItemDrop drop : container.getAllDrops(new ArrayList<>())) {
             addDrop(out, drop, weightedChance);
         }
+    }
+
+    private static double normalizeChanceWeight(double weight) {
+        if (weight <= 0.0d) {
+            return 0.0d;
+        }
+        if (weight <= 1.0d) {
+            return weight;
+        }
+        return Math.min(1.0d, weight / 100.0d);
     }
 
     private static void addDrop(Map<String, DropAccumulator> out, ItemDrop drop, double chance) {
@@ -486,13 +508,24 @@ public final class MobMetadataRegistry {
                 HabitatLabel label = habitatLabelForSpawn(spawn);
                 String spawnId = normalizeId(spawn.getId());
                 if (isIgnoredSpawnId(spawnId) || isEventSpawnLabel(label.zone())) continue;
-                String key = label.zone() + "|" + label.biome() + "|" + label.region();
-                SpawnHabitatAggregate aggregate = aggregates.computeIfAbsent(key,
-                        ignored -> new SpawnHabitatAggregate(label.zone(), label.biome(), label.region()));
-
                 String elementalCircle = elementalCircleLabel(spawnId);
+                String goblinDukePhase = goblinDukePhaseLabel(spawnId, npc.getId());
+                if (goblinDukePhase != null) {
+                    label = new HabitatLabel("Goblin Duke", null, null);
+                }
+
+                String key = label.zone() + "|" + label.biome() + "|" + label.region();
+                HabitatLabel aggregateLabel = label;
+                SpawnHabitatAggregate aggregate = aggregates.computeIfAbsent(key,
+                        ignored -> new SpawnHabitatAggregate(aggregateLabel.zone(), aggregateLabel.biome(), aggregateLabel.region()));
+
                 if (elementalCircle != null) {
                     aggregate.specialLabels.add(elementalCircle);
+                    continue;
+                }
+
+                if (goblinDukePhase != null) {
+                    aggregate.specialLabels.add(goblinDukePhase);
                     continue;
                 }
 
@@ -622,6 +655,17 @@ public final class MobMetadataRegistry {
                 .matcher(normalizeId(value));
         if (matcher.find()) {
             return "Elemental Circle Tier " + matcher.group(1);
+        }
+        return null;
+    }
+
+    private static String goblinDukePhaseLabel(String spawnId, String npcId) {
+        String combined = normalizeId(spawnId) + "_" + normalizeId(npcId);
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("(?i)goblin[_\\s-]*duke[_\\s-]*phase[_\\s-]*(\\d+)")
+                .matcher(combined);
+        if (matcher.find()) {
+            return "Goblin Duke Phase " + matcher.group(1);
         }
         return null;
     }
@@ -1103,7 +1147,7 @@ public final class MobMetadataRegistry {
 
         private List<String> detailLines() {
             List<String> details = new ArrayList<>();
-            details.addAll(this.specialLabels);
+            details.addAll(sortedSpecialLabels(this.specialLabels));
             addDetail(details, "Biome", this.biome);
             addDetail(details, "Region", this.region);
             if (!this.structures.isEmpty()) {
@@ -1111,6 +1155,21 @@ public final class MobMetadataRegistry {
             }
             return dedupeDetailLines(details);
         }
+    }
+
+    private static List<String> sortedSpecialLabels(Set<String> labels) {
+        List<String> sorted = new ArrayList<>(labels);
+        sorted.sort(Comparator.comparingInt(MobMetadataRegistry::trailingNumber)
+                .thenComparing(String.CASE_INSENSITIVE_ORDER));
+        return sorted;
+    }
+
+    private static int trailingNumber(String value) {
+        if (value == null) {
+            return Integer.MAX_VALUE;
+        }
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(\\d+)\\s*$").matcher(value);
+        return matcher.find() ? Integer.parseInt(matcher.group(1)) : Integer.MAX_VALUE;
     }
 
 }

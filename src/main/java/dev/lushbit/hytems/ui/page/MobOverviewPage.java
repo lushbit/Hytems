@@ -100,7 +100,14 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
         int dropsRows = metadata.drops().isEmpty() ? 1 : metadata.drops().size();
         int variantRows = metadata.variants().isEmpty() ? 1 : metadata.variants().size();
         int dropsVariantsHeight = 28 + 8 + 24 + (dropsRows * ITEM_ROW_HEIGHT) + 12 + 24 + (variantRows * ITEM_ROW_HEIGHT) + 36;
-        setHeight(cmd, "#DropsVariantsSection", Math.max(250, dropsVariantsHeight));
+        if (metadata.drops().isEmpty()) {
+            dropsVariantsHeight -= ITEM_ROW_HEIGHT - 28;
+        }
+        if (metadata.variants().isEmpty()) {
+            dropsVariantsHeight -= ITEM_ROW_HEIGHT - 28;
+        }
+        setHeight(cmd, "#DropsVariantsSection", Math.max(120, dropsVariantsHeight));
+        setHeight(cmd, "#DropsVariantsSpacer", metadata.drops().isEmpty() ? 6 : 12);
 
         int spawnHeight = 28 + 8 + 80;
         if (!metadata.spawnGroups().isEmpty()) {
@@ -116,7 +123,8 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
             }
             spawnHeight += 18;
         }
-        setHeight(cmd, "#SpawnSection", Math.max(190, spawnHeight));
+        setHeight(cmd, "#SpawnSection", Math.max(110, spawnHeight));
+        setHeight(cmd, "#DropsSpawnSpacer", metadata.drops().isEmpty() && metadata.variants().isEmpty() ? 8 : 14);
     }
 
     private void bindCloseButton(@Nonnull UIEventBuilder events) {
@@ -234,7 +242,7 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
         List<String> detailLines = entry.details();
         String details = String.join("\n", detailLines);
         int lineCount = Math.max(1, details.isEmpty() ? 1 : details.split("\n", -1).length);
-        int detailsHeight = isElementalCircleDetails(detailLines)
+        int detailsHeight = isCompactSpecialSpawnDetails(detailLines)
                 ? 20 + Math.max(0, lineCount - 1) * 12
                 : 20 + Math.max(0, lineCount - 1) * 16;
         int entryHeight = SPAWN_ENTRY_BASE_HEIGHT + Math.max(0, detailsHeight - 20);
@@ -250,8 +258,9 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
         return entryHeight;
     }
 
-    private boolean isElementalCircleDetails(@Nonnull List<String> detailLines) {
-        return !detailLines.isEmpty() && detailLines.stream().allMatch(line -> line.startsWith("Elemental Circle Tier "));
+    private boolean isCompactSpecialSpawnDetails(@Nonnull List<String> detailLines) {
+        return !detailLines.isEmpty() && detailLines.stream().allMatch(line ->
+                line.startsWith("Elemental Circle Tier ") || line.startsWith("Goblin Duke Phase "));
     }
 
     private void setHeight(@Nonnull UICommandBuilder cmd, @Nonnull String selector, int height) {

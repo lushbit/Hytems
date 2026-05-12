@@ -171,7 +171,7 @@ Group {
             }
 
             Label #NoDropsLabel {
-              FlexWeight: 1;
+              Anchor: (Height: 28);
               Text: "No drops found";
               Style: (
                 FontSize: 12,
@@ -182,7 +182,7 @@ Group {
               Visible: false;
             }
 
-            Group {
+            Group #DropsVariantsSpacer {
               Anchor: (Height: 12);
             }
 
@@ -203,7 +203,7 @@ Group {
             }
 
             Label #NoVariantsLabel {
-              FlexWeight: 1;
+              Anchor: (Height: 28);
               Text: "No variant items found";
               Style: (
                 FontSize: 12,
@@ -216,7 +216,7 @@ Group {
           }
         }
 
-        Group {
+        Group #DropsSpawnSpacer {
           Anchor: (Height: 14);
         }
 
@@ -240,13 +240,8 @@ Group {
             Anchor: (Height: 8);
           }
 
-          Group #SpawnGroups {
-            FlexWeight: 1;
-            LayoutMode: Top;
-          }
-
           Label #NoSpawnLabel {
-            FlexWeight: 1;
+            Anchor: (Height: 28);
             Text: "No spawn data found";
             Style: (
               FontSize: 12,
@@ -255,6 +250,11 @@ Group {
               VerticalAlignment: Center
             );
             Visible: false;
+          }
+
+          Group #SpawnGroups {
+            FlexWeight: 1;
+            LayoutMode: Top;
           }
         }
       }

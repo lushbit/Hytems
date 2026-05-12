@@ -63,6 +63,14 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
             return;
         }
 
+        if ("back".equals(data.action)) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                player.getPageManager().openCustomPage(ref, store, new MobBrowserPage(this.playerRef));
+            }
+            return;
+        }
+
         if (data.itemId == null || data.itemId.isEmpty() || !HytemsPlugin.ITEMS.containsKey(data.itemId)) {
             return;
         }
@@ -116,6 +124,12 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
                 CustomUIEventBindingType.Activating,
                 "#CloseButton",
                 EventData.of("Action", "close"),
+                false
+        );
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#BackButton",
+                EventData.of("Action", "back"),
                 false
         );
     }

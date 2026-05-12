@@ -1,0 +1,124 @@
+Group {
+  Anchor: (Height: 812);
+  LayoutMode: Top;
+
+  Group #MobsHeader {
+    Anchor: (Height: 24);
+    LayoutMode: Center;
+
+    Group {
+      Anchor: (Width: 760, Height: 20);
+      LayoutMode: Left;
+      Padding: (Left: 4);
+
+      Group {
+        Anchor: (Width: 10, Height: 16);
+        Background: "../../Common/DropdownPressedCaret.png";
+      }
+
+      Group {
+        Anchor: (Width: 4);
+      }
+
+      Label #MobsHeaderText {
+        Anchor: (Height: 20);
+        Text: "Mobs";
+        Style: (
+          FontSize: 14,
+          TextColor: #b4c8c9,
+          VerticalAlignment: Center,
+          RenderUppercase: true,
+          RenderBold: true
+        );
+      }
+    }
+  }
+
+  Group #NoMobsRow {
+    Anchor: (Height: 788);
+    LayoutMode: Center;
+    Visible: false;
+
+    Label #NoMobsLabel {
+      Text: "No mobs to display";
+      Anchor: (Height: 22);
+      Style: (
+        FontSize: 14,
+        TextColor: #9aa4af,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center,
+        RenderBold: true
+      );
+    }
+  }
+
+  Group #MobRow0 {
+    Anchor: (Height: 112);
+    LayoutMode: Center;
+
+    Group #MobRow0Columns {
+      Anchor: (Top: 0, Bottom: 0, Width: 760);
+      LayoutMode: Left;
+    }
+  }
+
+  Group #MobRow1 {
+    Anchor: (Height: 112);
+    LayoutMode: Center;
+
+    Group #MobRow1Columns {
+      Anchor: (Top: 0, Bottom: 0, Width: 760);
+      LayoutMode: Left;
+    }
+  }
+
+  Group #MobRow2 {
+    Anchor: (Height: 112);
+    LayoutMode: Center;
+
+    Group #MobRow2Columns {
+      Anchor: (Top: 0, Bottom: 0, Width: 760);
+      LayoutMode: Left;
+    }
+  }
+
+  Group #MobRow3 {
+    Anchor: (Height: 112);
+    LayoutMode: Center;
+
+    Group #MobRow3Columns {
+      Anchor: (Top: 0, Bottom: 0, Width: 760);
+      LayoutMode: Left;
+    }
+  }
+
+  Group #MobRow4 {
+    Anchor: (Height: 112);
+    LayoutMode: Center;
+
+    Group #MobRow4Columns {
+      Anchor: (Top: 0, Bottom: 0, Width: 760);
+      LayoutMode: Left;
+    }
+  }
+
+  Group #MobRow5 {
+    Anchor: (Height: 112);
+    LayoutMode: Center;
+
+    Group #MobRow5Columns {
+      Anchor: (Top: 0, Bottom: 0, Width: 760);
+      LayoutMode: Left;
+    }
+  }
+
+  Group #MobRow6 {
+    Anchor: (Height: 112);
+    LayoutMode: Center;
+
+    Group #MobRow6Columns {
+      Anchor: (Top: 0, Bottom: 0, Width: 760);
+      LayoutMode: Left;
+    }
+  }
+}

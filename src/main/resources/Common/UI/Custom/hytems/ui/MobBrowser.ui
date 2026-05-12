@@ -1,0 +1,143 @@
+$C = "../../Common.ui";
+
+Group {
+  Anchor: (Width: 900, Height: 1010);
+  LayoutMode: Top;
+
+  Group #Header {
+    Anchor: (Height: 38);
+    LayoutMode: Center;
+    Padding: (Top: 7);
+    Background: (TexturePath: "../../Common/ContainerHeader.png", HorizontalBorder: 50, VerticalBorder: 0);
+
+    Label #Title {
+      Anchor: (Height: 22);
+      Text: "MOB BROWSER";
+      Style: (
+        FontSize: 15,
+        TextColor: #b4c8c9,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center,
+        RenderUppercase: true,
+        RenderBold: true
+      );
+    }
+  }
+
+  Group #BrowserContainer {
+    Anchor: (Top: -1);
+    FlexWeight: 1;
+    LayoutMode: Top;
+    Padding: (Full: 16);
+    Background: (TexturePath: "../../Common/ContainerPatch.png", Border: 23);
+
+    Group #CenterBrowserPanel {
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 8, Right: 8, Bottom: 8);
+
+      Group #GridSection {
+        Anchor: (Height: 812);
+
+        Group #MobGrid {
+          Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+          LayoutMode: Top;
+        }
+      }
+
+      Group { Anchor: (Height: 16); }
+
+      Group #PaginationSection {
+        Anchor: (Height: 52);
+        LayoutMode: Top;
+
+        Group {
+          Anchor: (Height: 34);
+          LayoutMode: Center;
+
+          Group #PaginationControls {
+            Anchor: (Width: 334, Height: 34);
+            LayoutMode: Left;
+
+            $C.@SecondaryTextButton #PrevPageButton {
+              @Text = "PREV";
+              @Anchor = (Width: 84, Height: 28, Top: 4);
+            }
+
+            Group { Anchor: (Width: 10); }
+
+            Group {
+              Anchor: (Width: 146, Height: 34);
+              LayoutMode: Center;
+
+              Label #PageLabel {
+                Anchor: (Height: 34);
+                Text: "Page 1 / 1";
+                Style: (
+                  FontSize: 16,
+                  RenderBold: true,
+                  TextColor: #d0d7df,
+                  HorizontalAlignment: Center,
+                  VerticalAlignment: Center
+                );
+              }
+            }
+
+            Group { Anchor: (Width: 10); }
+
+            $C.@SecondaryTextButton #NextPageButton {
+              @Text = "NEXT";
+              @Anchor = (Width: 84, Height: 28, Top: 4);
+            }
+          }
+        }
+
+        Label #MobCountLabel {
+          Anchor: (Height: 18);
+          Text: "0 mobs found";
+          Style: (
+            FontSize: 11,
+            TextColor: #b4c8c9,
+            HorizontalAlignment: Center,
+            VerticalAlignment: Center
+          );
+        }
+      }
+
+      Group { Anchor: (Height: 12); }
+
+      Group #SearchSection {
+        LayoutMode: Center;
+        Anchor: (Height: 46);
+
+        Group #SearchFrame {
+          Anchor: (Width: 760, Height: 42);
+          LayoutMode: Center;
+          Padding: (Full: 2);
+          Background: $C.@InputBoxBackground;
+
+          Group {
+            Anchor: (Width: 752, Height: 38);
+            LayoutMode: Center;
+
+            CompactTextField #SearchInput {
+              Anchor: (Width: 744, Height: 38);
+              CollapsedWidth: 744;
+              ExpandedWidth: 744;
+              PlaceholderText: "Search mobs...";
+              Style: (FontSize: 14, TextColor: #ffffff);
+              PlaceholderStyle: (TextColor: #6e7da1, FontSize: 14);
+              Padding: (Horizontal: 12, Left: 36, Right: 38);
+              Decoration: (
+                Default: (
+                  Icon: (Texture: "../../Common/SearchIcon.png", Width: 16, Height: 16, Offset: 10),
+                  ClearButtonStyle: $C.@ClearButtonStyle
+                )
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+}

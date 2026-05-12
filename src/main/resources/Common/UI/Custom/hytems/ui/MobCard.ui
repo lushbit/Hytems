@@ -1,0 +1,44 @@
+Group {
+  Anchor: (Width: 95, Height: 104);
+  LayoutMode: Center;
+
+  Group #CardBackground {
+    Anchor: (Width: 93, Height: 101);
+    Background: "hytems/textures/rarity_default.png";
+
+    Label #MobName {
+      Text: "";
+      Anchor: (Left: 4, Right: 4, Bottom: 4, Height: 28);
+      Style: (
+        FontSize: 10,
+        TextColor: #ffffff,
+        RenderBold: true,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center,
+        Wrap: true
+      );
+    }
+
+    Group #PortraitLayer {
+      Anchor: (Top: 4, Left: 4, Right: 4, Bottom: 33);
+      LayoutMode: Center;
+
+      Group #MobPortrait {
+        Anchor: (Width: 62, Height: 62);
+        Background: #000000(0);
+        Visible: true;
+      }
+    }
+
+    Button #InteractButton {
+      Anchor: (Top: 3, Bottom: 3, Left: 3, Right: 3);
+      Background: #000000(0);
+      Padding: (Full: 0);
+      Style: ButtonStyle(
+        Default: (Background: #000000(0)),
+        Hovered: (Background: #7db0db(0.2)),
+        Pressed: (Background: #7db0db(0.3))
+      );
+    }
+  }
+}

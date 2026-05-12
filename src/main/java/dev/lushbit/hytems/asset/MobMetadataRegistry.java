@@ -105,6 +105,42 @@ public final class MobMetadataRegistry {
         markNpcDataDirty();
     }
 
+    @Nonnull
+    public static List<String> knownMobIds() {
+        LinkedHashSet<String> ids = new LinkedHashSet<>();
+        collectBuilderMobIds(ids);
+        collectSpawnMobIds(ids, currentWorldNpcSpawns());
+        collectSpawnMobIds(ids, currentBeaconNpcSpawns());
+        collectPortraitMobIds(ids);
+
+        List<String> sorted = new ArrayList<>(ids);
+        sorted.removeIf(MobMetadataRegistry::shouldHideFromMobBrowser);
+        sorted.sort(Comparator.comparing(TextFormatters::mobName, String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(String.CASE_INSENSITIVE_ORDER));
+        return sorted;
+    }
+
+    private static boolean shouldHideFromMobBrowser(String mobId) {
+        if (mobId == null || mobId.isEmpty()) {
+            return true;
+        }
+
+        String normalized = normalizeKey(mobId);
+        if (normalized.equals("self") || normalized.equals("player")) {
+            return true;
+        }
+
+        return normalized.contains("test")
+                || normalized.equals("blanktemplate")
+                || normalized.contains("component")
+                || normalized.contains("dungeon")
+                || normalized.equals("emptyrole")
+                || normalized.contains("tamed")
+                || normalized.contains("static")
+                || normalized.contains("template")
+                || normalized.contains("temple");
+    }
+
     private static void ensureLoadedAsync(String mobId) {
         if (!LOADING.add(mobId)) {
             return;
@@ -130,6 +166,65 @@ public final class MobMetadataRegistry {
         } catch (Exception e) {
             System.err.println("[Hytems] Failed to load mob metadata for " + mobId + ": " + e.getMessage());
             return fallback(mobId);
+        }
+    }
+
+    private static void collectBuilderMobIds(Set<String> ids) {
+        try {
+            NPCPlugin plugin = NPCPlugin.get();
+            BuilderManager manager = plugin == null ? null : plugin.getBuilderManager();
+            if (manager == null) return;
+
+            for (String name : plugin.getRoleTemplateNames(false)) {
+                addMobId(ids, name);
+            }
+            for (String name : manager.getTemplateNames()) {
+                addMobId(ids, name);
+            }
+            for (String name : manager.getNameToIndexMap().keySet()) {
+                addMobId(ids, name);
+            }
+            manager.getAllBuilders().values().forEach(info -> {
+                if (info != null) {
+                    addMobId(ids, info.getKeyName());
+                    if (info.getPath() != null) {
+                        addMobId(ids, info.getPath().getFileName().toString());
+                    }
+                }
+            });
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static void collectSpawnMobIds(Set<String> ids, Map<String, ? extends NPCSpawn> map) {
+        for (NPCSpawn spawn : map.values()) {
+            if (spawn == null || spawn.getNPCs() == null) continue;
+            for (RoleSpawnParameters npc : spawn.getNPCs()) {
+                addMobId(ids, npc.getId());
+            }
+        }
+    }
+
+    private static void collectPortraitMobIds(Set<String> ids) {
+        try {
+            Path portraits = Path.of("src/main/resources/Common/UI/Custom/hytems/ui/Assets/MobPortraits");
+            if (!Files.isDirectory(portraits)) return;
+            try (var stream = Files.list(portraits)) {
+                stream.filter(Files::isRegularFile)
+                        .map(path -> path.getFileName().toString())
+                        .filter(name -> name.toLowerCase(Locale.ENGLISH).endsWith(".png"))
+                        .map(name -> name.substring(0, name.length() - 4))
+                        .filter(name -> !name.equalsIgnoreCase("Construction_Sign"))
+                        .forEach(name -> addMobId(ids, name));
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static void addMobId(Set<String> ids, String value) {
+        String id = normalizeId(value);
+        if (!id.isEmpty()) {
+            ids.add(id);
         }
     }
 

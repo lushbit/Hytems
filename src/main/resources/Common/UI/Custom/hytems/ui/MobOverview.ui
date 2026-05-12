@@ -272,6 +272,15 @@ Group {
         FlexWeight: 1;
       }
 
+      $C.@SecondaryTextButton #BackButton {
+        @Text = "Back";
+        @Anchor = (Width: 128, Height: 38);
+      }
+
+      Group {
+        Anchor: (Width: 12);
+      }
+
       $C.@CancelTextButton #CloseButton {
         @Text = "Close";
         @Anchor = (Width: 128, Height: 38);

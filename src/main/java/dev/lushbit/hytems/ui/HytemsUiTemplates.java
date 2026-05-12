@@ -20,6 +20,9 @@ public final class HytemsUiTemplates {
     public static final String PINS_MANAGEMENT = "hytems/ui/PinsManagement.ui";
     public static final String PINS_MANAGEMENT_CARD = "hytems/ui/PinsManagementCard.ui";
     public static final String MOB_OVERVIEW = "hytems/ui/MobOverview.ui";
+    public static final String MOB_BROWSER = "hytems/ui/MobBrowser.ui";
+    public static final String MOB_GRID = "hytems/ui/MobGrid.ui";
+    public static final String MOB_CARD = "hytems/ui/MobCard.ui";
     public static final String MOB_ATTRIBUTE_ROW = "hytems/ui/MobAttributeRow.ui";
     public static final String MOB_ITEM_ROW = "hytems/ui/MobItemRow.ui";
     public static final String MOB_SPAWN_GROUP = "hytems/ui/MobSpawnGroup.ui";

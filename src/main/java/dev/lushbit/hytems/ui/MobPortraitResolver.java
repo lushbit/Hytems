@@ -1,10 +1,15 @@
 package dev.lushbit.hytems.ui;
 
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 public final class MobPortraitResolver {
     private static final String BASE_PATH = "hytems/ui/Assets/MobPortraits/";
+    private static final String RESOURCE_BASE_PATH = "Common/UI/Custom/" + BASE_PATH;
+    private static final Path DEV_RESOURCE_BASE_PATH = Path.of("src/main/resources/Common/UI/Custom").resolve(BASE_PATH);
 
     private MobPortraitResolver() {
     }
@@ -19,7 +24,25 @@ public final class MobPortraitResolver {
             return null;
         }
 
-        return BASE_PATH + candidates.get(0) + ".png";
+        for (String candidate : candidates) {
+            String path = BASE_PATH + candidate + ".png";
+            if (portraitExists(path)) {
+                return path;
+            }
+        }
+        return null;
+    }
+
+    private static boolean portraitExists(String uiPath) {
+        String resourcePath = RESOURCE_BASE_PATH + uiPath.substring(BASE_PATH.length());
+        ClassLoader loader = MobPortraitResolver.class.getClassLoader();
+        URL resource = loader == null ? ClassLoader.getSystemResource(resourcePath) : loader.getResource(resourcePath);
+        if (resource != null) {
+            return true;
+        }
+
+        Path devPath = DEV_RESOURCE_BASE_PATH.resolve(uiPath.substring(BASE_PATH.length()));
+        return Files.isRegularFile(devPath);
     }
 
     private static List<String> buildCandidates(String mobType) {

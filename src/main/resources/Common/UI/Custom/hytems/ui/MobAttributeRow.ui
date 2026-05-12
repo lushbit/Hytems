@@ -1,0 +1,29 @@
+Group {
+  Anchor: (Height: 28);
+  LayoutMode: Left;
+  Padding: (Left: 8, Right: 8, Bottom: 4);
+  Background: #182331(0.55);
+
+  Label #AttributeLabel {
+    Anchor: (Width: 132);
+    Text: "";
+    Style: (
+      FontSize: 11,
+      TextColor: #8fa4ba,
+      VerticalAlignment: Center,
+      RenderBold: true
+    );
+  }
+
+  Label #AttributeValue {
+    FlexWeight: 1;
+    Padding: (Left: 8);
+    Text: "";
+    Style: (
+      FontSize: 11,
+      TextColor: #d8e2ec,
+      VerticalAlignment: Center,
+      Wrap: true
+    );
+  }
+}

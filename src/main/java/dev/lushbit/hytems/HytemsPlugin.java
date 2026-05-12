@@ -20,10 +20,14 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.inventory.InventoryChangeEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.npc.AllNPCsLoadedEvent;
+import com.hypixel.hytale.server.spawning.assets.spawns.config.BeaconNPCSpawn;
+import com.hypixel.hytale.server.spawning.assets.spawns.config.WorldNPCSpawn;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.lushbit.hytems.asset.DropListRegistry;
 import dev.lushbit.hytems.asset.ItemSearchService;
+import dev.lushbit.hytems.asset.MobMetadataRegistry;
 import dev.lushbit.hytems.asset.PrefabDropMetadataRegistry;
 import dev.lushbit.hytems.asset.RecipeManager;
 import dev.lushbit.hytems.command.HytemsCommand;
@@ -61,6 +65,9 @@ public class HytemsPlugin extends JavaPlugin {
         this.getEventRegistry().register(LoadedAssetsEvent.class, ItemQuality.class, this::onQualityAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, this::onRecipeAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, ItemDropList.class, this::onDropListAssetLoad);
+        this.getEventRegistry().register(LoadedAssetsEvent.class, WorldNPCSpawn.class, this::onWorldNpcSpawnAssetLoad);
+        this.getEventRegistry().register(LoadedAssetsEvent.class, BeaconNPCSpawn.class, this::onBeaconNpcSpawnAssetLoad);
+        this.getEventRegistry().registerGlobal(AllNPCsLoadedEvent.class, event -> MobMetadataRegistry.markNpcDataDirty());
 
         this.getEventRegistry().register(PlayerConnectEvent.class, event -> {
             playerDataManager.loadData(event.getPlayerRef());
@@ -138,4 +145,15 @@ public class HytemsPlugin extends JavaPlugin {
         QUALITIES = event.getAssetMap().getAssetMap();
         this.getLogger().at(Level.INFO).log("Loaded %d item qualities for Hytems browser", QUALITIES.size());
     }
+
+    private void onWorldNpcSpawnAssetLoad(LoadedAssetsEvent<String, WorldNPCSpawn, IndexedLookupTableAssetMap<String, WorldNPCSpawn>> event) {
+        MobMetadataRegistry.reloadWorldNpcSpawns(event.getAssetMap().getAssetMap());
+        this.getLogger().at(Level.INFO).log("Loaded %d world NPC spawns for Hytems mob overview", event.getAssetMap().getAssetMap().size());
+    }
+
+    private void onBeaconNpcSpawnAssetLoad(LoadedAssetsEvent<String, BeaconNPCSpawn, IndexedLookupTableAssetMap<String, BeaconNPCSpawn>> event) {
+        MobMetadataRegistry.reloadBeaconNpcSpawns(event.getAssetMap().getAssetMap());
+        this.getLogger().at(Level.INFO).log("Loaded %d beacon NPC spawns for Hytems mob overview", event.getAssetMap().getAssetMap().size());
+    }
+
 }

@@ -1,0 +1,61 @@
+Group {
+  Anchor: (Height: 54);
+  Padding: (Left: 8, Right: 8, Top: 3, Bottom: 3);
+  Background: #182331(0.78);
+
+  Label #QuantityLabel {
+    Anchor: (Left: 8, Top: 2, Bottom: 0, Width: 44);
+    Text: "";
+    Style: (
+      FontSize: 12,
+      TextColor: #ffaa00,
+      VerticalAlignment: Center,
+      HorizontalAlignment: Center,
+      RenderBold: true
+    );
+  }
+
+  Group #IconBackground {
+    Anchor: (Left: 54, Top: 4, Width: 42, Height: 42);
+    Background: "hytems/textures/rarity_default.png";
+    LayoutMode: Center;
+
+    ItemIcon #ItemIcon {
+      Anchor: (Width: 38, Height: 38);
+    }
+  }
+
+  Label #ItemName {
+    Anchor: (Left: 108, Right: 72, Top: 0, Bottom: 0);
+    Text: "";
+    Style: (
+      FontSize: 12,
+      TextColor: #d8e2ec,
+      VerticalAlignment: Center,
+      Wrap: true
+    );
+  }
+
+  Label #ChanceLabel {
+    Anchor: (Right: 8, Top: 0, Bottom: 0, Width: 58);
+    Text: "";
+    Style: (
+      FontSize: 11,
+      TextColor: #ffaa00,
+      VerticalAlignment: Center,
+      HorizontalAlignment: End,
+      RenderBold: true
+    );
+  }
+
+  Button #InteractButton {
+    Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+    Background: #000000(0);
+    Padding: (Full: 0);
+    Style: ButtonStyle(
+      Default: (Background: #000000(0)),
+      Hovered: (Background: #7db0db(0.18)),
+      Pressed: (Background: #7db0db(0.28))
+    );
+  }
+}

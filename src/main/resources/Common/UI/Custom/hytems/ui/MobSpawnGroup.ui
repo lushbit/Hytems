@@ -1,0 +1,21 @@
+Group {
+  Anchor: (Height: 36);
+  LayoutMode: Top;
+  Padding: (Left: 6, Right: 6, Top: 4, Bottom: 4);
+  Background: #000000(0);
+
+  Label #GroupTitle {
+    Anchor: (Height: 20);
+    Text: "";
+    Style: (
+      FontSize: 13,
+      TextColor: #96a9be,
+      RenderBold: true,
+      VerticalAlignment: Center
+    );
+  }
+
+  Group #Entries {
+    LayoutMode: Top;
+  }
+}

@@ -1,0 +1,32 @@
+Group {
+  Anchor: (Height: 52);
+  LayoutMode: Top;
+  Padding: (Left: 8, Right: 8, Top: 6, Bottom: 6);
+  Background: #182331(0.7);
+
+  Label #EntryTitle {
+    Anchor: (Height: 20);
+    Text: "";
+    Style: (
+      FontSize: 13,
+      TextColor: #d8e2ec,
+      RenderBold: true,
+      VerticalAlignment: Center
+    );
+  }
+
+  Group {
+    Anchor: (Height: 3);
+  }
+
+  Label #EntryDetails {
+    Anchor: (Height: 20);
+    Text: "";
+    Style: (
+      FontSize: 11,
+      TextColor: #8fa4ba,
+      Wrap: true,
+      VerticalAlignment: Center
+    );
+  }
+}

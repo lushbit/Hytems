@@ -214,7 +214,7 @@ Group #DropDetailContent {
                   }
 
                   Label #MobDropPortraitFallback {
-                    Text: "No portrait";
+                    Text: "No image";
                     Anchor: (Width: 72, Height: 24);
                     Style: (
                       FontSize: 9,

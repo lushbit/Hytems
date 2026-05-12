@@ -11,6 +11,7 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.ui.Anchor;
@@ -1078,9 +1079,36 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 this.currentMobDropIndex = Math.floorMod(this.currentMobDropIndex + 1, mobDrops.size());
                 return true;
             case "open":
+                openCurrentMobOverview();
                 return false;
             default:
                 return false;
+        }
+    }
+
+    private void openCurrentMobOverview() {
+        if (this.pageRef == null || this.pageStore == null) {
+            return;
+        }
+
+        List<DropSourceSummaries.DisplayDropSource> mobDrops = filterDropSummariesByKind(
+                getCachedDropSummaries(this.dropsItemId),
+                DropSourceParser.DropSourceKind.MOB
+        );
+        if (mobDrops.isEmpty()) {
+            return;
+        }
+
+        this.currentMobDropIndex = Math.floorMod(this.currentMobDropIndex, mobDrops.size());
+        DropSourceSummaries.DisplayDropSource currentMobDrop = mobDrops.get(this.currentMobDropIndex);
+        String mobId = currentMobDrop.previewSource != null ? currentMobDrop.previewSource.mobType : null;
+        if (mobId == null || mobId.isEmpty()) {
+            return;
+        }
+
+        Player player = this.pageStore.getComponent(this.pageRef, Player.getComponentType());
+        if (player != null) {
+            player.getPageManager().openCustomPage(this.pageRef, this.pageStore, new MobOverviewPage(this.playerRef, mobId));
         }
     }
 

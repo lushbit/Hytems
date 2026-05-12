@@ -19,6 +19,11 @@ public final class HytemsUiTemplates {
     public static final String PINNED_HUD_ZONE_BADGE = "hytems/hud/PinnedHudZoneBadge.ui";
     public static final String PINS_MANAGEMENT = "hytems/ui/PinsManagement.ui";
     public static final String PINS_MANAGEMENT_CARD = "hytems/ui/PinsManagementCard.ui";
+    public static final String MOB_OVERVIEW = "hytems/ui/MobOverview.ui";
+    public static final String MOB_ATTRIBUTE_ROW = "hytems/ui/MobAttributeRow.ui";
+    public static final String MOB_ITEM_ROW = "hytems/ui/MobItemRow.ui";
+    public static final String MOB_SPAWN_GROUP = "hytems/ui/MobSpawnGroup.ui";
+    public static final String MOB_SPAWN_ENTRY = "hytems/ui/MobSpawnEntry.ui";
 
     private HytemsUiTemplates() {
     }

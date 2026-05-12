@@ -1178,13 +1178,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         String portraitPath = MobPortraitResolver.resolvePortraitPath(mobType);
         boolean hasPortrait = portraitPath != null && !portraitPath.isEmpty();
 
-        cmd.set("#MobDropPortrait.Visible", hasPortrait);
-        cmd.set("#MobDropPortraitFallback.Visible", !hasPortrait);
-        if (hasPortrait) {
-            cmd.set("#MobDropPortrait.Background", portraitPath);
-        } else {
-            cmd.set("#MobDropPortrait.Background", "#000000(0)");
-        }
+        cmd.set("#MobDropPortrait.Visible", true);
+        cmd.set("#MobDropPortraitFallback.Visible", false);
+        cmd.set("#MobDropPortrait.Background", hasPortrait ? portraitPath : MobPortraitResolver.FALLBACK_PORTRAIT_PATH);
     }
 
     private void setStationIcon(@Nonnull UICommandBuilder cmd, Item stationItem) {

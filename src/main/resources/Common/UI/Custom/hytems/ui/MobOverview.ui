@@ -38,13 +38,11 @@ Group {
       Group #LeftPanel {
         Anchor: (Width: 300);
         LayoutMode: Top;
-        Padding: (Full: 12);
-        Background: #16202c(0.86);
+        Padding: (Left: 4, Right: 12, Top: 4, Bottom: 4);
 
         Group #PortraitFrame {
           Anchor: (Height: 188);
           LayoutMode: Center;
-          Background: #1a2836(0.86);
 
           Group #MobPortrait {
             Anchor: (Width: 162, Height: 162);
@@ -135,8 +133,7 @@ Group {
         Group #DropsVariantsSection {
           Anchor: (Height: 350);
           LayoutMode: Top;
-          Padding: (Full: 12);
-          Background: #16202c(0.86);
+          Padding: (Left: 4, Right: 12, Top: 0, Bottom: 4);
 
           Label {
             Anchor: (Height: 28);
@@ -226,8 +223,7 @@ Group {
         Group #SpawnSection {
           Anchor: (Height: 310);
           LayoutMode: Top;
-          Padding: (Full: 12);
-          Background: #16202c(0.86);
+          Padding: (Left: 4, Right: 12, Top: 0, Bottom: 4);
 
           Label {
             Anchor: (Height: 28);

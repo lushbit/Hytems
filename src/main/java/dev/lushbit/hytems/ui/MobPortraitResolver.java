@@ -8,6 +8,7 @@ import java.util.List;
 
 public final class MobPortraitResolver {
     private static final String BASE_PATH = "hytems/ui/Assets/MobPortraits/";
+    public static final String FALLBACK_PORTRAIT_PATH = BASE_PATH + "Construction_Sign.png";
     private static final String RESOURCE_BASE_PATH = "Common/UI/Custom/" + BASE_PATH;
     private static final Path DEV_RESOURCE_BASE_PATH = Path.of("src/main/resources/Common/UI/Custom").resolve(BASE_PATH);
 

@@ -149,11 +149,9 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
     private void setPortrait(@Nonnull UICommandBuilder cmd) {
         String path = MobPortraitResolver.resolvePortraitPath(this.mobId);
         boolean hasPortrait = path != null && !path.isEmpty();
-        cmd.set("#MobPortrait.Visible", hasPortrait);
-        cmd.set("#PortraitFallback.Visible", !hasPortrait);
-        if (hasPortrait) {
-            cmd.set("#MobPortrait.Background", path);
-        }
+        cmd.set("#MobPortrait.Visible", true);
+        cmd.set("#PortraitFallback.Visible", false);
+        cmd.set("#MobPortrait.Background", hasPortrait ? path : MobPortraitResolver.FALLBACK_PORTRAIT_PATH);
     }
 
     private void renderAttributes(@Nonnull UICommandBuilder cmd, @Nonnull List<AttributeRow> rows) {

@@ -51,7 +51,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class MobMetadataRegistry {
     private static final MobMetadata EMPTY = new MobMetadata("", "Unknown", null,
             Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
+    private static final String MISSING_ITEM_ID = "__HYTEMS_MISSING_ITEM__";
     private static final Map<String, MobMetadata> CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, String> ITEM_ID_LOOKUP = new ConcurrentHashMap<>();
     private static final Set<String> LOADING = ConcurrentHashMap.newKeySet();
     private static volatile Map<String, WorldNPCSpawn> worldNpcSpawns = Collections.emptyMap();
     private static volatile Map<String, BeaconNPCSpawn> beaconNpcSpawns = Collections.emptyMap();
@@ -71,8 +73,20 @@ public final class MobMetadataRegistry {
             return cached;
         }
 
+        return CACHE.computeIfAbsent(normalized, MobMetadataRegistry::loadSafely);
+    }
+
+    public static void preload(String mobId) {
+        if (mobId == null || mobId.isEmpty()) {
+            return;
+        }
+
+        String normalized = normalizeId(mobId);
+        if (CACHE.containsKey(normalized)) {
+            return;
+        }
+
         ensureLoadedAsync(normalized);
-        return fallback(normalized);
     }
 
     public static void markNpcDataDirty() {
@@ -108,6 +122,15 @@ public final class MobMetadataRegistry {
         }, "Hytems-MobMetadata-" + mobId);
         loader.setDaemon(true);
         loader.start();
+    }
+
+    private static MobMetadata loadSafely(String mobId) {
+        try {
+            return load(mobId);
+        } catch (Exception e) {
+            System.err.println("[Hytems] Failed to load mob metadata for " + mobId + ": " + e.getMessage());
+            return fallback(mobId);
+        }
     }
 
     private static MobMetadata load(String mobId) {
@@ -727,9 +750,17 @@ public final class MobMetadataRegistry {
     private static String findKnownItemId(String id) {
         if (id == null || HytemsPlugin.ITEMS == null) return null;
         String normalized = normalizeKey(id);
-        for (Map.Entry<String, Item> entry : HytemsPlugin.ITEMS.entrySet()) {
-            if (normalizeKey(entry.getKey()).equals(normalized)) return entry.getKey();
+        if (ITEM_ID_LOOKUP.containsKey(normalized)) {
+            String cached = ITEM_ID_LOOKUP.get(normalized);
+            return MISSING_ITEM_ID.equals(cached) ? null : cached;
         }
+        for (Map.Entry<String, Item> entry : HytemsPlugin.ITEMS.entrySet()) {
+            if (normalizeKey(entry.getKey()).equals(normalized)) {
+                ITEM_ID_LOOKUP.put(normalized, entry.getKey());
+                return entry.getKey();
+            }
+        }
+        ITEM_ID_LOOKUP.put(normalized, MISSING_ITEM_ID);
         return null;
     }
 

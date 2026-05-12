@@ -24,6 +24,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.lushbit.hytems.HytemsPlugin;
 import dev.lushbit.hytems.asset.DropSourceParser;
 import dev.lushbit.hytems.asset.ItemSearchService;
+import dev.lushbit.hytems.asset.MobMetadataRegistry;
 import dev.lushbit.hytems.asset.RecipeUtils;
 import dev.lushbit.hytems.ui.DropSourceSummaries;
 import dev.lushbit.hytems.ui.HytemsUiTemplates;
@@ -812,6 +813,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         this.currentMobDropIndex = Math.floorMod(this.currentMobDropIndex, mobDrops.size());
         DropSourceSummaries.DisplayDropSource currentMobDrop = mobDrops.get(this.currentMobDropIndex);
+        preloadMobOverviewData(mobDrops);
         cmd.set("#MobDropName.Text", currentMobDrop.primaryLabel());
         cmd.set("#MobDropCounter.Text", (this.currentMobDropIndex + 1) + " / " + mobDrops.size());
         setMobDropPortrait(cmd, currentMobDrop.previewSource.mobType);
@@ -1181,6 +1183,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         cmd.set("#MobDropPortrait.Visible", true);
         cmd.set("#MobDropPortraitFallback.Visible", false);
         cmd.set("#MobDropPortrait.Background", hasPortrait ? portraitPath : MobPortraitResolver.FALLBACK_PORTRAIT_PATH);
+    }
+
+    private void preloadMobOverviewData(@Nonnull List<DropSourceSummaries.DisplayDropSource> mobDrops) {
+        for (DropSourceSummaries.DisplayDropSource mobDrop : mobDrops) {
+            if (mobDrop.previewSource != null) {
+                MobMetadataRegistry.preload(mobDrop.previewSource.mobType);
+            }
+        }
     }
 
     private void setStationIcon(@Nonnull UICommandBuilder cmd, Item stationItem) {

@@ -41,7 +41,6 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
 
     private final PlayerRef playerRef;
     private final String mobId;
-    private volatile boolean dismissed;
 
     public MobOverviewPage(@Nonnull PlayerRef playerRef, @Nonnull String mobId) {
         super(playerRef, CustomPageLifetime.CanDismiss, MobOverviewData.CODEC);
@@ -54,13 +53,6 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
                       @Nonnull UIEventBuilder events, @Nonnull Store<EntityStore> store) {
         cmd.append(HytemsUiTemplates.MOB_OVERVIEW);
         render(cmd, events);
-        scheduleAsyncRefresh();
-    }
-
-    @Override
-    public void onDismiss(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-        this.dismissed = true;
-        super.onDismiss(ref, store);
     }
 
     @Override
@@ -126,24 +118,6 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
                 EventData.of("Action", "close"),
                 false
         );
-    }
-
-    private void scheduleAsyncRefresh() {
-        Thread refreshThread = new Thread(() -> {
-            for (int attempt = 0; attempt < 3 && !this.dismissed; attempt++) {
-                try {
-                    Thread.sleep(350L + (attempt * 350L));
-                    UICommandBuilder cmd = new UICommandBuilder();
-                    UIEventBuilder events = new UIEventBuilder();
-                    render(cmd, events);
-                    this.sendUpdate(cmd, events, false);
-                } catch (Exception ignored) {
-                    return;
-                }
-            }
-        }, "Hytems-MobOverviewRefresh-" + this.mobId);
-        refreshThread.setDaemon(true);
-        refreshThread.start();
     }
 
     private void setPortrait(@Nonnull UICommandBuilder cmd) {

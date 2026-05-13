@@ -1,36 +1,81 @@
 [![](https://img.shields.io/badge/DISCORD-JOIN_SERVER-blue?style=for-the-badge&logo=discord&logoColor=ffffff&color=5865F2)](https://discord.gg/WV9V5uvghp) [![](https://img.shields.io/badge/KO--FI-DONATE-red?style=for-the-badge&logo=ko-fi&logoColor=ffffff&color=ed5353)](https://ko-fi.com/lushbit)
 
-# Hytems
+Hytems is a lightweight and modern in-game browser that helps you discover items, recipes, drops, mobs, and crafting requirements directly inside Hytale.
 
-Tired of not knowing which items exist or how to craft them in Hytale? **Hytems** brings a comprehensive in-game item browser to your fingertips. Browse all items, view crafting recipes, and discover what you need to progress — all without leaving the game.
+No more guessing which items exist, where they come from, or what you need to craft them. Open Hytems, search what you need, pin important items to your HUD, and keep progressing without leaving the game.
 
-__**Features:**__
+ 
 
-**🔍 Complete Item Browser** - Browse all items with pagination support
+## **✨ Features**
 
-**📜 Recipe Viewer** - See crafting recipes, required items, drops and crafting stations
+**🔍 Complete Item Browser** - Browse all available Hytale items directly in-game, including supported custom items from other mods.
 
-**🔎 Real-time Search** - Quickly find items by name and categories
+**📜 Recipe Viewer** - View crafting recipes, required ingredients, crafting stations, drops, and other useful item information in one clean interface.
 
-**📌 Item pinning** - Pin items to your HUD and see your required ingredients directly on spot
+**🧟 Mob Browser & Drop Support** - Discover which mobs can drop specific items and explore detailed mob information directly inside Hytems.
 
-**⭐ Favorite items** - You can favorite up to 8 items in your item browser
+Open the mob browser with:
 
-🕐 **Item history** \- View your recently searched items for quick access
+`/h mobs` or `/hytems mobs`
 
-**📊 Detailed Information** - View item IDs, stack sizes, and durability
+The **Mob Overview UI** displays available mob information in three clear sections:
 
-**🎨 Clean UI Design** - Modern, dark-themed interface that fits Hytale's aesthetic
+**Attributes**  
+Shows useful mob stats such as health, family, and other available attributes.
 
-**⚡ Lightweight** - Minimal performance impact
+**Drops & Variants**  
+Lists known drops and possible equipment variants, including tools, armor, and weapons the mob may spawn with.
 
-**🔧 Custom Item Support** - Supports custom items and recipes in the browser
+**Spawn & Habitat**  
+Shows known spawn locations in the world, structured as _Zone -> Biome -> Structure_
+
+ 
+
+**🔎 Real-time Search** - Quickly find items by name, category, or type using the built-in real-time search.
+
+**🏷️ Category Search -** Use category prefixes like `@weapon`, `@armor`, `@tool`, `@food`, `@craftable`, or `@ingredient` to narrow down your search.
+
+Example:
+
+`@weapon sword`
+
+This will show all weapon items matching “sword”.
+
+Available categories:
+
+_`weapon`, `armor`, `tool`, `block`, `food`, `consumable`, `material`, `resource`, `furniture`, `craftable`,_ `_ingredient_`
+
+ 
+
+**📌 HUD pinning** - Pin up to **3 items** directly to your HUD and track their required ingredients while playing.
+
+Hytems also checks your inventory and updates the remaining required items live whenever your inventory changes.
+
+You can manage pinned items with:
+
+`/h pins` or `/hytems pins`
+
+⭐ **Favorite Items** - Mark up to **8 items** as favorites and access them instantly at the top of the item browser.
+
+🕐 **Recent Item History** - Recently searched or viewed items are saved for quick access.
+
+**📊 Detailed Item Information -** View useful details such as item IDs, stack sizes, durability, crafting requirements, and more.
+
+**🎨 Clean Dark UI** - A modern dark-themed interface designed to fit naturally into Hytale’s style.
+
+**🔧 Mod Support** - Hytems supports custom items and mobs from other mods, making it useful for both vanilla and modded gameplay.
+
+**⚡ Lightweight -** Built with performance in mind, Hytems keeps the interface smooth without unnecessary overhead.
+
+ 
+
+## **📦 Requirements**
 
 <span style="color: #e03e2d;"><strong>As of <em>v1.1.0</em>, Hytems uses the <a href="https://www.curseforge.com/hytale/mods/multiplehud" target="_blank" rel="nofollow noopener">MultipleHUD</a> library for better UI management. Since Hytale doesn't natively support multiple custom HUDs yet, this library ensures our item browser and detail panels work smoothly and separate from each other.</strong></span>
 
 <span style="color: #e03e2d;"><strong>You need to install <a href="https://www.curseforge.com/hytale/mods/multiplehud" target="_blank" rel="nofollow noopener">MultipleHUD</a> (<em>1.0.7 or higher</em>) for this mod to work properly!</strong></span>
 
-**__How to Use__**
+## **📖 How to use**
 
 *   Simply type `/hytems` or `/h` in chat to open the browser!
 *   Leftclick any item to view its details and recipe
@@ -38,38 +83,15 @@ __**Features:**__
 *   Use the search bar to search for specific items or even categories
 *   Navigate through the pages with `<` and `>` buttons
 
-**__Category search__**
-
-_v1.2.0_ introduced **Category Search** - find items faster by filtering by type!
-
-Simply prefix your search with `@` followed by a category name like `@weapon`, `@armor`, `@tool`, `@craftable`, or `@food`. You can even combine categories with text search: `@weapon sword` to find all swords. Valid categories appear in green, invalid ones in red for instant feedback.
-
-Available categories: `weapon`, `armor`, `tool`, `block`, `food`, `consumable`, `material`, `resource`, `furniture`, `craftable`, `ingredient`
-
-**__Pin items__**
-
-With _v1.4.0_ Hytems comes with a **pinning system** - Pin items directly to your HUD!
-
-You can pin up to 3 items to the screen. For every item you can see some of the mob drops as well as the required ingredients for the item to craft. You can either pin it by hovering over the top of the item box and using the pin icon, or over the item details or item drop panel.
-
-_The mod will also count, how many items you already have in your inventory and show the remaining items, which will update live on inventory change._
-
-If you want to reorder your items on the screen or simply remove them fast, you can use `/h pins` or `/hytems pins` to open the management UI!
-
-**__Favorite items__**
-
-Hytems _v1.5.0_ introduces **favorite items**. You can favorite up to 8 items, which will be displayed directly at the top of the item browser. Just hover over one item on the top of its box and you will find the star icon to favorite it! Alternatively, you can also favorite item in the item details or item drop panel.
-
-**__Planned Features__**
+## **🛠️ Planned Features**
 
 *   More information on items (such as stats, drops, loot etc.)
 *   Mod filtering
 *   More browser opening options
 *   and much more to come!
 
-I hope you enjoy this really useful mod! It's my first project.  
-  
+I hope you enjoy this really useful mod! It's my first project.
 
 **__Disclaimer:__** **I inspired myself from other mods and projects.** I'm happy about feedback and feature ideas. For issues and suggestions, please join my [Discord](https://discord.gg/WV9V5uvghp) or go to [GitHub](https://github.com/lushbit/Hytems)!
 
-[![](https://img.shields.io/badge/DISCORD-JOIN_SERVER-blue?style=for-the-badge&logo=discord&logoColor=ffffff&color=5865F2)](https://discord.gg/WV9V5uvghp) [![](https://img.shields.io/badge/KO--FI-DONATE-red?style=for-the-badge&logo=ko-fi&logoColor=ffffff&color=ed5353)](https://ko-fi.com/lushbit)
+[![](https://img.shields.io/badge/DISCORD-JOIN_SERVER-blue?style=for-the-badge&logo=discord&logoColor=ffffff&color=5865F2)](https://discord.gg/WV9V5uvghp) [![](https://img.shields.io/badge/KO--FI-DONATE-red?style=for-the-badge&logo=ko-fi&logoColor=ffffff&color=ed5353)](https://ko-fi.com/lushbit)

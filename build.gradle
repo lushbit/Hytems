@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'dev.lushbit.hytems'
-version = '1.7.0-hytale-pre5.7'
+version = '1.7.0-hytale-pre5.8'
 
 repositories {
     mavenCentral()

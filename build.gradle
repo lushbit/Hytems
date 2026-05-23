@@ -33,7 +33,6 @@ dependencies {
     // JSR305 annotations (@Nonnull, @Nullable)
     compileOnly 'com.google.code.findbugs:jsr305:3.0.2'
     implementation 'com.google.code.gson:gson:2.10.1'
-    compileOnly 'com.buuz135:MultipleHUD:1.0.7'
 }
 
 java {

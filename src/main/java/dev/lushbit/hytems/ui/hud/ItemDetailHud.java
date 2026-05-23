@@ -18,12 +18,15 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public class ItemDetailHud extends CustomUIHud {
+    public static final String KEY = "hytems_item_detail";
+    private static final int Z_ORDER = 20;
+
     private final PlayerRef playerRef;
     private String itemId;
     private boolean visible = true;
 
     public ItemDetailHud(@Nonnull PlayerRef playerRef) {
-        super(playerRef);
+        super(playerRef, KEY, Z_ORDER);
         this.playerRef = playerRef;
     }
 

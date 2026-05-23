@@ -23,6 +23,8 @@ import javax.annotation.Nonnull;
 import java.util.*;
 
 public class PinnedItemsHud extends CustomUIHud {
+    public static final String KEY = "hytems_pinned_items";
+    private static final int Z_ORDER = 10;
     
     private final PlayerDataManager playerDataManager;
     private final PlayerRef playerRef;
@@ -31,7 +33,7 @@ public class PinnedItemsHud extends CustomUIHud {
     
     public PinnedItemsHud(@Nonnull PlayerRef playerRef, @Nonnull PlayerDataManager playerDataManager,
                           @Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
-        super(playerRef);
+        super(playerRef, KEY, Z_ORDER);
         this.playerRef = playerRef;
         this.playerDataManager = playerDataManager;
         this.store = store;

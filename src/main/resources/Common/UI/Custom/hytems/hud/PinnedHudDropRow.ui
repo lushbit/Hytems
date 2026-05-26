@@ -5,7 +5,7 @@ Group {
 
   Label #SourceName {
     Text: "";
-    Anchor: (Width: 135);
+    FlexWeight: 1;
     Style: (
       FontSize: 12,
       TextColor: #ffffff,
@@ -20,6 +20,5 @@ Group {
 
   Group #ZoneBadges {
     LayoutMode: Left;
-    FlexWeight: 1;
   }
 }

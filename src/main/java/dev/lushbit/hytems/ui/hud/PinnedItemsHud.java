@@ -165,12 +165,17 @@ public class PinnedItemsHud extends CustomUIHud {
     private void displayDrops(@Nonnull UICommandBuilder cmd, @Nonnull String itemSelector, @Nonnull List<String> dropSources) {
         try {
             String listSelector = itemSelector + " #DropsList";
-            List<DropSourceSummaries.DisplayDropSource> mobSummaries = DropSourceSummaries.summarizeMobDrops(dropSources);
-            int totalDropSources = DropSourceSummaries.summarize(dropSources).size();
+            List<DropSourceSummaries.DisplayDropSource> displayableDrops = new ArrayList<>();
+            for (DropSourceSummaries.DisplayDropSource summary : DropSourceSummaries.summarize(dropSources)) {
+                if (DropSourceSummaries.shouldDisplayInMobCarousel(summary)
+                        || DropSourceSummaries.shouldDisplayInOtherDrops(summary)) {
+                    displayableDrops.add(summary);
+                }
+            }
             int dropIndex = 0;
             int maxDrops = 3;
 
-            for (DropSourceSummaries.DisplayDropSource summary : mobSummaries) {
+            for (DropSourceSummaries.DisplayDropSource summary : displayableDrops) {
                 if (dropIndex >= maxDrops) break;
 
                 cmd.append(listSelector, HytemsUiTemplates.PINNED_HUD_DROP_ROW);
@@ -193,7 +198,7 @@ public class PinnedItemsHud extends CustomUIHud {
                 }
                 dropIndex++;
             }
-            int remainingDrops = totalDropSources - dropIndex;
+            int remainingDrops = displayableDrops.size() - dropIndex;
 
             if (remainingDrops > 0) {
                 String suffix = remainingDrops == 1 ? "" : "s";

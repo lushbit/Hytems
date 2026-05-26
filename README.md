@@ -71,9 +71,9 @@ You can manage pinned items with:
 
 ## **📦 Requirements**
 
-<span style="color: #e03e2d;"><strong>As of <em>v1.1.0</em>, Hytems uses the <a href="https://www.curseforge.com/hytale/mods/multiplehud" target="_blank" rel="nofollow noopener">MultipleHUD</a> library for better UI management. Since Hytale doesn't natively support multiple custom HUDs yet, this library ensures our item browser and detail panels work smoothly and separate from each other.</strong></span>
+<span style="color: #2e7d32;"><strong>For newer major upcoming versions of Hytems and the beta release <em>hytems-1.7.0-hytale-pre5.9</em> or higher, Hytems uses Hytale's native keyed custom HUD layers. MultipleHUD is no longer required for these versions.</strong></span>
 
-<span style="color: #e03e2d;"><strong>You need to install <a href="https://www.curseforge.com/hytale/mods/multiplehud" target="_blank" rel="nofollow noopener">MultipleHUD</a> (<em>1.0.7 or higher</em>) for this mod to work properly!</strong></span>
+<span style="color: #e03e2d;"><strong>For Hytems from <em>v1.1.0</em> to <em>v1.7.0</em>, and for beta releases <em>hytems-1.7.0-hytale-pre5.7</em> and <em>hytems-1.7.0-hytale-pre5.8</em>, you still need to install <a href="https://www.curseforge.com/hytale/mods/multiplehud" target="_blank" rel="nofollow noopener">MultipleHUD</a> (<em>1.0.7 or higher</em>) for the mod to work properly.</strong></span>
 
 ## **📖 How to use**
 

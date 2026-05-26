@@ -1,14 +1,12 @@
 {
   "Group": "dev.lushbit",
   "Name": "Hytems",
-  "Version": "1.7.0",
+  "Version": "1.7.0-hytale-pre5.9",
   "Description": "View items and their recipes in Hytale just like in JEI!",
   "Authors": [{"Name": "lushbit"}],
-  "ServerVersion": "2026.03.26-89796e57b",
+  "ServerVersion": "0.5.0-pre.9",
   "Main": "dev.lushbit.hytems.HytemsPlugin",
   "LoadOrder": "POSTWORLD",
   "IncludesAssetPack": true,
-  "Dependencies": {
-    "Buuz135:MultipleHUD": ">=1.0.6"
-  }
+  "Dependencies": {}
 }

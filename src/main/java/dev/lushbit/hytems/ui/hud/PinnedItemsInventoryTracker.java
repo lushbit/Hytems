@@ -1,13 +1,12 @@
 package dev.lushbit.hytems.ui.hud;
 
-import com.buuz135.mhud.MultipleHUD;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
-import com.hypixel.hytale.server.core.inventory.InventoryChangeEvent;
+import com.hypixel.hytale.server.core.event.events.ecs.InventoryChangeEvent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.lushbit.hytems.HytemsPlugin;
@@ -68,7 +67,7 @@ public class PinnedItemsInventoryTracker {
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player != null) {
             PinnedItemsHud hud = new PinnedItemsHud(playerRef, HytemsPlugin.playerDataManager, store, ref);
-            MultipleHUD.getInstance().setCustomHud(player, playerRef, "hytems_pinned_items", hud);
+            player.getHudManager().addCustomHud(playerRef, hud);
         }
     }
     

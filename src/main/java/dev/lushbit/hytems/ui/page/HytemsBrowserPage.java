@@ -8,6 +8,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
+import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
@@ -15,6 +16,8 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.ui.Anchor;
+import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
+import com.hypixel.hytale.server.core.ui.LocalizableString;
 import com.hypixel.hytale.server.core.ui.Value;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -26,6 +29,7 @@ import dev.lushbit.hytems.asset.DropSourceParser;
 import dev.lushbit.hytems.asset.ItemSearchService;
 import dev.lushbit.hytems.asset.MobMetadataRegistry;
 import dev.lushbit.hytems.asset.RecipeUtils;
+import dev.lushbit.hytems.data.BrowserFilterSettings;
 import dev.lushbit.hytems.ui.DropSourceSummaries;
 import dev.lushbit.hytems.ui.HytemsUiTemplates;
 import dev.lushbit.hytems.ui.ItemUiSupport;
@@ -41,6 +45,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.Comparator;
 
 public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage.BrowserData> {
 
@@ -86,6 +91,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private List<Map.Entry<String, Item>> filteredItems = new ArrayList<>();
     private Set<String> favoriteItems = new LinkedHashSet<>();
     private List<String> searchHistoryItems = new ArrayList<>();
+    private BrowserFilterSettings browserFilters;
 
     private Ref<EntityStore> pageRef;
     private Store<EntityStore> pageStore;
@@ -102,6 +108,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         this.itemSearchService = new ItemSearchService(playerRef);
         this.favoriteItems = new LinkedHashSet<>(HytemsPlugin.playerDataManager.getFavoriteItems(playerRef));
         this.searchHistoryItems = sanitizeHistory(HytemsPlugin.playerDataManager.getSearchHistoryItems(playerRef));
+        this.browserFilters = HytemsPlugin.playerDataManager.getBrowserFilters(playerRef);
 
         String lastViewedItem = HytemsPlugin.playerDataManager.getLastViewedItem(playerRef);
         if (isKnownItem(lastViewedItem)) {
@@ -136,6 +143,14 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         cmd.append("#InfoPanelSlot", HytemsUiTemplates.BROWSER_INFO_PANEL);
         cmd.append("#SearchHistorySlot", HytemsUiTemplates.SEARCH_HISTORY);
         cmd.set("#SearchInput.Value", this.searchQuery);
+        renderFilters(cmd);
+        bindFilterEvents(events);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#ResetFiltersButton",
+                EventData.of("ResetFilters", "true"), false);
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowSalvagerRecipes #CheckBox",
+                EventData.of("@ShowSalvagerRecipes", "#ShowSalvagerRecipes #CheckBox.Value"), false);
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowHiddenItems #CheckBox",
+                EventData.of("@ShowHiddenItems", "#ShowHiddenItems #CheckBox.Value"), false);
 
         events.addEventBinding(
                 CustomUIEventBindingType.ValueChanged,
@@ -273,6 +288,38 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             needsSearchUpdate = true;
         }
 
+        if (applyFilterChanges(data)) {
+            this.currentPage = 0;
+            HytemsPlugin.playerDataManager.setBrowserFilters(this.playerRef, this.browserFilters);
+            needsUpdate = true;
+            needsGridUpdate = true;
+        }
+
+        if ("true".equals(data.resetFilters)) {
+            this.browserFilters.resetFilters();
+            this.searchQuery = "";
+            this.currentPage = 0;
+            HytemsPlugin.playerDataManager.setBrowserFilters(this.playerRef, this.browserFilters);
+            needsUpdate = true;
+            needsGridUpdate = true;
+            needsSearchUpdate = true;
+        }
+
+        if (data.showSalvagerRecipes != null && data.showSalvagerRecipes != this.browserFilters.showSalvagerRecipes) {
+            this.browserFilters.showSalvagerRecipes = data.showSalvagerRecipes;
+            HytemsPlugin.playerDataManager.setBrowserFilters(this.playerRef, this.browserFilters);
+            needsUpdate = true;
+            needsInfoUpdate = true;
+        }
+
+        if (data.showHiddenItems != null && data.showHiddenItems != this.browserFilters.showHiddenItems) {
+            this.browserFilters.showHiddenItems = data.showHiddenItems;
+            this.currentPage = 0;
+            HytemsPlugin.playerDataManager.setBrowserFilters(this.playerRef, this.browserFilters);
+            needsUpdate = true;
+            needsGridUpdate = true;
+        }
+
         if (data.pageAction != null) {
             int totalPages = getTotalPages();
             if ("prev".equals(data.pageAction) && this.currentPage > 0) {
@@ -318,6 +365,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 filterItems();
                 clampCurrentPage();
                 renderItems(cmd, events);
+            }
+            if ("true".equals(data.resetFilters)) {
+                cmd.set("#SearchInput.Value", "");
+                renderFilters(cmd);
             }
             if (needsSearchUpdate) {
                 updateSearchInputColor(cmd);
@@ -386,15 +437,25 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         try {
             if (selectedItemId != null && !selectedItemId.isEmpty()) {
-                List<CraftingRecipe> recipes = getCachedRecipes(selectedItemId);
-                if (recipes != null && recipes.size() == 1) {
-                    int baseHeight = hasVisibleCraftingStation(recipes.get(0))
+                List<CraftingRecipe> recipes = getVisibleRecipes(selectedItemId);
+                List<CraftingRecipe> craftingRecipes = recipes.stream().filter(recipe -> !RecipeUtils.hasSalvagerBench(recipe)).toList();
+                List<CraftingRecipe> salvagerRecipes = recipes.stream().filter(RecipeUtils::hasSalvagerBench).toList();
+                if (craftingRecipes.size() == 1) {
+                    int baseHeight = hasVisibleCraftingStation(craftingRecipes.get(0))
                             ? RECIPE_SECTION_BASE_HEIGHT
                             : RECIPE_SECTION_NO_STATION_BASE_HEIGHT;
-                    List<MaterialQuantity> ingredients = RecipeUtils.getInputs(recipes.get(0));
+                    List<MaterialQuantity> ingredients = RecipeUtils.getInputs(craftingRecipes.get(0));
                     if (ingredients != null && !ingredients.isEmpty()) {
                         recipeSectionHeight = baseHeight + (ingredients.size() * LIST_ROW_HEIGHT);
                     }
+                }
+                if (!salvagerRecipes.isEmpty()) {
+                    int salvagerIngredientCount = salvagerRecipes.stream()
+                            .map(RecipeUtils::getInputs)
+                            .filter(ingredients -> ingredients != null)
+                            .mapToInt(List::size)
+                            .sum();
+                    recipeSectionHeight += 144 + (salvagerIngredientCount * LIST_ROW_HEIGHT);
                 }
             }
         } catch (Exception ignored) {
@@ -586,15 +647,19 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
     private void loadRecipes(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events, @Nonnull String itemId) {
         try {
-            List<CraftingRecipe> allRecipes = getCachedRecipes(itemId);
+            List<CraftingRecipe> allRecipes = getVisibleRecipes(itemId);
+            List<CraftingRecipe> salvagerRecipes = allRecipes.stream().filter(RecipeUtils::hasSalvagerBench).toList();
+            List<CraftingRecipe> craftingRecipes = allRecipes.stream().filter(recipe -> !RecipeUtils.hasSalvagerBench(recipe)).toList();
 
-            if (allRecipes == null || allRecipes.isEmpty() || allRecipes.size() > 1) {
-                cmd.set("#NoRecipeContainer.Visible", true);
+            renderSalvagerRecipes(cmd, events, salvagerRecipes);
+
+            if (craftingRecipes.isEmpty() || craftingRecipes.size() > 1) {
+                cmd.set("#NoRecipeContainer.Visible", salvagerRecipes.isEmpty());
                 cmd.set("#RecipeContent.Visible", false);
             } else {
                 cmd.set("#NoRecipeContainer.Visible", false);
                 cmd.set("#RecipeContent.Visible", true);
-                displayRecipes(cmd, events, allRecipes);
+                displayRecipes(cmd, events, craftingRecipes);
             }
         } catch (Exception e) {
             System.err.println("[Hytems] Error loading recipes for " + itemId + ": " + e.getMessage());
@@ -1018,7 +1083,198 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     }
 
     private void filterItems() {
-        filteredItems = itemSearchService.filter(HytemsPlugin.ITEMS, searchQuery);
+        filteredItems = itemSearchService.filter(
+                HytemsPlugin.ITEMS,
+                searchQuery,
+                browserFilters,
+                new LinkedHashSet<>(HytemsPlugin.playerDataManager.getPinnedItems(this.playerRef))
+        );
+    }
+
+    private void renderSalvagerRecipes(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events,
+                                       @Nonnull List<CraftingRecipe> recipes) {
+        cmd.clear("#SalvagerIngredientsList");
+        cmd.set("#SalvagerRecipesSection.Visible", !recipes.isEmpty());
+        if (recipes.isEmpty()) return;
+
+        BenchRequirement salvagerBench = firstBenchRequirement(recipes.get(0));
+        String stationItemId = salvagerBench == null ? null : resolveBenchItemId(salvagerBench.id);
+        if (stationItemId == null) {
+            cmd.set("#SalvagerStationName.Text", "Salvagebench");
+            cmd.set("#SalvagerStationTier.Text", "");
+            cmd.set("#SalvagerStationIcon.Visible", false);
+            cmd.set("#SalvagerStationAssetIcon.Visible", false);
+            cmd.set("#SalvagerStationPathButton.Visible", false);
+        } else {
+            Item stationItem = HytemsPlugin.ITEMS.get(stationItemId);
+            String stationName = translatedName(stationItem, stationItemId);
+            if (stationName.equals(stationItemId)) {
+                stationName = benchDisplayName(stationItemId);
+            }
+
+            cmd.set("#SalvagerStationName.Text", stationName);
+            cmd.set("#SalvagerStationIcon.ItemId", stationItemId);
+            setSalvagerStationIcon(cmd, stationItem);
+            cmd.set("#SalvagerStationIconBackground.Background", ItemUiSupport.rarityBackground(stationItem));
+            cmd.set("#SalvagerStationPathButton.Visible", true);
+            bindItemPathButton(events, "#SalvagerStationPathButton", stationItemId);
+
+            int tier = salvagerBench.requiredTierLevel;
+            cmd.set("#SalvagerStationTier.Text", tier > 0 ? "Tier " + tier : "Any tier");
+        }
+
+        int renderedIndex = 0;
+        for (CraftingRecipe recipe : recipes) {
+            renderedIndex = appendSalvagerIngredients(cmd, events, recipe, renderedIndex);
+        }
+    }
+
+    private BenchRequirement firstBenchRequirement(@Nonnull CraftingRecipe recipe) {
+        BenchRequirement[] benches = recipe.getBenchRequirement();
+        return benches == null || benches.length == 0 ? null : benches[0];
+    }
+
+    private int appendSalvagerIngredients(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events,
+                                          @Nonnull CraftingRecipe recipe, int renderedIndex) {
+        List<MaterialQuantity> ingredients = RecipeUtils.getInputs(recipe);
+        if (ingredients == null) return renderedIndex;
+
+        for (MaterialQuantity ingredient : ingredients) {
+            if (ingredient == null) continue;
+
+            String ingredientId = ingredient.getItemId();
+            String resourceTypeId = ingredient.getResourceTypeId();
+            if (ingredientId == null && resourceTypeId == null) continue;
+
+            String rowSelector = "#SalvagerIngredientsList[" + renderedIndex + "]";
+            if (ingredientId != null) {
+                cmd.append("#SalvagerIngredientsList", HytemsUiTemplates.INGREDIENT_ENTRY);
+                renderedIndex++;
+                Item ingredientItem = HytemsPlugin.ITEMS.get(ingredientId);
+                cmd.set(rowSelector + " #IconBackground.Background", ItemUiSupport.rarityBackground(ingredientItem));
+                cmd.set(rowSelector + " #ItemIcon.ItemId", ingredientId);
+                cmd.set(rowSelector + " #ItemIcon.Visible", true);
+                cmd.set(rowSelector + " #Quantity.Text", "x" + ingredient.getQuantity());
+                cmd.set(rowSelector + " #IngredientName.Text", translatedName(ingredientItem, ingredientId));
+                cmd.set(rowSelector + " #PathButton.Visible", true);
+                bindItemPathButton(events, rowSelector + " #PathButton", ingredientId);
+            } else {
+                ResourceType resourceType = (ResourceType) ResourceType.getAssetMap().getAsset(resourceTypeId);
+                if (resourceType != null) {
+                    cmd.append("#SalvagerIngredientsList", HytemsUiTemplates.INGREDIENT_ENTRY);
+                    renderedIndex++;
+                    cmd.set(rowSelector + " #IconBackground.Background", ItemUiSupport.RARITY_DEFAULT_BACKGROUND);
+                    cmd.set(rowSelector + " #ItemIcon.Visible", false);
+                    cmd.set(rowSelector + " #ResourceIcon.AssetPath", resourceType.getIcon());
+                    cmd.set(rowSelector + " #ResourceIcon.Visible", true);
+                    cmd.set(rowSelector + " #Quantity.Text", "x" + ingredient.getQuantity());
+                    cmd.set(rowSelector + " #IngredientName.Text", "Any " + TextFormatters.resourceTypeName(resourceTypeId));
+                    cmd.set(rowSelector + " #PathButton.Visible", false);
+                }
+            }
+        }
+        return renderedIndex;
+    }
+
+    private List<CraftingRecipe> getVisibleRecipes(String itemId) {
+        List<CraftingRecipe> recipes = getCachedRecipes(itemId);
+        if (this.browserFilters.showSalvagerRecipes) return recipes;
+        return recipes.stream().filter(recipe -> !RecipeUtils.hasSalvagerBench(recipe)).toList();
+    }
+
+    private void bindFilterEvents(@Nonnull UIEventBuilder events) {
+        bindFilterEvent(events, "#CategoryFilter", "@CategoryFilter");
+        bindFilterEvent(events, "#ModFilter", "@ModFilter");
+        bindFilterEvent(events, "#CraftableFilter", "@CraftableFilter");
+        bindFilterEvent(events, "#DroppableFilter", "@DroppableFilter");
+        bindFilterEvent(events, "#PinnedFilter", "@PinnedFilter");
+        bindFilterEvent(events, "#SortingFilter", "@SortingFilter");
+    }
+
+    private void bindFilterEvent(@Nonnull UIEventBuilder events, @Nonnull String selector, @Nonnull String key) {
+        events.addEventBinding(CustomUIEventBindingType.ValueChanged, selector,
+                EventData.of(key, selector + ".Value"), false);
+    }
+
+    private void renderFilters(@Nonnull UICommandBuilder cmd) {
+        cmd.set("#CategoryFilter.Entries", categoryEntries());
+        cmd.set("#CategoryFilter.Value", browserFilters.category);
+        cmd.set("#ModFilter.Entries", modEntries());
+        cmd.set("#ModFilter.Value", browserFilters.mod);
+        cmd.set("#CraftableFilter.Entries", entries(new String[][]{{"All", "all"}, {"Yes", "yes"}, {"No", "no"}}));
+        cmd.set("#CraftableFilter.Value", browserFilters.craftable);
+        cmd.set("#DroppableFilter.Entries", entries(new String[][]{{"All", "all"}, {"Yes", "yes"}, {"No", "no"}}));
+        cmd.set("#DroppableFilter.Value", browserFilters.droppable);
+        cmd.set("#PinnedFilter.Entries", entries(new String[][]{{"All", "all"}, {"Yes", "yes"}, {"No", "no"}}));
+        cmd.set("#PinnedFilter.Value", browserFilters.pinned);
+        cmd.set("#SortingFilter.Entries", entries(new String[][]{
+                {"A-Z", "a-z"}, {"Z-A", "z-a"}, {"Quality: rare first", "quality-desc"},
+                {"Quality: common first", "quality-asc"},
+                {"Weapon damage", "weapon-damage"}, {"Category", "category"}
+        }));
+        cmd.set("#SortingFilter.Value", browserFilters.sorting);
+        cmd.set("#ShowSalvagerRecipes #CheckBox.Value", browserFilters.showSalvagerRecipes);
+        cmd.set("#ShowHiddenItems #CheckBox.Value", browserFilters.showHiddenItems);
+    }
+
+    private List<DropdownEntryInfo> categoryEntries() {
+        List<DropdownEntryInfo> entries = new ArrayList<>();
+        entries.add(new DropdownEntryInfo(LocalizableString.fromString("All categories"), BrowserFilterSettings.ALL));
+        for (String category : itemSearchService.getNativeCategoryPaths(HytemsPlugin.ITEMS)) {
+            String[] parts = category.split("\\.");
+            int depth = parts.length - 1;
+            entries.add(new DropdownEntryInfo(
+                    LocalizableString.fromString(indent(depth) + TextFormatters.itemName(parts[depth])),
+                    "category:" + category
+            ));
+        }
+        return entries;
+    }
+
+    private List<DropdownEntryInfo> modEntries() {
+        List<DropdownEntryInfo> entries = new ArrayList<>();
+        entries.add(new DropdownEntryInfo(LocalizableString.fromString("All mods"), BrowserFilterSettings.ALL));
+        AssetModule.get().getAssetPacks().stream()
+                .filter(pack -> pack.getManifest() != null && pack.getManifest().getName() != null)
+                .filter(pack -> {
+                    Set<String> itemIds = Item.getAssetMap().getKeysForPack(pack.getName());
+                    return itemIds != null && !itemIds.isEmpty();
+                })
+                .sorted(Comparator.comparing(pack -> pack.getManifest().getName(), String.CASE_INSENSITIVE_ORDER))
+                .forEach(pack -> entries.add(new DropdownEntryInfo(
+                        LocalizableString.fromString(pack.getManifest().getName()),
+                        pack.getName()
+                )));
+        return entries;
+    }
+
+    private String indent(int depth) {
+        return "  ".repeat(Math.max(0, depth));
+    }
+
+    private List<DropdownEntryInfo> entries(String[][] values) {
+        List<DropdownEntryInfo> entries = new ArrayList<>();
+        for (String[] value : values) {
+            entries.add(new DropdownEntryInfo(LocalizableString.fromString(value[0]), value[1]));
+        }
+        return entries;
+    }
+
+    private boolean applyFilterChanges(@Nonnull BrowserData data) {
+        boolean changed = false;
+        changed |= setFilter(data.categoryFilter, browserFilters.category, value -> browserFilters.category = value);
+        changed |= setFilter(data.modFilter, browserFilters.mod, value -> browserFilters.mod = value);
+        changed |= setFilter(data.craftableFilter, browserFilters.craftable, value -> browserFilters.craftable = value);
+        changed |= setFilter(data.droppableFilter, browserFilters.droppable, value -> browserFilters.droppable = value);
+        changed |= setFilter(data.pinnedFilter, browserFilters.pinned, value -> browserFilters.pinned = value);
+        changed |= setFilter(data.sortingFilter, browserFilters.sorting, value -> browserFilters.sorting = value);
+        return changed;
+    }
+
+    private boolean setFilter(String newValue, String oldValue, java.util.function.Consumer<String> setter) {
+        if (newValue == null || newValue.isEmpty() || newValue.equals(oldValue)) return false;
+        setter.accept(newValue);
+        return true;
     }
 
     private void ensureDetailItemAvailable() {
@@ -1204,6 +1460,17 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
     }
 
+    private void setSalvagerStationIcon(@Nonnull UICommandBuilder cmd, Item stationItem) {
+        String iconPath = stationItem == null ? null : stationItem.getIcon();
+        boolean hasIconPath = iconPath != null && !iconPath.isEmpty();
+
+        cmd.set("#SalvagerStationIcon.Visible", !hasIconPath);
+        cmd.set("#SalvagerStationAssetIcon.Visible", hasIconPath);
+        if (hasIconPath) {
+            cmd.set("#SalvagerStationAssetIcon.AssetPath", iconPath);
+        }
+    }
+
     private String resolveBenchItemId(String benchId) {
         if (benchId == null || benchId.isEmpty()) {
             return null;
@@ -1341,21 +1608,16 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private void updateSearchInputColor(@Nonnull UICommandBuilder cmd) {
         if (searchQuery.startsWith("@") && searchQuery.length() > 1) {
             String queryAfterAt = searchQuery.substring(1).trim();
-            String category;
-
-            int spaceIndex = queryAfterAt.indexOf(' ');
-            if (spaceIndex > 0) {
-                category = queryAfterAt.substring(0, spaceIndex).toLowerCase(Locale.ENGLISH);
-            } else {
-                category = queryAfterAt.toLowerCase(Locale.ENGLISH);
-            }
-
-            boolean isValid = itemSearchService.isValidCategory(category);
+            boolean isValid = itemSearchService.isValidCategoryTag(queryAfterAt);
             if (isValid) {
                 cmd.set("#SearchInput.Style.TextColor", "#00cc00");
             } else {
                 cmd.set("#SearchInput.Style.TextColor", "#cc0000");
             }
+        } else if (searchQuery.startsWith("#") && searchQuery.length() > 1) {
+            String queryAfterHash = searchQuery.substring(1).trim();
+            cmd.set("#SearchInput.Style.TextColor",
+                    itemSearchService.isValidModTag(queryAfterHash) ? "#7db0db" : "#cc0000");
         } else {
             cmd.set("#SearchInput.Style.TextColor", "#ffffff");
         }
@@ -1665,6 +1927,15 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         (data, value) -> data.mobDropAction = value,
                         data -> data.mobDropAction
                 )
+                .addField(new KeyedCodec<>("@CategoryFilter", Codec.STRING), (data, value) -> data.categoryFilter = value, data -> data.categoryFilter)
+                .addField(new KeyedCodec<>("@ModFilter", Codec.STRING), (data, value) -> data.modFilter = value, data -> data.modFilter)
+                .addField(new KeyedCodec<>("@CraftableFilter", Codec.STRING), (data, value) -> data.craftableFilter = value, data -> data.craftableFilter)
+                .addField(new KeyedCodec<>("@DroppableFilter", Codec.STRING), (data, value) -> data.droppableFilter = value, data -> data.droppableFilter)
+                .addField(new KeyedCodec<>("@PinnedFilter", Codec.STRING), (data, value) -> data.pinnedFilter = value, data -> data.pinnedFilter)
+                .addField(new KeyedCodec<>("@SortingFilter", Codec.STRING), (data, value) -> data.sortingFilter = value, data -> data.sortingFilter)
+                .addField(new KeyedCodec<>("ResetFilters", Codec.STRING), (data, value) -> data.resetFilters = value, data -> data.resetFilters)
+                .addField(new KeyedCodec<>("@ShowSalvagerRecipes", Codec.BOOLEAN), (data, value) -> data.showSalvagerRecipes = value, data -> data.showSalvagerRecipes)
+                .addField(new KeyedCodec<>("@ShowHiddenItems", Codec.BOOLEAN), (data, value) -> data.showHiddenItems = value, data -> data.showHiddenItems)
                 .build();
 
         private String searchQuery;
@@ -1684,6 +1955,15 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         private String infoTab;
         private String historyIndex;
         private String mobDropAction;
+        private String categoryFilter;
+        private String modFilter;
+        private String craftableFilter;
+        private String droppableFilter;
+        private String pinnedFilter;
+        private String sortingFilter;
+        private String resetFilters;
+        private Boolean showSalvagerRecipes;
+        private Boolean showHiddenItems;
     }
 }
 

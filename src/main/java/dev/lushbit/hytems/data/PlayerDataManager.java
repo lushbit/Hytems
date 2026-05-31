@@ -24,6 +24,7 @@ public class PlayerDataManager {
     private final Map<UUID, LinkedList<String>> playerSearchHistoryItems = new ConcurrentHashMap<>();
     private final Map<UUID, String> playerLastViewedItems = new ConcurrentHashMap<>();
     private final Map<UUID, String> playerLastViewedTabs = new ConcurrentHashMap<>();
+    private final Map<UUID, BrowserFilterSettings> playerBrowserFilters = new ConcurrentHashMap<>();
     private final Set<UUID> loadedPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private Path dataDirectory;
     
@@ -74,6 +75,9 @@ public class PlayerDataManager {
                     if (data.lastViewedTab != null && !data.lastViewedTab.isEmpty()) {
                         playerLastViewedTabs.put(uuid, data.lastViewedTab);
                     }
+                    if (data.browserFilters != null) {
+                        playerBrowserFilters.put(uuid, data.browserFilters.copy());
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -98,6 +102,7 @@ public class PlayerDataManager {
         LinkedList<String> searchHistory = playerSearchHistoryItems.get(uuid);
         String lastViewedItem = playerLastViewedItems.get(uuid);
         String lastViewedTab = playerLastViewedTabs.get(uuid);
+        BrowserFilterSettings browserFilters = playerBrowserFilters.get(uuid);
 
         Path playerFile = dataDirectory.resolve("players").resolve(uuid.toString() + ".json");
 
@@ -105,7 +110,8 @@ public class PlayerDataManager {
                 && (favorites == null || favorites.isEmpty())
                 && (searchHistory == null || searchHistory.isEmpty())
                 && (lastViewedItem == null || lastViewedItem.isEmpty())
-                && (lastViewedTab == null || lastViewedTab.isEmpty())) {
+                && (lastViewedTab == null || lastViewedTab.isEmpty())
+                && browserFilters == null) {
             try {
                 Files.deleteIfExists(playerFile);
             } catch (IOException e) {
@@ -120,6 +126,7 @@ public class PlayerDataManager {
         data.searchHistoryItems = searchHistory != null ? new ArrayList<>(searchHistory) : new ArrayList<>();
         data.lastViewedItem = lastViewedItem;
         data.lastViewedTab = lastViewedTab;
+        data.browserFilters = browserFilters != null ? browserFilters.copy() : null;
         
         try (Writer writer = Files.newBufferedWriter(playerFile)) {
             GSON.toJson(data, writer);
@@ -224,6 +231,18 @@ public class PlayerDataManager {
         }
         saveData(playerRef);
     }
+
+    public BrowserFilterSettings getBrowserFilters(PlayerRef playerRef) {
+        BrowserFilterSettings filters = playerBrowserFilters.get(playerRef.getUuid());
+        return filters != null ? filters.copy() : new BrowserFilterSettings();
+    }
+
+    public void setBrowserFilters(PlayerRef playerRef, BrowserFilterSettings filters) {
+        UUID uuid = playerRef.getUuid();
+        loadedPlayers.add(uuid);
+        playerBrowserFilters.put(uuid, filters.copy());
+        saveData(playerRef);
+    }
     
     public int getPinnedCount(PlayerRef playerRef) {
         LinkedHashSet<String> pinnedItems = playerPinnedItems.get(playerRef.getUuid());
@@ -313,6 +332,7 @@ public class PlayerDataManager {
         playerSearchHistoryItems.remove(uuid);
         playerLastViewedItems.remove(uuid);
         playerLastViewedTabs.remove(uuid);
+        playerBrowserFilters.remove(uuid);
         loadedPlayers.remove(uuid);
         PinnedItemsInventoryTracker.clearCache(uuid);
     }
@@ -323,6 +343,7 @@ public class PlayerDataManager {
         List<String> searchHistoryItems;
         String lastViewedItem;
         String lastViewedTab;
+        BrowserFilterSettings browserFilters;
     }
 }
 

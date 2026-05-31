@@ -41,19 +41,68 @@ Group {
 
       Group #LeftSpacePanel {
         Anchor: (Width: 320);
-        LayoutMode: Center;
+        LayoutMode: Top;
+        Padding: (Top: 20, Left: 22, Right: 22);
 
         Label {
-          Anchor: (Height: 24);
-          Text: "COMING SOON!";
+          Anchor: (Height: 28);
+          Text: "FILTERS";
           Style: (
-            FontSize: 16,
+            FontSize: 18,
             TextColor: #b4c8c9,
-            HorizontalAlignment: Center,
             VerticalAlignment: Center,
             RenderUppercase: true,
             RenderBold: true
           );
+        }
+
+        Label { Anchor: (Height: 20); Text: "Category"; Style: (FontSize: 13, TextColor: #b4c8c9, VerticalAlignment: Center); }
+        $C.@DropdownBox #CategoryFilter { Anchor: (Width: 276, Height: 28); }
+        Group { Anchor: (Height: 6); }
+
+        Label { Anchor: (Height: 20); Text: "Mod"; Style: (FontSize: 13, TextColor: #b4c8c9, VerticalAlignment: Center); }
+        $C.@DropdownBox #ModFilter { Anchor: (Width: 276, Height: 28); }
+        Group { Anchor: (Height: 6); }
+
+        Label { Anchor: (Height: 20); Text: "Craftable"; Style: (FontSize: 13, TextColor: #b4c8c9, VerticalAlignment: Center); }
+        $C.@DropdownBox #CraftableFilter { Anchor: (Width: 276, Height: 28); }
+        Group { Anchor: (Height: 6); }
+
+        Label { Anchor: (Height: 20); Text: "Droppable"; Style: (FontSize: 13, TextColor: #b4c8c9, VerticalAlignment: Center); }
+        $C.@DropdownBox #DroppableFilter { Anchor: (Width: 276, Height: 28); }
+        Group { Anchor: (Height: 6); }
+
+        Label { Anchor: (Height: 20); Text: "Pinned"; Style: (FontSize: 13, TextColor: #b4c8c9, VerticalAlignment: Center); }
+        $C.@DropdownBox #PinnedFilter { Anchor: (Width: 276, Height: 28); }
+        Group { Anchor: (Height: 6); }
+
+        Label { Anchor: (Height: 20); Text: "Sorting"; Style: (FontSize: 13, TextColor: #b4c8c9, VerticalAlignment: Center); }
+        $C.@DropdownBox #SortingFilter { Anchor: (Width: 276, Height: 28); }
+        Group { Anchor: (Height: 10); }
+
+        TextButton #ResetFiltersButton {
+          Anchor: (Width: 140, Height: 26);
+          Text: "RESET FILTERS";
+          Style: (...$C.@CancelTextButtonStyle);
+        }
+
+        Label {
+          Anchor: (Height: 38);
+          Padding: (Top: 14);
+          Text: "SETTINGS";
+          Style: (FontSize: 18, TextColor: #b4c8c9, VerticalAlignment: Center, RenderUppercase: true, RenderBold: true);
+        }
+
+        $C.@CheckBoxWithLabel #ShowSalvagerRecipes {
+          @Text = "Show Salvager Recipes";
+          Padding: (Top: 2);
+        }
+
+        Group { Anchor: (Height: 4); }
+
+        $C.@CheckBoxWithLabel #ShowHiddenItems {
+          @Text = "Show Hidden Items";
+          Padding: (Top: 2);
         }
       }
 

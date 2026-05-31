@@ -60,6 +60,8 @@ public final class ItemUiSupport {
         ItemQuality quality = itemQuality(item);
         if (quality != null && quality.getSlotTexture() != null) {
             String texture = quality.getSlotTexture();
+            if (texture.contains("SlotDeveloper")) return "hytems/textures/rarity_developer.png";
+            if (texture.contains("SlotTool")) return "hytems/textures/rarity_tool.png";
             if (texture.contains("SlotCommon")) return "hytems/textures/rarity_common.png";
             if (texture.contains("SlotUncommon")) return "hytems/textures/rarity_uncommon.png";
             if (texture.contains("SlotRare")) return "hytems/textures/rarity_rare.png";

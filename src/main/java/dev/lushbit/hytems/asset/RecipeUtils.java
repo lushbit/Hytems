@@ -59,6 +59,18 @@ public final class RecipeUtils {
         return false;
     }
 
+    public static boolean hasSalvagerBench(@Nonnull CraftingRecipe recipe) {
+        try {
+            BenchRequirement[] benches = recipe.getBenchRequirement();
+            if (benches == null) return false;
+            for (BenchRequirement bench : benches) {
+                if (bench != null && "Salvagebench".equalsIgnoreCase(bench.id)) return true;
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
     private static Object invokeFirstInputMethod(@Nonnull CraftingRecipe recipe) {
         for (String methodName : INPUT_METHODS) {
             try {

@@ -246,6 +246,81 @@ Group #DetailContent {
         }
       }
     }
+
+    Group #SalvagerRecipesSection {
+      LayoutMode: Top;
+      Visible: false;
+      Padding: (Top: 10);
+
+      Label #SalvagerStationLabel {
+        Text: "Can be salvaged at:";
+        Anchor: (Height: 20);
+        Padding: (Left: 8);
+        Style: (FontSize: 14, TextColor: #96a9be);
+      }
+
+      Group { Anchor: (Height: 6); }
+
+      Group #SalvagerStationInfo {
+        Anchor: (Height: 72);
+        Background: #223044(0.72);
+
+        Group #SalvagerStationIconBackground {
+          Anchor: (Left: 10, Top: 12, Width: 48, Height: 48);
+          Background: "hytems/textures/rarity_default.png";
+          LayoutMode: Center;
+
+          ItemIcon #SalvagerStationIcon {
+            Anchor: (Width: 42, Height: 42);
+            Visible: true;
+          }
+
+          AssetImage #SalvagerStationAssetIcon {
+            Anchor: (Width: 42, Height: 42);
+            Visible: false;
+          }
+        }
+
+        Label #SalvagerStationName {
+          Text: "";
+          Anchor: (Left: 70, Right: 12, Top: 13, Height: 22);
+          Style: (FontSize: 15, TextColor: #ffffff, RenderBold: true);
+        }
+
+        Label #SalvagerStationTier {
+          Text: "";
+          Anchor: (Left: 70, Right: 12, Top: 42, Height: 16);
+          Style: (FontSize: 12, TextColor: #aaaaaa);
+        }
+
+        Button #SalvagerStationPathButton {
+          Anchor: (Top: 0, Bottom: 0, Left: 0, Right: 0);
+          Background: #000000(0);
+          Padding: (Full: 0);
+          Style: ButtonStyle(
+            Default: (Background: #000000(0)),
+            Hovered: (Background: #7db0db(0.2)),
+            Pressed: (Background: #7db0db(0.3))
+          );
+          Visible: false;
+        }
+      }
+
+      Group { Anchor: (Height: 10); }
+
+      Label #SalvagerIngredientsLabel {
+        Text: "Items that can be salvaged:";
+        Anchor: (Height: 20);
+        Padding: (Left: 8);
+        Style: (FontSize: 14, TextColor: #96a9be);
+      }
+
+      Group { Anchor: (Height: 6); }
+
+      Group #SalvagerIngredientsList {
+        LayoutMode: Top;
+      }
+    }
   }
 
   Group {

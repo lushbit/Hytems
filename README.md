@@ -8,9 +8,9 @@ No more guessing which items exist, where they come from, or what you need to cr
 
 ## **✨ Features**
 
-**🔍 Complete Item Browser** - Browse all available Hytale items directly in-game, including supported custom items from other mods.
+**🔍 Complete Item Browser** - Browse all available Hytale items directly in-game, including supported custom items from other mods. Use the filter sidebar to narrow the grid by category, mod, craftability, drop availability, pinned status, or sorting mode.
 
-**📜 Recipe Viewer** - View crafting recipes, required ingredients, crafting stations, drops, and other useful item information in one clean interface.
+**📜 Recipe Viewer** - View crafting recipes, required ingredients, crafting stations, drops, and other useful item information in one clean interface. Optional salvager recipes show the salvage bench and every item that can be salvaged to obtain the selected item.
 
 **🧟 Mob Browser & Drop Support** - Discover which mobs can drop specific items and explore detailed mob information directly inside Hytems.
 
@@ -31,21 +31,30 @@ Shows known spawn locations in the world, structured as _Zone -> Biome -> Struc
 
  
 
-**🔎 Real-time Search** - Quickly find items by name, category, or type using the built-in real-time search.
+**🔎 Real-time Search** - Quickly find items by name, category, or mod using the built-in real-time search.
 
-**🏷️ Category Search -** Use category prefixes like `@weapon`, `@armor`, `@tool`, `@food`, `@craftable`, or `@ingredient` to narrow down your search.
+**🏷️ Category Search -** Use `@category` prefixes to narrow down your search. All native categories and subcategories shown in the category dropdown are supported. Valid category tags are highlighted in green.
 
 Example:
 
-`@weapon sword`
+`@Blocks.Cloth`
 
-This will show all weapon items matching “sword”.
+This will show all items in the `Blocks.Cloth` subcategory. Subcategories can also be searched using their short form, such as `@Cloth`. Main categories such as `@Blocks` include all of their subcategories. You can also add item text after a tag, for example:
 
-Available categories:
+`@Blocks wood`
 
-_`weapon`, `armor`, `tool`, `block`, `food`, `consumable`, `material`, `resource`, `furniture`, `craftable`,_ `_ingredient_`
+**🧩 Mod Search -** Use `#mod` prefixes to search within items added by a specific asset pack. Valid mod tags are highlighted in light blue.
 
- 
+Example:
+
+`#Hytems sword`
+
+**🎛️ Filters & Settings -** Refine the item browser with flexible filters, sorting options, and optional visibility settings:
+
+*   Category, mod, craftable, droppable, and pinned filters
+*   Sorting by name, quality, weapon damage, or category
+*   Setting to show salvager recipes
+*   Setting to show hidden and developer items
 
 **📌 HUD pinning** - Pin up to **3 items** directly to your HUD and track their required ingredients while playing.
 
@@ -80,13 +89,15 @@ You can manage pinned items with:
 *   Simply type `/hytems` or `/h` in chat to open the browser!
 *   Leftclick any item to view its details and recipe
 *   Rightclick any item to see where it can be dropped
-*   Use the search bar to search for specific items or even categories
+*   Use the sidebar to filter and sort the item grid
+*   Use the search bar to find items, `@categories`, or `#mods`
+*   Enable salvager recipes or hidden items in the settings section when needed
 *   Navigate through the pages with `<` and `>` buttons
 
 ## **🛠️ Planned Features**
 
-*   More information on items (such as stats, drops, loot etc.)
-*   Mod filtering
+*   More detailed item stats
+*   Additional loot and source information
 *   More browser opening options
 *   and much more to come!
 

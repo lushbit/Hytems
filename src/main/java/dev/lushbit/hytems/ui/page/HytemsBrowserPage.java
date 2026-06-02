@@ -86,6 +86,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private String selectedItemId = null;
     private String dropsItemId = null;
     private int currentMobDropIndex = 0;
+    private int currentRecipeIndex = 0;
     private InfoTab activeInfoTab = InfoTab.RECIPES;
 
     private List<Map.Entry<String, Item>> filteredItems = new ArrayList<>();
@@ -209,6 +210,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         boolean needsSearchUpdate = false;
         boolean needsTabUpdate = false;
         boolean needsHistoryUpdate = false;
+        boolean needsRecipeUpdate = false;
 
         if (data.toggleFavorite != null && !data.toggleFavorite.isEmpty()) {
             HytemsPlugin.playerDataManager.toggleFavorite(this.playerRef, data.toggleFavorite);
@@ -322,12 +324,12 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         if (data.pageAction != null) {
             int totalPages = getTotalPages();
-            if ("prev".equals(data.pageAction) && this.currentPage > 0) {
-                this.currentPage--;
+            if ("prev".equals(data.pageAction)) {
+                this.currentPage = Math.floorMod(this.currentPage - 1, totalPages);
                 needsUpdate = true;
                 needsGridUpdate = true;
-            } else if ("next".equals(data.pageAction) && this.currentPage < totalPages - 1) {
-                this.currentPage++;
+            } else if ("next".equals(data.pageAction)) {
+                this.currentPage = Math.floorMod(this.currentPage + 1, totalPages);
                 needsUpdate = true;
                 needsGridUpdate = true;
             }
@@ -337,6 +339,13 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             if (handleMobDropAction(data.mobDropAction)) {
                 needsUpdate = true;
                 needsInfoUpdate = true;
+            }
+        }
+
+        if (data.recipeAction != null && !data.recipeAction.isEmpty()) {
+            if (handleRecipeAction(data.recipeAction)) {
+                needsUpdate = true;
+                needsRecipeUpdate = true;
             }
         }
 
@@ -379,6 +388,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             if (needsInfoUpdate) {
                 ensureDetailItemAvailable();
                 renderActiveInfoPanel(cmd, events);
+            } else if (needsRecipeUpdate) {
+                renderCurrentCraftingRecipe(cmd, events);
+                updateInfoContainerHeight(cmd, estimateRecipePanelHeight());
             }
             if (needsTabUpdate) {
                 updateTabVisualState(cmd);
@@ -440,11 +452,12 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 List<CraftingRecipe> recipes = getVisibleRecipes(selectedItemId);
                 List<CraftingRecipe> craftingRecipes = recipes.stream().filter(recipe -> !RecipeUtils.hasSalvagerBench(recipe)).toList();
                 List<CraftingRecipe> salvagerRecipes = recipes.stream().filter(RecipeUtils::hasSalvagerBench).toList();
-                if (craftingRecipes.size() == 1) {
-                    int baseHeight = hasVisibleCraftingStation(craftingRecipes.get(0))
+                if (!craftingRecipes.isEmpty()) {
+                    CraftingRecipe currentRecipe = craftingRecipes.get(Math.floorMod(this.currentRecipeIndex, craftingRecipes.size()));
+                    int baseHeight = hasVisibleCraftingStation(currentRecipe)
                             ? RECIPE_SECTION_BASE_HEIGHT
                             : RECIPE_SECTION_NO_STATION_BASE_HEIGHT;
-                    List<MaterialQuantity> ingredients = RecipeUtils.getInputs(craftingRecipes.get(0));
+                    List<MaterialQuantity> ingredients = RecipeUtils.getInputs(currentRecipe);
                     if (ingredients != null && !ingredients.isEmpty()) {
                         recipeSectionHeight = baseHeight + (ingredients.size() * LIST_ROW_HEIGHT);
                     }
@@ -653,29 +666,46 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
             renderSalvagerRecipes(cmd, events, salvagerRecipes);
 
-            if (craftingRecipes.isEmpty() || craftingRecipes.size() > 1) {
+            if (craftingRecipes.isEmpty()) {
                 cmd.set("#NoRecipeContainer.Visible", salvagerRecipes.isEmpty());
                 cmd.set("#RecipeContent.Visible", false);
+                cmd.set("#RecipePagination.Visible", false);
             } else {
                 cmd.set("#NoRecipeContainer.Visible", false);
                 cmd.set("#RecipeContent.Visible", true);
-                displayRecipes(cmd, events, craftingRecipes);
+                renderCurrentCraftingRecipe(cmd, events, craftingRecipes);
             }
         } catch (Exception e) {
             System.err.println("[Hytems] Error loading recipes for " + itemId + ": " + e.getMessage());
             e.printStackTrace();
             cmd.set("#NoRecipeContainer.Visible", true);
             cmd.set("#RecipeContent.Visible", false);
+            cmd.set("#RecipePagination.Visible", false);
         }
     }
 
-    private void displayRecipes(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events,
-                                @Nonnull List<CraftingRecipe> recipes) {
+    private void renderCurrentCraftingRecipe(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
+        List<CraftingRecipe> craftingRecipes = getVisibleRecipes(this.selectedItemId).stream()
+                .filter(recipe -> !RecipeUtils.hasSalvagerBench(recipe))
+                .toList();
+        if (!craftingRecipes.isEmpty()) {
+            renderCurrentCraftingRecipe(cmd, events, craftingRecipes);
+        }
+    }
+
+    private void renderCurrentCraftingRecipe(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events,
+                                             @Nonnull List<CraftingRecipe> recipes) {
         try {
             if (recipes.isEmpty()) return;
 
-            CraftingRecipe firstRecipe = recipes.get(0);
-            BenchRequirement[] benchReqs = firstRecipe.getBenchRequirement();
+            this.currentRecipeIndex = Math.floorMod(this.currentRecipeIndex, recipes.size());
+            CraftingRecipe currentRecipe = recipes.get(this.currentRecipeIndex);
+            boolean showPagination = recipes.size() > 1;
+            cmd.set("#RecipePagination.Visible", showPagination);
+            cmd.set("#RecipeCounter.Text", (this.currentRecipeIndex + 1) + "/" + recipes.size());
+            bindRecipePaginationEvents(events);
+
+            BenchRequirement[] benchReqs = currentRecipe.getBenchRequirement();
 
             if (benchReqs != null && benchReqs.length > 0) {
                 BenchRequirement bench = benchReqs[0];
@@ -714,7 +744,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             }
 
             cmd.clear("#IngredientsList");
-            displaySingleRecipe(cmd, events, firstRecipe);
+            displaySingleRecipe(cmd, events, currentRecipe);
         } catch (Exception e) {
             System.err.println("[Hytems] Error displaying recipes: " + e.getMessage());
             e.printStackTrace();
@@ -1312,6 +1342,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         this.dropsItemId = itemId;
         if (itemChanged) {
             this.currentMobDropIndex = 0;
+            this.currentRecipeIndex = 0;
         }
         if (persist) {
             HytemsPlugin.playerDataManager.setLastViewedItem(this.playerRef, itemId);
@@ -1439,6 +1470,33 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         cmd.set("#MobDropPortrait.Visible", true);
         cmd.set("#MobDropPortraitFallback.Visible", false);
         cmd.set("#MobDropPortrait.Background", hasPortrait ? portraitPath : MobPortraitResolver.FALLBACK_PORTRAIT_PATH);
+    }
+
+    private boolean handleRecipeAction(@Nonnull String action) {
+        List<CraftingRecipe> craftingRecipes = getVisibleRecipes(this.selectedItemId).stream()
+                .filter(recipe -> !RecipeUtils.hasSalvagerBench(recipe))
+                .toList();
+        if (craftingRecipes.size() < 2) {
+            this.currentRecipeIndex = 0;
+            return false;
+        }
+
+        if ("prev".equalsIgnoreCase(action)) {
+            this.currentRecipeIndex = Math.floorMod(this.currentRecipeIndex - 1, craftingRecipes.size());
+            return true;
+        }
+        if ("next".equalsIgnoreCase(action)) {
+            this.currentRecipeIndex = Math.floorMod(this.currentRecipeIndex + 1, craftingRecipes.size());
+            return true;
+        }
+        return false;
+    }
+
+    private void bindRecipePaginationEvents(@Nonnull UIEventBuilder events) {
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#RecipePrevButton",
+                EventData.of("RecipeAction", "prev"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#RecipeNextButton",
+                EventData.of("RecipeAction", "next"), false);
     }
 
     private void preloadMobOverviewData(@Nonnull List<DropSourceSummaries.DisplayDropSource> mobDrops) {
@@ -1927,6 +1985,11 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         (data, value) -> data.mobDropAction = value,
                         data -> data.mobDropAction
                 )
+                .addField(
+                        new KeyedCodec<>("RecipeAction", Codec.STRING),
+                        (data, value) -> data.recipeAction = value,
+                        data -> data.recipeAction
+                )
                 .addField(new KeyedCodec<>("@CategoryFilter", Codec.STRING), (data, value) -> data.categoryFilter = value, data -> data.categoryFilter)
                 .addField(new KeyedCodec<>("@ModFilter", Codec.STRING), (data, value) -> data.modFilter = value, data -> data.modFilter)
                 .addField(new KeyedCodec<>("@CraftableFilter", Codec.STRING), (data, value) -> data.craftableFilter = value, data -> data.craftableFilter)
@@ -1955,6 +2018,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         private String infoTab;
         private String historyIndex;
         private String mobDropAction;
+        private String recipeAction;
         private String categoryFilter;
         private String modFilter;
         private String craftableFilter;

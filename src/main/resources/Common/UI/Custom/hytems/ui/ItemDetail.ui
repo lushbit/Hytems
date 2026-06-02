@@ -245,6 +245,38 @@ Group #DetailContent {
           LayoutMode: Top;
         }
       }
+
+      Group {
+        Anchor: (Height: 6);
+      }
+
+      Group #RecipePagination {
+        Anchor: (Height: 34);
+        LayoutMode: Center;
+        Visible: false;
+
+        $C.@SmallSecondaryTextButton #RecipePrevButton {
+          @Text = "<";
+          @Anchor = (Width: 40, Height: 28);
+        }
+
+        Label #RecipeCounter {
+          Text: "1/1";
+          Anchor: (Width: 64, Height: 28);
+          Style: (
+            FontSize: 12,
+            TextColor: #b4c8c9,
+            HorizontalAlignment: Center,
+            VerticalAlignment: Center,
+            RenderBold: true
+          );
+        }
+
+        $C.@SmallSecondaryTextButton #RecipeNextButton {
+          @Text = ">";
+          @Anchor = (Width: 40, Height: 28);
+        }
+      }
     }
 
     Group #SalvagerRecipesSection {

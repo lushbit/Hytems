@@ -84,11 +84,11 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
 
         if (data.pageAction != null) {
             int totalPages = getTotalPages();
-            if ("prev".equals(data.pageAction) && this.currentPage > 0) {
-                this.currentPage--;
+            if ("prev".equals(data.pageAction)) {
+                this.currentPage = Math.floorMod(this.currentPage - 1, totalPages);
                 needsUpdate = true;
-            } else if ("next".equals(data.pageAction) && this.currentPage < totalPages - 1) {
-                this.currentPage++;
+            } else if ("next".equals(data.pageAction)) {
+                this.currentPage = Math.floorMod(this.currentPage + 1, totalPages);
                 needsUpdate = true;
             }
         }

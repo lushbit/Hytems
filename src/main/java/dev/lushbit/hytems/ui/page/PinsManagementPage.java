@@ -8,6 +8,7 @@ import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
@@ -24,16 +25,24 @@ import java.util.List;
 public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPage.PinsEventData> {
 
     private final PlayerRef playerRef;
+    private final boolean openedFromBrowser;
 
     public PinsManagementPage(@Nonnull PlayerRef playerRef) {
+        this(playerRef, false);
+    }
+
+    public PinsManagementPage(@Nonnull PlayerRef playerRef, boolean openedFromBrowser) {
         super(playerRef, CustomPageLifetime.CanDismiss, PinsEventData.CODEC);
         this.playerRef = playerRef;
+        this.openedFromBrowser = openedFromBrowser;
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder cmd,
                       @Nonnull UIEventBuilder events, @Nonnull Store<EntityStore> store) {
         cmd.append(HytemsUiTemplates.PINS_MANAGEMENT);
+        cmd.set("#BackButton.Visible", this.openedFromBrowser);
+        cmd.set("#BackButtonSpacer.Visible", this.openedFromBrowser);
 
         List<String> pinnedItems = HytemsPlugin.playerDataManager.getPinnedItems(playerRef);
 
@@ -53,6 +62,14 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
             }
         }
 
+        if (this.openedFromBrowser) {
+            events.addEventBinding(
+                    CustomUIEventBindingType.Activating,
+                    "#BackButton",
+                    EventData.of("Action", "back"),
+                    false
+            );
+        }
         events.addEventBinding(
                 CustomUIEventBindingType.Activating,
                 "#CloseButton",
@@ -78,7 +95,7 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
         cmd.set(cardSelector + " #ItemIcon.ItemId", itemId);
         cmd.set(cardSelector + " #ItemName.Text", translatedName);
         cmd.set(cardSelector + " #ItemName.Style.TextColor", rarityColor);
-        
+
         if (!isFirst) {
             events.addEventBinding(
                     CustomUIEventBindingType.Activating,
@@ -100,7 +117,7 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
                         .append("ItemId", itemId),
                 false
         );
-        
+
         if (!isLast) {
             events.addEventBinding(
                     CustomUIEventBindingType.Activating,
@@ -123,6 +140,17 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
 
         if ("close".equals(action)) {
             this.close();
+            return;
+        }
+
+        if ("back".equals(action)) {
+            if (!this.openedFromBrowser) {
+                return;
+            }
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(this.playerRef, CustomPageLifetime.CanDismiss));
+            }
             return;
         }
 
@@ -171,4 +199,3 @@ public class PinsManagementPage extends InteractiveCustomUIPage<PinsManagementPa
         }
     }
 }
-

@@ -119,20 +119,25 @@ Group {
     }
 
     Group #ButtonContainer {
-      LayoutMode: Left;
+      LayoutMode: Center;
       Anchor: (Height: 44);
 
       Group {
-        FlexWeight: 1;
-      }
+        LayoutMode: Left;
 
-      $C.@SecondaryTextButton #CloseButton {
-        @Text = "Close";
-        @Anchor = (Width: 140, Height: 44);
-      }
+        $C.@SecondaryTextButton #BackButton {
+          @Text = "Back";
+          @Anchor = (Width: 140, Height: 44);
+        }
 
-      Group {
-        FlexWeight: 1;
+        Group #BackButtonSpacer {
+          Anchor: (Width: 12);
+        }
+
+        $C.@CancelTextButton #CloseButton {
+          @Text = "Close";
+          @Anchor = (Width: 140, Height: 44);
+        }
       }
     }
   }

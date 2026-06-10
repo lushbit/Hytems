@@ -1,7 +1,7 @@
 $C = "../../Common.ui";
 
 Group {
-  Anchor: (Width: 900, Height: 1010);
+  Anchor: (Width: 900, Height: 1060);
   LayoutMode: Top;
 
   Group #Header {
@@ -135,6 +135,31 @@ Group {
                 )
               );
             }
+          }
+        }
+      }
+
+      Group { Anchor: (Height: 12); }
+
+      Group #NavigationSection {
+        Anchor: (Height: 34);
+        LayoutMode: Center;
+
+        Group {
+          LayoutMode: Left;
+
+          $C.@SecondaryTextButton #BackButton {
+            @Text = "BACK";
+            @Anchor = (Width: 120, Height: 28);
+          }
+
+          Group #BackButtonSpacer {
+            Anchor: (Width: 12);
+          }
+
+          $C.@CancelTextButton #CloseButton {
+            @Text = "CLOSE";
+            @Anchor = (Width: 120, Height: 28);
           }
         }
       }

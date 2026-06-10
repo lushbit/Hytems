@@ -31,13 +31,19 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
     private static final int GRID_LABEL_MAX_CHARS = 22;
 
     private final PlayerRef playerRef;
+    private final boolean openedFromBrowser;
     private String searchQuery = "";
     private int currentPage = 0;
     private List<String> filteredMobs = new ArrayList<>();
 
     public MobBrowserPage(@Nonnull PlayerRef playerRef) {
+        this(playerRef, false);
+    }
+
+    public MobBrowserPage(@Nonnull PlayerRef playerRef, boolean openedFromBrowser) {
         super(playerRef, CustomPageLifetime.CanDismiss, MobBrowserData.CODEC);
         this.playerRef = playerRef;
+        this.openedFromBrowser = openedFromBrowser;
     }
 
     @Override
@@ -45,11 +51,27 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
                       @Nonnull UIEventBuilder events, @Nonnull Store<EntityStore> store) {
         cmd.append(HytemsUiTemplates.MOB_BROWSER);
         cmd.set("#SearchInput.Value", this.searchQuery);
+        cmd.set("#BackButton.Visible", this.openedFromBrowser);
+        cmd.set("#BackButtonSpacer.Visible", this.openedFromBrowser);
 
         events.addEventBinding(
                 CustomUIEventBindingType.ValueChanged,
                 "#SearchInput",
                 EventData.of("@SearchQuery", "#SearchInput.Value"),
+                false
+        );
+        if (this.openedFromBrowser) {
+            events.addEventBinding(
+                    CustomUIEventBindingType.Activating,
+                    "#BackButton",
+                    EventData.of("NavAction", "browser"),
+                    false
+            );
+        }
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#CloseButton",
+                EventData.of("NavAction", "close"),
                 false
         );
         events.addEventBinding(
@@ -91,6 +113,22 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
                 this.currentPage = Math.floorMod(this.currentPage + 1, totalPages);
                 needsUpdate = true;
             }
+        }
+
+        if ("browser".equals(data.navAction)) {
+            if (!this.openedFromBrowser) {
+                return;
+            }
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(this.playerRef, CustomPageLifetime.CanDismiss));
+            }
+            return;
+        }
+
+        if ("close".equals(data.navAction)) {
+            this.close();
+            return;
         }
 
         if (data.selectedMob != null && !data.selectedMob.isEmpty()) {
@@ -225,6 +263,11 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
                         data -> data.pageAction
                 )
                 .addField(
+                        new KeyedCodec<>("NavAction", Codec.STRING),
+                        (data, value) -> data.navAction = value,
+                        data -> data.navAction
+                )
+                .addField(
                         new KeyedCodec<>("SelectedMob", Codec.STRING),
                         (data, value) -> data.selectedMob = value,
                         data -> data.selectedMob
@@ -233,6 +276,7 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
 
         private String searchQuery;
         private String pageAction;
+        private String navAction;
         private String selectedMob;
     }
 }

@@ -148,6 +148,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         bindFilterEvents(events);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ResetFiltersButton",
                 EventData.of("ResetFilters", "true"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#OpenPinnedItemsButton",
+                EventData.of("NavAction", "pins"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#OpenMobBrowserButton",
+                EventData.of("NavAction", "mobs"), false);
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowSalvagerRecipes #CheckBox",
                 EventData.of("@ShowSalvagerRecipes", "#ShowSalvagerRecipes #CheckBox.Value"), false);
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowHiddenItems #CheckBox",
@@ -351,6 +355,18 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         if (data.closeGUI != null && "true".equals(data.closeGUI)) {
             this.close();
+            return;
+        }
+
+        if (data.navAction != null && !data.navAction.isEmpty()) {
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player != null) {
+                if ("pins".equals(data.navAction)) {
+                    player.getPageManager().openCustomPage(ref, store, new PinsManagementPage(this.playerRef, true));
+                } else if ("mobs".equals(data.navAction)) {
+                    player.getPageManager().openCustomPage(ref, store, new MobBrowserPage(this.playerRef, true));
+                }
+            }
             return;
         }
 
@@ -1997,6 +2013,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 .addField(new KeyedCodec<>("@PinnedFilter", Codec.STRING), (data, value) -> data.pinnedFilter = value, data -> data.pinnedFilter)
                 .addField(new KeyedCodec<>("@SortingFilter", Codec.STRING), (data, value) -> data.sortingFilter = value, data -> data.sortingFilter)
                 .addField(new KeyedCodec<>("ResetFilters", Codec.STRING), (data, value) -> data.resetFilters = value, data -> data.resetFilters)
+                .addField(new KeyedCodec<>("NavAction", Codec.STRING), (data, value) -> data.navAction = value, data -> data.navAction)
                 .addField(new KeyedCodec<>("@ShowSalvagerRecipes", Codec.BOOLEAN), (data, value) -> data.showSalvagerRecipes = value, data -> data.showSalvagerRecipes)
                 .addField(new KeyedCodec<>("@ShowHiddenItems", Codec.BOOLEAN), (data, value) -> data.showHiddenItems = value, data -> data.showHiddenItems)
                 .build();
@@ -2026,6 +2043,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         private String pinnedFilter;
         private String sortingFilter;
         private String resetFilters;
+        private String navAction;
         private Boolean showSalvagerRecipes;
         private Boolean showHiddenItems;
     }

@@ -31,6 +31,7 @@ import dev.lushbit.hytems.asset.MobMetadataRegistry;
 import dev.lushbit.hytems.asset.RecipeUtils;
 import dev.lushbit.hytems.data.BrowserFilterSettings;
 import dev.lushbit.hytems.ui.DropSourceSummaries;
+import dev.lushbit.hytems.ui.HytemsBookManager;
 import dev.lushbit.hytems.ui.HytemsUiTemplates;
 import dev.lushbit.hytems.ui.ItemUiSupport;
 import dev.lushbit.hytems.ui.MobPortraitResolver;
@@ -97,15 +98,23 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private Ref<EntityStore> pageRef;
     private Store<EntityStore> pageStore;
     private final PlayerRef playerRef;
+    private final HytemsBookManager.LexiconSession lexiconSession;
     private final ItemSearchService itemSearchService;
+    private boolean keepLexiconOpenOnDismiss;
     private String cachedRecipeItemId;
     private List<CraftingRecipe> cachedRecipes = Collections.emptyList();
     private String cachedDropItemId;
     private List<DropSourceSummaries.DisplayDropSource> cachedDropSummaries = Collections.emptyList();
 
     public HytemsBrowserPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime) {
+        this(playerRef, lifetime, null);
+    }
+
+    public HytemsBrowserPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime,
+                             HytemsBookManager.LexiconSession lexiconSession) {
         super(playerRef, lifetime, BrowserData.CODEC);
         this.playerRef = playerRef;
+        this.lexiconSession = lexiconSession;
         this.itemSearchService = new ItemSearchService(playerRef);
         this.favoriteItems = new LinkedHashSet<>(HytemsPlugin.playerDataManager.getFavoriteItems(playerRef));
         this.searchHistoryItems = sanitizeHistory(HytemsPlugin.playerDataManager.getSearchHistoryItems(playerRef));
@@ -121,6 +130,16 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         if (lastViewedTab != null) {
             this.activeInfoTab = lastViewedTab;
         }
+    }
+
+    @Override
+    public void onDismiss(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
+        super.onDismiss(ref, store);
+        System.out.println("[HytemsLexicon] UI dismissed: keepOpen=" + this.keepLexiconOpenOnDismiss);
+        if (!this.keepLexiconOpenOnDismiss && this.lexiconSession != null) {
+            this.lexiconSession.markDismissed();
+        }
+        this.keepLexiconOpenOnDismiss = false;
     }
 
     private void updatePinnedItemsHud() {
@@ -362,9 +381,11 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
                 if ("pins".equals(data.navAction)) {
-                    player.getPageManager().openCustomPage(ref, store, new PinsManagementPage(this.playerRef, true));
+                    this.keepLexiconOpenOnDismiss = this.lexiconSession != null;
+                    player.getPageManager().openCustomPage(ref, store, new PinsManagementPage(this.playerRef, true, this.lexiconSession));
                 } else if ("mobs".equals(data.navAction)) {
-                    player.getPageManager().openCustomPage(ref, store, new MobBrowserPage(this.playerRef, true));
+                    this.keepLexiconOpenOnDismiss = this.lexiconSession != null;
+                    player.getPageManager().openCustomPage(ref, store, new MobBrowserPage(this.playerRef, true, this.lexiconSession));
                 }
             }
             return;
@@ -414,11 +435,6 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
             this.sendUpdate(cmd, events, false);
         }
-    }
-
-    @Override
-    public void onDismiss(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-        super.onDismiss(ref, store);
     }
 
     private void renderActiveInfoPanel(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events) {
@@ -1413,7 +1429,8 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         Player player = this.pageStore.getComponent(this.pageRef, Player.getComponentType());
         if (player != null) {
-            player.getPageManager().openCustomPage(this.pageRef, this.pageStore, new MobOverviewPage(this.playerRef, mobId));
+            this.keepLexiconOpenOnDismiss = this.lexiconSession != null;
+            player.getPageManager().openCustomPage(this.pageRef, this.pageStore, new MobOverviewPage(this.playerRef, mobId, this.lexiconSession));
         }
     }
 

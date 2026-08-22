@@ -9,6 +9,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.EntityEventSystem;
+import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
@@ -18,6 +19,8 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.InventoryChangeEvent;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.npc.AllNPCsLoadedEvent;
@@ -32,9 +35,14 @@ import dev.lushbit.hytems.asset.PrefabDropMetadataRegistry;
 import dev.lushbit.hytems.asset.RecipeManager;
 import dev.lushbit.hytems.command.HytemsCommand;
 import dev.lushbit.hytems.data.PlayerDataManager;
+import dev.lushbit.hytems.ui.HytemsBookManager;
 import dev.lushbit.hytems.ui.ItemUiSupport;
 import dev.lushbit.hytems.ui.hud.PinnedItemsHudManager;
 import dev.lushbit.hytems.ui.hud.PinnedItemsInventoryTracker;
+import dev.lushbit.hytems.ui.interaction.HytemsLexiconBrowserInteraction;
+import dev.lushbit.hytems.ui.interaction.HytemsLexiconOpenInteraction;
+import dev.lushbit.hytems.ui.interaction.HytemsLexiconUnlockInteraction;
+import dev.lushbit.hytems.ui.page.HytemsBrowserPage;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -59,6 +67,34 @@ public class HytemsPlugin extends JavaPlugin {
         super.setup();
 
         playerDataManager.setDataDirectory(this.getDataDirectory());
+
+        OpenCustomUIInteraction.registerCustomPageSupplier(
+                this,
+                HytemsBookManager.class,
+                HytemsBookManager.OPEN_BROWSER_PAGE_SUPPLIER_ID,
+                (ref, accessor, playerRef, interactionContext) -> {
+                    return new HytemsBrowserPage(
+                            playerRef,
+                            CustomPageLifetime.CanDismiss,
+                            HytemsBookManager.createSession(ref, accessor, playerRef.getUuid())
+                    );
+                }
+        );
+        this.getCodecRegistry(Interaction.CODEC).register(
+                HytemsBookManager.OPEN_BROWSER_INTERACTION_TYPE,
+                HytemsLexiconBrowserInteraction.class,
+                HytemsLexiconBrowserInteraction.CODEC
+        );
+        this.getCodecRegistry(Interaction.CODEC).register(
+                HytemsBookManager.OPEN_INTERACTION_TYPE,
+                HytemsLexiconOpenInteraction.class,
+                HytemsLexiconOpenInteraction.CODEC
+        );
+        this.getCodecRegistry(Interaction.CODEC).register(
+                HytemsBookManager.UNLOCK_INTERACTION_TYPE,
+                HytemsLexiconUnlockInteraction.class,
+                HytemsLexiconUnlockInteraction.CODEC
+        );
 
         this.getCommandRegistry().registerCommand(new HytemsCommand());
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, this::onItemAssetLoad);

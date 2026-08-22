@@ -39,6 +39,7 @@ import dev.lushbit.hytems.ui.ItemUiSupport;
 import dev.lushbit.hytems.ui.hud.PinnedItemsHudManager;
 import dev.lushbit.hytems.ui.hud.PinnedItemsInventoryTracker;
 import dev.lushbit.hytems.ui.interaction.HytemsLexiconBrowserInteraction;
+import dev.lushbit.hytems.ui.interaction.HytemsLexiconCloseInteraction;
 import dev.lushbit.hytems.ui.interaction.HytemsLexiconOpenInteraction;
 import dev.lushbit.hytems.ui.interaction.HytemsLexiconUnlockInteraction;
 import dev.lushbit.hytems.ui.page.HytemsNavigationPage;
@@ -87,6 +88,11 @@ public class HytemsPlugin extends JavaPlugin {
                 HytemsBookManager.OPEN_INTERACTION_TYPE,
                 HytemsLexiconOpenInteraction.class,
                 HytemsLexiconOpenInteraction.CODEC
+        );
+        this.getCodecRegistry(Interaction.CODEC).register(
+                HytemsBookManager.CLOSE_INTERACTION_TYPE,
+                HytemsLexiconCloseInteraction.class,
+                HytemsLexiconCloseInteraction.CODEC
         );
         this.getCodecRegistry(Interaction.CODEC).register(
                 HytemsBookManager.UNLOCK_INTERACTION_TYPE,
@@ -143,6 +149,7 @@ public class HytemsPlugin extends JavaPlugin {
                 return Player.getComponentType();
             }
         });
+
     }
 
     @Override

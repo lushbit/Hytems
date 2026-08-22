@@ -9,7 +9,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,9 +18,11 @@ public final class HytemsBookManager {
     public static final String OPEN_BROWSER_PAGE_SUPPLIER_ID = "hytems:item_browser";
     public static final String OPEN_BROWSER_INTERACTION_TYPE = "HytemsLexiconBrowser";
     public static final String OPEN_INTERACTION_TYPE = "HytemsLexiconOpen";
+    public static final String CLOSE_INTERACTION_TYPE = "HytemsLexiconClose";
     public static final String UNLOCK_INTERACTION_TYPE = "HytemsLexiconUnlock";
+    private static final long CLOSE_LOCK_TIMEOUT_NANOS = 2_500_000_000L;
     private static final Map<SessionKey, LexiconSession> SESSIONS = new ConcurrentHashMap<>();
-    private static final Set<SessionKey> CLOSING = ConcurrentHashMap.newKeySet();
+    private static final Map<SessionKey, Long> CLOSING = new ConcurrentHashMap<>();
 
     private HytemsBookManager() {
     }
@@ -59,17 +60,37 @@ public final class HytemsBookManager {
 
     public static void markClosing(@Nullable LexiconSession session) {
         if (session != null && session.key != null) {
-            CLOSING.add(session.key);
+            CLOSING.put(session.key, System.nanoTime() + CLOSE_LOCK_TIMEOUT_NANOS);
         }
     }
 
     public static boolean isClosing(@Nullable UUID playerId, byte slot) {
-        return playerId != null && CLOSING.contains(new SessionKey(playerId, slot));
+        if (playerId == null) {
+            return false;
+        }
+
+        SessionKey key = new SessionKey(playerId, slot);
+        Long expiresAt = CLOSING.get(key);
+        if (expiresAt == null) {
+            return false;
+        }
+        if (System.nanoTime() < expiresAt) {
+            return true;
+        }
+
+        CLOSING.remove(key, expiresAt);
+        return false;
     }
 
     public static void endClosing(@Nullable UUID playerId, byte slot) {
         if (playerId != null) {
             CLOSING.remove(new SessionKey(playerId, slot));
+        }
+    }
+
+    public static void endClosingOnSlotChange(@Nullable UUID playerId, byte activeSlot) {
+        if (playerId != null) {
+            CLOSING.keySet().removeIf(key -> key.playerId.equals(playerId) && key.slot != activeSlot);
         }
     }
 

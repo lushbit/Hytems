@@ -5,7 +5,6 @@ import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.protocol.InteractionState;
 import com.hypixel.hytale.protocol.InteractionType;
-import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.server.core.entity.InteractionContext;
 import com.hypixel.hytale.server.core.entity.InteractionChain;
 import com.hypixel.hytale.server.core.entity.entities.Player;
@@ -17,7 +16,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.lushbit.hytems.ui.HytemsBookManager;
-import dev.lushbit.hytems.ui.page.HytemsBrowserPage;
+import dev.lushbit.hytems.ui.page.HytemsNavigationPage;
 
 import javax.annotation.Nonnull;
 
@@ -47,24 +46,20 @@ public class HytemsLexiconBrowserInteraction extends SimpleInteraction {
 
         if (firstRun) {
             session = openBrowserPage(ref, commandBuffer, playerRef);
-            System.out.println("[HytemsLexicon] Browser started: slot=" + (session != null ? session.getSlot() : -1));
         }
 
         if (session == null || !session.isActive()) {
-            System.out.println("[HytemsLexicon] Browser ended: no active session");
             context.getState().state = InteractionState.Failed;
             return;
         }
 
         if (!isStillHoldingLexicon(ref, commandBuffer, session.getSlot())) {
-            System.out.println("[HytemsLexicon] Browser ended: held item changed");
             HytemsBookManager.endSession(session);
             context.getState().state = InteractionState.ItemChanged;
             return;
         }
 
         if (session.isDismissed()) {
-            System.out.println("[HytemsLexicon] Browser dismissed: starting close");
             HytemsBookManager.markClosing(session);
             HytemsBookManager.endSession(session);
             InteractionContext closeContext = InteractionContext.forInteraction(
@@ -108,7 +103,7 @@ public class HytemsLexiconBrowserInteraction extends SimpleInteraction {
         player.getPageManager().openCustomPage(
                 ref,
                 commandBuffer.getStore(),
-                new HytemsBrowserPage(playerRef, CustomPageLifetime.CanDismiss, session)
+                new HytemsNavigationPage(playerRef, session)
         );
         return session;
     }

@@ -2,6 +2,7 @@ package dev.lushbit.hytems.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
+import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.basecommands.AbstractPlayerCommand;
@@ -9,14 +10,14 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.lushbit.hytems.ui.page.MobBrowserPage;
+import dev.lushbit.hytems.ui.page.HytemsBrowserPage;
 
 import javax.annotation.Nonnull;
 
-public class MobsSubCommand extends AbstractPlayerCommand {
+public class BrowserSubCommand extends AbstractPlayerCommand {
 
-    public MobsSubCommand() {
-        super("mobs", "Opens the Hytems mob browser");
+    public BrowserSubCommand() {
+        super("browser", "Opens the Hytems item browser");
     }
 
     @Override
@@ -35,6 +36,6 @@ public class MobsSubCommand extends AbstractPlayerCommand {
             return;
         }
 
-        player.getPageManager().openCustomPage(ref, store, new MobBrowserPage(playerRef, true));
+        player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(playerRef, CustomPageLifetime.CanDismiss, true, null));
     }
 }

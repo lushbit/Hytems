@@ -27,7 +27,6 @@ public class HytemsLexiconUnlockInteraction extends SimpleInteraction {
         CommandBuffer<EntityStore> commandBuffer = context.getCommandBuffer();
         PlayerRef playerRef = commandBuffer.getComponent(ref, PlayerRef.getComponentType());
         if (playerRef != null) {
-            System.out.println("[HytemsLexicon] Close finished: unlocking slot=" + context.getHeldItemSlot());
             HytemsBookManager.endClosing(playerRef.getUuid(), context.getHeldItemSlot());
         }
     }

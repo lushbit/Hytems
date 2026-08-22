@@ -82,7 +82,7 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
             events.addEventBinding(
                     CustomUIEventBindingType.Activating,
                     "#BackButton",
-                    EventData.of("NavAction", "browser"),
+                    EventData.of("NavAction", "menu"),
                     false
             );
         }
@@ -133,14 +133,14 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
             }
         }
 
-        if ("browser".equals(data.navAction)) {
+        if ("menu".equals(data.navAction)) {
             if (!this.openedFromBrowser) {
                 return;
             }
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
                 this.keepLexiconOpenOnDismiss = this.lexiconSession != null;
-                player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(this.playerRef, CustomPageLifetime.CanDismiss, this.lexiconSession));
+                player.getPageManager().openCustomPage(ref, store, new HytemsNavigationPage(this.playerRef, this.lexiconSession));
             }
             return;
         }

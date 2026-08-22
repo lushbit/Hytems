@@ -17,6 +17,9 @@ public final class ItemUiSupport {
     public static final String ICON_PIN_FILLED = "hytems/textures/pinned.png";
     public static final String ICON_STAR_EMPTY = "hytems/textures/star.png";
     public static final String ICON_STAR_FILLED = "hytems/textures/star_filled.png";
+    public static final String ICON_NAV_PIN = "hytems/textures/pin_icon.png";
+    public static final String ICON_NAV_ITEM_BROWSER = "hytems/textures/item_browser_icon.png";
+    public static final String ICON_NAV_MOB_BROWSER = "hytems/textures/mob_browser_icon.png";
     public static final String RARITY_DEFAULT_BACKGROUND = "hytems/textures/rarity_default.png";
     private static final Map<String, String> TRANSLATED_NAME_CACHE = new ConcurrentHashMap<>();
     private static final Set<String> WARMED_LANGUAGES = ConcurrentHashMap.newKeySet();

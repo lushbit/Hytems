@@ -98,6 +98,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private Ref<EntityStore> pageRef;
     private Store<EntityStore> pageStore;
     private final PlayerRef playerRef;
+    private final boolean openedFromNavigation;
     private final HytemsBookManager.LexiconSession lexiconSession;
     private final ItemSearchService itemSearchService;
     private boolean keepLexiconOpenOnDismiss;
@@ -107,13 +108,19 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private List<DropSourceSummaries.DisplayDropSource> cachedDropSummaries = Collections.emptyList();
 
     public HytemsBrowserPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime) {
-        this(playerRef, lifetime, null);
+        this(playerRef, lifetime, false, null);
     }
 
     public HytemsBrowserPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime,
                              HytemsBookManager.LexiconSession lexiconSession) {
+        this(playerRef, lifetime, false, lexiconSession);
+    }
+
+    public HytemsBrowserPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime,
+                             boolean openedFromNavigation, HytemsBookManager.LexiconSession lexiconSession) {
         super(playerRef, lifetime, BrowserData.CODEC);
         this.playerRef = playerRef;
+        this.openedFromNavigation = openedFromNavigation;
         this.lexiconSession = lexiconSession;
         this.itemSearchService = new ItemSearchService(playerRef);
         this.favoriteItems = new LinkedHashSet<>(HytemsPlugin.playerDataManager.getFavoriteItems(playerRef));
@@ -163,14 +170,26 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         cmd.append("#InfoPanelSlot", HytemsUiTemplates.BROWSER_INFO_PANEL);
         cmd.append("#SearchHistorySlot", HytemsUiTemplates.SEARCH_HISTORY);
         cmd.set("#SearchInput.Value", this.searchQuery);
+        cmd.set("#BackButton.Visible", this.openedFromNavigation);
+        cmd.set("#BackButtonSpacer.Visible", this.openedFromNavigation);
         renderFilters(cmd);
         bindFilterEvents(events);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ResetFiltersButton",
                 EventData.of("ResetFilters", "true"), false);
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#OpenPinnedItemsButton",
-                EventData.of("NavAction", "pins"), false);
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#OpenMobBrowserButton",
-                EventData.of("NavAction", "mobs"), false);
+        if (this.openedFromNavigation) {
+            events.addEventBinding(
+                    CustomUIEventBindingType.Activating,
+                    "#BackButton",
+                    EventData.of("NavAction", "menu"),
+                    false
+            );
+        }
+        events.addEventBinding(
+                CustomUIEventBindingType.Activating,
+                "#CloseButton",
+                EventData.of("NavAction", "close"),
+                false
+        );
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowSalvagerRecipes #CheckBox",
                 EventData.of("@ShowSalvagerRecipes", "#ShowSalvagerRecipes #CheckBox.Value"), false);
         events.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowHiddenItems #CheckBox",
@@ -378,10 +397,16 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
 
         if (data.navAction != null && !data.navAction.isEmpty()) {
+            if ("close".equals(data.navAction)) {
+                this.close();
+                return;
+            }
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
-                if ("pins".equals(data.navAction)) {
-                    this.keepLexiconOpenOnDismiss = this.lexiconSession != null;
+                this.keepLexiconOpenOnDismiss = this.lexiconSession != null;
+                if ("menu".equals(data.navAction)) {
+                    player.getPageManager().openCustomPage(ref, store, new HytemsNavigationPage(this.playerRef, this.lexiconSession));
+                } else if ("pins".equals(data.navAction)) {
                     player.getPageManager().openCustomPage(ref, store, new PinsManagementPage(this.playerRef, true, this.lexiconSession));
                 } else if ("mobs".equals(data.navAction)) {
                     this.keepLexiconOpenOnDismiss = this.lexiconSession != null;

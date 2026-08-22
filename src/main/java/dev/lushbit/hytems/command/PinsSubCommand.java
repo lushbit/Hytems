@@ -35,7 +35,7 @@ public class PinsSubCommand extends AbstractPlayerCommand {
             return;
         }
 
-        PinsManagementPage page = new PinsManagementPage(playerRef);
+        PinsManagementPage page = new PinsManagementPage(playerRef, true);
         player.getPageManager().openCustomPage(ref, store, page);
     }
 }

@@ -100,7 +100,7 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player != null) {
             this.keepLexiconOpenOnDismiss = this.lexiconSession != null;
-            player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(this.playerRef, CustomPageLifetime.CanDismiss, this.lexiconSession));
+            player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(this.playerRef, CustomPageLifetime.CanDismiss, true, this.lexiconSession));
         }
     }
 

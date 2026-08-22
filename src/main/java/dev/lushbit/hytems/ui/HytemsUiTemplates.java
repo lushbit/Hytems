@@ -1,6 +1,7 @@
 package dev.lushbit.hytems.ui;
 
 public final class HytemsUiTemplates {
+    public static final String NAVIGATION_MENU = "hytems/ui/HytemsNavigation.ui";
     public static final String ITEM_BROWSER = "hytems/ui/ItemBrowser.ui";
     public static final String ITEM_CARD = "hytems/ui/ItemCard.ui";
     public static final String ITEM_DETAIL = "hytems/ui/ItemDetail.ui";

@@ -110,7 +110,7 @@ Group {
           }
         }
 
-        Group #SidebarNavButtons {
+        Group #NavigationSection {
           LayoutMode: Top;
           Padding: (Left: 22, Right: 22, Bottom: 4);
 
@@ -128,21 +128,18 @@ Group {
           Group {
             LayoutMode: Left;
 
-            Group {
-              LayoutMode: Top;
-              Anchor: (Width: 180);
+            $C.@SecondaryTextButton #BackButton {
+              @Text = "BACK";
+              @Anchor = (Width: 120, Height: 28);
+            }
 
-              $C.@SecondaryTextButton #OpenPinnedItemsButton {
-                @Text = "PINNED ITEMS";
-                @Anchor = (Width: 180, Height: 28);
-              }
+            Group #BackButtonSpacer {
+              Anchor: (Width: 12);
+            }
 
-              Group { Anchor: (Height: 6); }
-
-              $C.@SecondaryTextButton #OpenMobBrowserButton {
-                @Text = "MOB BROWSER";
-                @Anchor = (Width: 180, Height: 28);
-              }
+            $C.@CancelTextButton #CloseButton {
+              @Text = "CLOSE";
+              @Anchor = (Width: 120, Height: 28);
             }
           }
         }
@@ -299,5 +296,6 @@ Group {
         Padding: (Full: 10);
       }
     }
+
   }
 }

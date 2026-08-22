@@ -9,7 +9,6 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.EntityEventSystem;
-import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
@@ -42,7 +41,7 @@ import dev.lushbit.hytems.ui.hud.PinnedItemsInventoryTracker;
 import dev.lushbit.hytems.ui.interaction.HytemsLexiconBrowserInteraction;
 import dev.lushbit.hytems.ui.interaction.HytemsLexiconOpenInteraction;
 import dev.lushbit.hytems.ui.interaction.HytemsLexiconUnlockInteraction;
-import dev.lushbit.hytems.ui.page.HytemsBrowserPage;
+import dev.lushbit.hytems.ui.page.HytemsNavigationPage;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -73,9 +72,8 @@ public class HytemsPlugin extends JavaPlugin {
                 HytemsBookManager.class,
                 HytemsBookManager.OPEN_BROWSER_PAGE_SUPPLIER_ID,
                 (ref, accessor, playerRef, interactionContext) -> {
-                    return new HytemsBrowserPage(
+                    return new HytemsNavigationPage(
                             playerRef,
-                            CustomPageLifetime.CanDismiss,
                             HytemsBookManager.createSession(ref, accessor, playerRef.getUuid())
                     );
                 }

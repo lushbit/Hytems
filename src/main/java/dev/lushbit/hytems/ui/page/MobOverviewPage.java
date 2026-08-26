@@ -18,7 +18,6 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.lushbit.hytems.HytemsPlugin;
-import dev.lushbit.hytems.ui.HytemsBookManager;
 import dev.lushbit.hytems.asset.MobMetadataRegistry;
 import dev.lushbit.hytems.asset.MobMetadataRegistry.AttributeRow;
 import dev.lushbit.hytems.asset.MobMetadataRegistry.DropEntry;
@@ -42,28 +41,11 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
 
     private final PlayerRef playerRef;
     private final String mobId;
-    private final HytemsBookManager.LexiconSession lexiconSession;
-    private boolean keepLexiconOpenOnDismiss;
 
     public MobOverviewPage(@Nonnull PlayerRef playerRef, @Nonnull String mobId) {
-        this(playerRef, mobId, null);
-    }
-
-    public MobOverviewPage(@Nonnull PlayerRef playerRef, @Nonnull String mobId,
-                           HytemsBookManager.LexiconSession lexiconSession) {
         super(playerRef, CustomPageLifetime.CanDismiss, MobOverviewData.CODEC);
         this.playerRef = playerRef;
         this.mobId = mobId;
-        this.lexiconSession = lexiconSession;
-    }
-
-    @Override
-    public void onDismiss(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-        super.onDismiss(ref, store);
-        if (!this.keepLexiconOpenOnDismiss && this.lexiconSession != null) {
-            this.lexiconSession.markDismissed();
-        }
-        this.keepLexiconOpenOnDismiss = false;
     }
 
     @Override
@@ -84,8 +66,7 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
         if ("back".equals(data.action)) {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
-                this.keepLexiconOpenOnDismiss = this.lexiconSession != null;
-                player.getPageManager().openCustomPage(ref, store, new MobBrowserPage(this.playerRef, true, this.lexiconSession));
+                player.getPageManager().openCustomPage(ref, store, new MobBrowserPage(this.playerRef, true));
             }
             return;
         }
@@ -99,8 +80,7 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
 
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player != null) {
-            this.keepLexiconOpenOnDismiss = this.lexiconSession != null;
-            player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(this.playerRef, CustomPageLifetime.CanDismiss, true, this.lexiconSession));
+            player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(this.playerRef, CustomPageLifetime.CanDismiss, true));
         }
     }
 

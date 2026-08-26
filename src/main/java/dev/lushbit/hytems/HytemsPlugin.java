@@ -19,7 +19,6 @@ import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.event.events.ecs.InventoryChangeEvent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
-import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.OpenCustomUIInteraction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.npc.AllNPCsLoadedEvent;
@@ -34,15 +33,10 @@ import dev.lushbit.hytems.asset.PrefabDropMetadataRegistry;
 import dev.lushbit.hytems.asset.RecipeManager;
 import dev.lushbit.hytems.command.HytemsCommand;
 import dev.lushbit.hytems.data.PlayerDataManager;
-import dev.lushbit.hytems.ui.HytemsBookManager;
 import dev.lushbit.hytems.ui.ItemUiSupport;
 import dev.lushbit.hytems.ui.hud.PinnedItemsHudManager;
 import dev.lushbit.hytems.ui.hud.PinnedItemsInventoryTracker;
-import dev.lushbit.hytems.ui.interaction.HytemsLexiconBrowserInteraction;
-import dev.lushbit.hytems.ui.interaction.HytemsLexiconCloseInteraction;
 import dev.lushbit.hytems.ui.interaction.HytemsLexiconOpenInteraction;
-import dev.lushbit.hytems.ui.interaction.HytemsLexiconUnlockInteraction;
-import dev.lushbit.hytems.ui.page.HytemsNavigationPage;
 
 import javax.annotation.Nonnull;
 import java.util.HashMap;
@@ -68,36 +62,10 @@ public class HytemsPlugin extends JavaPlugin {
 
         playerDataManager.setDataDirectory(this.getDataDirectory());
 
-        OpenCustomUIInteraction.registerCustomPageSupplier(
-                this,
-                HytemsBookManager.class,
-                HytemsBookManager.OPEN_BROWSER_PAGE_SUPPLIER_ID,
-                (ref, accessor, playerRef, interactionContext) -> {
-                    return new HytemsNavigationPage(
-                            playerRef,
-                            HytemsBookManager.createSession(ref, accessor, playerRef.getUuid())
-                    );
-                }
-        );
         this.getCodecRegistry(Interaction.CODEC).register(
-                HytemsBookManager.OPEN_BROWSER_INTERACTION_TYPE,
-                HytemsLexiconBrowserInteraction.class,
-                HytemsLexiconBrowserInteraction.CODEC
-        );
-        this.getCodecRegistry(Interaction.CODEC).register(
-                HytemsBookManager.OPEN_INTERACTION_TYPE,
+                HytemsLexiconOpenInteraction.TYPE,
                 HytemsLexiconOpenInteraction.class,
                 HytemsLexiconOpenInteraction.CODEC
-        );
-        this.getCodecRegistry(Interaction.CODEC).register(
-                HytemsBookManager.CLOSE_INTERACTION_TYPE,
-                HytemsLexiconCloseInteraction.class,
-                HytemsLexiconCloseInteraction.CODEC
-        );
-        this.getCodecRegistry(Interaction.CODEC).register(
-                HytemsBookManager.UNLOCK_INTERACTION_TYPE,
-                HytemsLexiconUnlockInteraction.class,
-                HytemsLexiconUnlockInteraction.CODEC
         );
 
         this.getCommandRegistry().registerCommand(new HytemsCommand());

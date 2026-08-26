@@ -14,9 +14,8 @@ pom.xml.versionsBackup
 *.iml
 
 # Hytale
-libs/
-server/
-logs/
-server/Assets.zip
+/libs/
+/server/
+/logs/
 docs/*
 settings.json

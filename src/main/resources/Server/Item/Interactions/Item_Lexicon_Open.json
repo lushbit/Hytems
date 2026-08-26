@@ -1,0 +1,11 @@
+{
+  "Type": "HytemsLexiconOpen",
+  "RunTime": "Infinity",
+  "CancelOnItemChange": true,
+  "Effects": {
+    "ItemPlayerAnimationsId": "Item_Lexicon_Animations",
+    "ItemAnimationId": "Open",
+    "WaitForAnimationToFinish": true,
+    "ClearAnimationOnFinish": false
+  }
+}

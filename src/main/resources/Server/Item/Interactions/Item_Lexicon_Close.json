@@ -1,0 +1,11 @@
+{
+  "Type": "Simple",
+  "RunTime": 0,
+  "CancelOnItemChange": true,
+  "Effects": {
+    "ItemPlayerAnimationsId": "Item_Lexicon_Animations",
+    "ItemAnimationId": "Close",
+    "WaitForAnimationToFinish": true,
+    "ClearAnimationOnFinish": true
+  }
+}

@@ -14,7 +14,6 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import dev.lushbit.hytems.ui.HytemsBookManager;
 import dev.lushbit.hytems.ui.HytemsUiTemplates;
 import dev.lushbit.hytems.ui.ItemUiSupport;
 
@@ -22,26 +21,10 @@ import javax.annotation.Nonnull;
 
 public class HytemsNavigationPage extends InteractiveCustomUIPage<HytemsNavigationPage.NavigationData> {
     private final PlayerRef playerRef;
-    private final HytemsBookManager.LexiconSession lexiconSession;
-    private boolean keepLexiconOpenOnDismiss;
 
     public HytemsNavigationPage(@Nonnull PlayerRef playerRef) {
-        this(playerRef, null);
-    }
-
-    public HytemsNavigationPage(@Nonnull PlayerRef playerRef, HytemsBookManager.LexiconSession lexiconSession) {
         super(playerRef, CustomPageLifetime.CanDismiss, NavigationData.CODEC);
         this.playerRef = playerRef;
-        this.lexiconSession = lexiconSession;
-    }
-
-    @Override
-    public void onDismiss(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store) {
-        super.onDismiss(ref, store);
-        if (!this.keepLexiconOpenOnDismiss && this.lexiconSession != null) {
-            this.lexiconSession.markDismissed();
-        }
-        this.keepLexiconOpenOnDismiss = false;
     }
 
     @Override
@@ -91,13 +74,12 @@ public class HytemsNavigationPage extends InteractiveCustomUIPage<HytemsNavigati
             return;
         }
 
-        this.keepLexiconOpenOnDismiss = this.lexiconSession != null;
         if ("pins".equals(data.navAction)) {
-            player.getPageManager().openCustomPage(ref, store, new PinsManagementPage(this.playerRef, true, this.lexiconSession));
+            player.getPageManager().openCustomPage(ref, store, new PinsManagementPage(this.playerRef, true));
         } else if ("browser".equals(data.navAction)) {
-            player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(this.playerRef, CustomPageLifetime.CanDismiss, true, this.lexiconSession));
+            player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(this.playerRef, CustomPageLifetime.CanDismiss, true));
         } else if ("mobs".equals(data.navAction)) {
-            player.getPageManager().openCustomPage(ref, store, new MobBrowserPage(this.playerRef, true, this.lexiconSession));
+            player.getPageManager().openCustomPage(ref, store, new MobBrowserPage(this.playerRef, true));
         }
     }
 

@@ -1,0 +1,52 @@
+{
+  "TranslationProperties": {
+    "Name": "server.items.Item_Lexicon.name"
+  },
+  "Categories": [
+    "Items.Tools"
+  ],
+  "Quality": "Common",
+  "ItemLevel": 40,
+  "Model": "Resources/Item_Lexicon.blockymodel",
+  "Texture": "Resources/Item_Lexicon.png",
+  "IconProperties": {
+    "Scale": 0.8,
+    "Rotation": [
+      65,
+      6,
+      0
+    ],
+    "Translation": [
+      -2,
+      -10
+    ]
+  },
+  "Scale": 1.4,
+  "DroppedItemAnimation": "Items/Animations/Dropped/Dropped_Diagonal_Left.blockyanim",
+  "Icon": "Icons/ItemsGenerated/Item_Lexicon.png",
+  "ItemSoundSetId": "ISS_Weapons_Books",
+  "MaxStack": 1,
+  "Interactions": {
+    "Secondary": {
+      "Interactions": [
+        "Item_Lexicon_Open"
+      ],
+      "RequireNewClick": true
+    },
+    "SwapFrom": {
+      "Interactions": [
+        {
+          "Type": "Interrupt",
+          "InterruptTypes": [
+            "Secondary"
+          ]
+        },
+        {
+          "Type": "ChangeActiveSlot"
+        }
+      ]
+    }
+  },
+  "UsePlayerAnimations": true,
+  "PlayerAnimationsId": "Spellbook"
+}

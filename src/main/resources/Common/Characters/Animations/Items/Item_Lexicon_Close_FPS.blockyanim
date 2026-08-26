@@ -391,15 +391,25 @@
       "shapeUvOffset": []
     },
     "R-Arm": {
-      "position": [],
+      "position": [
+        {
+          "time": 0,
+          "delta": {
+            "x": -41.803,
+            "y": -32.054,
+            "z": 61
+          },
+          "interpolationType": "linear"
+        }
+      ],
       "orientation": [
         {
           "time": 0,
           "delta": {
-            "x": -0.135752,
-            "y": 0.021104,
-            "z": -0.029274,
-            "w": 0.990085
+            "x": -0.383857,
+            "y": 0.25147,
+            "z": -0.216391,
+            "w": 0.861737
           },
           "interpolationType": "linear"
         }
@@ -414,10 +424,10 @@
         {
           "time": 0,
           "delta": {
-            "x": -0.258819,
+            "x": -0.34202,
             "y": 0,
             "z": 0,
-            "w": 0.965926
+            "w": 0.939693
           },
           "interpolationType": "linear"
         }
@@ -432,10 +442,10 @@
         {
           "time": 0,
           "delta": {
-            "x": 0,
-            "y": 0,
-            "z": 0.043619,
-            "w": 0.999048
+            "x": -0.110718,
+            "y": -0.097372,
+            "z": -0.06111,
+            "w": 0.987181
           },
           "interpolationType": "linear"
         }
@@ -449,9 +459,9 @@
         {
           "time": 0,
           "delta": {
-            "x": 2,
-            "y": -2,
-            "z": 2.1
+            "x": 0,
+            "y": 0,
+            "z": 5.1
           },
           "interpolationType": "linear"
         }

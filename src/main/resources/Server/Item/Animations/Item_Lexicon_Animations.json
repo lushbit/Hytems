@@ -1,0 +1,32 @@
+{
+  "Parent": "Spellbook",
+  "Animations": {
+    "Open": {
+      "ThirdPerson": "Characters/Animations/Items/Item_Lexicon_Open.blockyanim",
+      "ThirdPersonMoving": "Characters/Animations/Items/Item_Lexicon_Open.blockyanim",
+      "FirstPerson": "Characters/Animations/Items/Item_Lexicon_Open_FPS.blockyanim",
+      "Speed": 1,
+      "Looping": false
+    },
+    "Close": {
+      "ThirdPerson": "Characters/Animations/Items/Item_Lexicon_Close.blockyanim",
+      "ThirdPersonMoving": "Characters/Animations/Items/Item_Lexicon_Close.blockyanim",
+      "FirstPerson": "Characters/Animations/Items/Item_Lexicon_Close_FPS.blockyanim",
+      "Speed": 1,
+      "Looping": false,
+      "BlendingDuration": 0.1
+    }
+  },
+  "WiggleWeights": {
+    "X": 3,
+    "XDeceleration": 0.1,
+    "Y": 0.1,
+    "YDeceleration": 0.1,
+    "Z": 0.1,
+    "ZDeceleration": 0.1,
+    "Roll": 0.1,
+    "RollDeceleration": 0.1,
+    "Pitch": 3,
+    "PitchDeceleration": 0.1
+  }
+}

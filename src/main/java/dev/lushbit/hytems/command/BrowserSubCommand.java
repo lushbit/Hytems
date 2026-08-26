@@ -36,6 +36,6 @@ public class BrowserSubCommand extends AbstractPlayerCommand {
             return;
         }
 
-        player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(playerRef, CustomPageLifetime.CanDismiss, true, null));
+        player.getPageManager().openCustomPage(ref, store, new HytemsBrowserPage(playerRef, CustomPageLifetime.CanDismiss, true));
     }
 }

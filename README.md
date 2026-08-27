@@ -12,6 +12,8 @@ No more guessing which items exist, where they come from, or what you need to cr
 
 **📜 Recipe Viewer** - View crafting recipes, required ingredients, crafting stations, drops, and other useful item information in one clean interface. Optional salvager recipes show the salvage bench and every item that can be salvaged to obtain the selected item.
 
+**📖 Item Lexicon** - Allows you to open all Hytems menus in survival using a craftable book! You can craft it in the Tier 2 Workbench under the `Survival` category and requires `5x Medium Leather`, `10x Plant Fiber`, `10x Linen Scraps`.
+
 **🧟 Mob Browser & Drop Support** - Discover which mobs can drop specific items and explore detailed mob information directly inside Hytems.
 
 Open the mob browser with:
@@ -86,7 +88,7 @@ You can manage pinned items with:
 
 ## **📖 How to use**
 
-*   Simply type `/hytems` or `/h` in chat to open the browser!
+*   Simply type `/hytems` or `/h` in chat or use the Item Lexicon to open the browser!
 *   Leftclick any item to view its details and recipe
 *   Rightclick any item to see where it can be dropped
 *   Use the sidebar to filter and sort the item grid
@@ -94,12 +96,11 @@ You can manage pinned items with:
 *   Enable salvager recipes or hidden items in the settings section when needed
 *   Navigate through the pages with `<` and `>` buttons
 
-## **🛠️ Planned Features**
+## **💝 Special Thanks**
+Special thanks go out to `@jxstjordan` for creating the Item Lexicon model, textures and animations for **Hytems**. Thank you for your amazing work and support!
 
-*   More detailed item stats
-*   Additional loot and source information
-*   More browser opening options
-*   and much more to come!
+## **🪩 The Future**
+With the release of **1.9.0**, Hytems is now **feature complete**! In the future I will focus on compatibility updates and bug fixes for each new Hytale version releasing. If you still have any ideas what I could add to Hytems let me know. Maybe we could make another new feature update work in the future!
 
 I hope you enjoy this really useful mod! It's my first project.
 

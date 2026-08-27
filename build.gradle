@@ -53,22 +53,56 @@ tasks.named('build') {
     dependsOn shadowJar
 }
 
-// Task to copy server JAR to libs folder if not present
+// Reads Implementation-Version from a HytaleServer.jar manifest, or null.
+def serverJarVersion = { File jar ->
+    if (!jar?.exists()) return null
+    try {
+        new java.util.jar.JarFile(jar).withCloseable { j ->
+            return j.manifest?.mainAttributes?.getValue('Implementation-Version')
+        }
+    } catch (Exception ignored) {
+        return null
+    }
+}
+
+// Keep libs/HytaleServer.jar in sync with the server we actually run against.
+// Without the version check a stale jar silently survives a server update and
+// the mod compiles against an API that no longer exists at runtime.
 tasks.register('copyServerJar') {
     doLast {
         def destJar = file('libs/HytaleServer.jar')
-        if (!destJar.exists()) {
-            def sources = [file('server/HytaleServer.jar'), file('../server/HytaleServer.jar')]
-            for (src in sources) {
-                if (src.exists()) {
-                    copy {
-                        from src
-                        into 'libs'
-                    }
-                    break
-                }
+        def src = [file('server/HytaleServer.jar'), file('../server/HytaleServer.jar')].find { it.exists() }
+        if (src == null) {
+            if (!destJar.exists()) {
+                logger.warn("No HytaleServer.jar found in libs/, server/ or ../server/ - compilation will fail.")
             }
+            return
         }
+
+        def srcVersion = serverJarVersion(src)
+        def destVersion = serverJarVersion(destJar)
+
+        if (!destJar.exists()) {
+            logger.lifecycle("Copying HytaleServer.jar ${srcVersion ?: '(unknown version)'} into libs/")
+        } else if (destVersion != srcVersion) {
+            logger.lifecycle("Server jar changed: libs/ has ${destVersion ?: '(unknown)'}, " +
+                    "${src.path} has ${srcVersion ?: '(unknown)'} - refreshing libs/HytaleServer.jar")
+        } else {
+            return
+        }
+
+        copy {
+            from src
+            into 'libs'
+        }
+    }
+}
+
+// Surface the version we are compiling against so a mismatch is never silent.
+tasks.register('printServerJarVersion') {
+    doLast {
+        def jar = file('libs/HytaleServer.jar')
+        println "Compiling against HytaleServer ${serverJarVersion(jar) ?: '(unknown version)'}"
     }
 }
 

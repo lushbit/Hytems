@@ -17,11 +17,7 @@ public class MobsSubCommand extends AbstractPlayerCommand {
 
     public MobsSubCommand() {
         super("mobs", "Opens the Hytems mob browser");
-    }
-
-    @Override
-    protected boolean canGeneratePermission() {
-        return false;
+        this.requireNoPermission();
     }
 
     @Override

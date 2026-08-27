@@ -17,11 +17,7 @@ public class PinsSubCommand extends AbstractPlayerCommand {
 
     public PinsSubCommand() {
         super("pins", "Manage your pinned items");
-    }
-
-    @Override
-    protected boolean canGeneratePermission() {
-        return false;
+        this.requireNoPermission();
     }
 
     @Override

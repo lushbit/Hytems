@@ -281,16 +281,16 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
                         MobOverviewData.class,
                         MobOverviewData::new
                 )
-                .addField(
+                .append(
                         new KeyedCodec<>("ItemId", Codec.STRING),
                         (data, value) -> data.itemId = value,
                         data -> data.itemId
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("Action", Codec.STRING),
                         (data, value) -> data.action = value,
                         data -> data.action
-                )
+                ).add()
                 .build();
 
         private String itemId;

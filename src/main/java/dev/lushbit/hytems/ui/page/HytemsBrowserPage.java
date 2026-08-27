@@ -1572,6 +1572,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         String strippedBenchId = stripNamespace(benchId);
         String stationCore = stationCoreName(strippedBenchId);
+        // Recipes also spell the bench without a separator (e.g. "ArmorBench", "Cookingbench"),
+        // so try the core with a trailing "Bench" removed as well.
+        String stationCoreNoSuffix = stationCore.replaceFirst("(?i)bench$", "");
         List<String> candidates = List.of(
                 canonicalBenchItemId(stationCore),
                 benchId,
@@ -1579,7 +1582,10 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 "Bench_" + stationCore,
                 "Bench_" + stationCore.replace("Workbench", "WorkBench"),
                 "Bench_" + stationCore.replace("Armor", "Armour"),
-                "Bench_" + stationCore.replace("Armour", "Armor")
+                "Bench_" + stationCore.replace("Armour", "Armor"),
+                "Bench_" + stationCoreNoSuffix,
+                "Bench_" + stationCoreNoSuffix.replace("Armor", "Armour"),
+                "Bench_" + stationCoreNoSuffix.replace("Armour", "Armor")
         );
 
         for (String candidate : candidates) {
@@ -1936,106 +1942,106 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                         BrowserData.class,
                         BrowserData::new
                 )
-                .addField(
+                .append(
                         new KeyedCodec<>("@SearchQuery", Codec.STRING),
                         (data, value) -> data.searchQuery = value,
                         data -> data.searchQuery
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("PageAction", Codec.STRING),
                         (data, value) -> data.pageAction = value,
                         data -> data.pageAction
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("ClearSearch", Codec.STRING),
                         (data, value) -> data.clearSearch = value,
                         data -> data.clearSearch
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("CloseGUI", Codec.STRING),
                         (data, value) -> data.closeGUI = value,
                         data -> data.closeGUI
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("SelectedItem", Codec.STRING),
                         (data, value) -> data.selectedItem = value,
                         data -> data.selectedItem
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("ItemPath", Codec.STRING),
                         (data, value) -> data.itemPath = value,
                         data -> data.itemPath
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("ShowDrops", Codec.STRING),
                         (data, value) -> data.showDrops = value,
                         data -> data.showDrops
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("CloseDetail", Codec.STRING),
                         (data, value) -> data.closeDetail = value,
                         data -> data.closeDetail
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("CloseDropPanel", Codec.STRING),
                         (data, value) -> data.closeDropPanel = value,
                         data -> data.closeDropPanel
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("PinItem", Codec.STRING),
                         (data, value) -> data.pinItem = value,
                         data -> data.pinItem
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("ToggleFavorite", Codec.STRING),
                         (data, value) -> data.toggleFavorite = value,
                         data -> data.toggleFavorite
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("FavSelector", Codec.STRING),
                         (data, value) -> data.toggleFavoriteSelector = value,
                         data -> data.toggleFavoriteSelector
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("ToggleFavoritesCollapse", Codec.STRING),
                         (data, value) -> data.toggleFavoritesCollapse = value,
                         data -> data.toggleFavoritesCollapse
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("IsFavSection", Codec.STRING),
                         (data, value) -> data.isFavSectionStr = value,
                         data -> data.isFavSectionStr
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("InfoTab", Codec.STRING),
                         (data, value) -> data.infoTab = value,
                         data -> data.infoTab
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("HistoryIndex", Codec.STRING),
                         (data, value) -> data.historyIndex = value,
                         data -> data.historyIndex
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("MobDropAction", Codec.STRING),
                         (data, value) -> data.mobDropAction = value,
                         data -> data.mobDropAction
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("RecipeAction", Codec.STRING),
                         (data, value) -> data.recipeAction = value,
                         data -> data.recipeAction
-                )
-                .addField(new KeyedCodec<>("@CategoryFilter", Codec.STRING), (data, value) -> data.categoryFilter = value, data -> data.categoryFilter)
-                .addField(new KeyedCodec<>("@ModFilter", Codec.STRING), (data, value) -> data.modFilter = value, data -> data.modFilter)
-                .addField(new KeyedCodec<>("@CraftableFilter", Codec.STRING), (data, value) -> data.craftableFilter = value, data -> data.craftableFilter)
-                .addField(new KeyedCodec<>("@DroppableFilter", Codec.STRING), (data, value) -> data.droppableFilter = value, data -> data.droppableFilter)
-                .addField(new KeyedCodec<>("@PinnedFilter", Codec.STRING), (data, value) -> data.pinnedFilter = value, data -> data.pinnedFilter)
-                .addField(new KeyedCodec<>("@SortingFilter", Codec.STRING), (data, value) -> data.sortingFilter = value, data -> data.sortingFilter)
-                .addField(new KeyedCodec<>("ResetFilters", Codec.STRING), (data, value) -> data.resetFilters = value, data -> data.resetFilters)
-                .addField(new KeyedCodec<>("NavAction", Codec.STRING), (data, value) -> data.navAction = value, data -> data.navAction)
-                .addField(new KeyedCodec<>("@ShowSalvagerRecipes", Codec.BOOLEAN), (data, value) -> data.showSalvagerRecipes = value, data -> data.showSalvagerRecipes)
-                .addField(new KeyedCodec<>("@ShowHiddenItems", Codec.BOOLEAN), (data, value) -> data.showHiddenItems = value, data -> data.showHiddenItems)
+                ).add()
+                .append(new KeyedCodec<>("@CategoryFilter", Codec.STRING), (data, value) -> data.categoryFilter = value, data -> data.categoryFilter).add()
+                .append(new KeyedCodec<>("@ModFilter", Codec.STRING), (data, value) -> data.modFilter = value, data -> data.modFilter).add()
+                .append(new KeyedCodec<>("@CraftableFilter", Codec.STRING), (data, value) -> data.craftableFilter = value, data -> data.craftableFilter).add()
+                .append(new KeyedCodec<>("@DroppableFilter", Codec.STRING), (data, value) -> data.droppableFilter = value, data -> data.droppableFilter).add()
+                .append(new KeyedCodec<>("@PinnedFilter", Codec.STRING), (data, value) -> data.pinnedFilter = value, data -> data.pinnedFilter).add()
+                .append(new KeyedCodec<>("@SortingFilter", Codec.STRING), (data, value) -> data.sortingFilter = value, data -> data.sortingFilter).add()
+                .append(new KeyedCodec<>("ResetFilters", Codec.STRING), (data, value) -> data.resetFilters = value, data -> data.resetFilters).add()
+                .append(new KeyedCodec<>("NavAction", Codec.STRING), (data, value) -> data.navAction = value, data -> data.navAction).add()
+                .append(new KeyedCodec<>("@ShowSalvagerRecipes", Codec.BOOLEAN), (data, value) -> data.showSalvagerRecipes = value, data -> data.showSalvagerRecipes).add()
+                .append(new KeyedCodec<>("@ShowHiddenItems", Codec.BOOLEAN), (data, value) -> data.showHiddenItems = value, data -> data.showHiddenItems).add()
                 .build();
 
         private String searchQuery;

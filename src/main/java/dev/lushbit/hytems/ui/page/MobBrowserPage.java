@@ -252,26 +252,26 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
                         MobBrowserData.class,
                         MobBrowserData::new
                 )
-                .addField(
+                .append(
                         new KeyedCodec<>("@SearchQuery", Codec.STRING),
                         (data, value) -> data.searchQuery = value,
                         data -> data.searchQuery
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("PageAction", Codec.STRING),
                         (data, value) -> data.pageAction = value,
                         data -> data.pageAction
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("NavAction", Codec.STRING),
                         (data, value) -> data.navAction = value,
                         data -> data.navAction
-                )
-                .addField(
+                ).add()
+                .append(
                         new KeyedCodec<>("SelectedMob", Codec.STRING),
                         (data, value) -> data.selectedMob = value,
                         data -> data.selectedMob
-                )
+                ).add()
                 .build();
 
         private String searchQuery;

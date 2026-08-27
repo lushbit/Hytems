@@ -1,7 +1,7 @@
 {
   "Type": "HytemsLexiconOpen",
-  "RunTime": "Infinity",
-  "CancelOnItemChange": true,
+  "RunTime": 86400,
+  "OnItemChangeBehavior": "Cancel",
   "Effects": {
     "ItemPlayerAnimationsId": "Item_Lexicon_Animations",
     "ItemAnimationId": "Open",

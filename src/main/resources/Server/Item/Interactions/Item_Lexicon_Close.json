@@ -1,7 +1,7 @@
 {
   "Type": "Simple",
   "RunTime": 0,
-  "CancelOnItemChange": true,
+  "OnItemChangeBehavior": "Cancel",
   "Effects": {
     "ItemPlayerAnimationsId": "Item_Lexicon_Animations",
     "ItemAnimationId": "Close",

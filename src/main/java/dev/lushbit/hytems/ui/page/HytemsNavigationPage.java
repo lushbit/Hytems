@@ -88,11 +88,11 @@ public class HytemsNavigationPage extends InteractiveCustomUIPage<HytemsNavigati
                         NavigationData.class,
                         NavigationData::new
                 )
-                .addField(
+                .append(
                         new KeyedCodec<>("NavAction", Codec.STRING),
                         (data, value) -> data.navAction = value,
                         data -> data.navAction
-                )
+                ).add()
                 .build();
 
         private String navAction;

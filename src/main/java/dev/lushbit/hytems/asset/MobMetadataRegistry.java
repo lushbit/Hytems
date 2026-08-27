@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.container.SingleIte
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAttachment;
 import com.hypixel.hytale.server.npc.NPCPlugin;
+import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderInfo;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderManager;
 import com.hypixel.hytale.server.npc.role.Role;
@@ -31,6 +32,7 @@ import javax.annotation.Nonnull;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,11 +49,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 public final class MobMetadataRegistry {
     private static final MobMetadata EMPTY = new MobMetadata("", "Unknown", null,
             Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
     private static final String MISSING_ITEM_ID = "__HYTEMS_MISSING_ITEM__";
+    private static final String PORTRAIT_RESOURCE_DIR = "Common/UI/Custom/hytems/ui/Assets/MobPortraits/";
+    private static final Path DEV_PORTRAIT_DIR = Path.of("src/main/resources").resolve(PORTRAIT_RESOURCE_DIR);
     private static final Map<String, MobMetadata> CACHE = new ConcurrentHashMap<>();
     private static final Map<String, String> ITEM_ID_LOOKUP = new ConcurrentHashMap<>();
     private static final Set<String> LOADING = ConcurrentHashMap.newKeySet();
@@ -130,6 +136,11 @@ public final class MobMetadataRegistry {
             return true;
         }
 
+        // Wander_Circle / Wander_Rect / Wander_Simple are movement components, not mobs.
+        if (normalized.startsWith("wander")) {
+            return true;
+        }
+
         return normalized.contains("test")
                 || normalized.equals("blanktemplate")
                 || normalized.contains("component")
@@ -181,13 +192,17 @@ public final class MobMetadataRegistry {
                 addMobId(ids, name);
             }
             for (String name : manager.getTemplateNames()) {
-                addMobId(ids, name);
+                if (isRoleBuilderName(manager, name)) {
+                    addMobId(ids, name);
+                }
             }
             for (String name : manager.getNameToIndexMap().keySet()) {
-                addMobId(ids, name);
+                if (isRoleBuilderName(manager, name)) {
+                    addMobId(ids, name);
+                }
             }
             manager.getAllBuilders().values().forEach(info -> {
-                if (info != null) {
+                if (isRoleBuilder(info)) {
                     addMobId(ids, info.getKeyName());
                     if (info.getPath() != null) {
                         addMobId(ids, info.getPath().getFileName().toString());
@@ -195,6 +210,33 @@ public final class MobMetadataRegistry {
                 }
             });
         } catch (Exception ignored) {
+        }
+    }
+
+    /**
+     * The BuilderManager does not only hold NPC roles: since 0.6.0 it also holds EncounterManager
+     * configs (Example_Boss, Example_Encounter, Encounter_Macro_*, ...) plus the action/sensor
+     * component builders. Only entries whose builder produces a Role are actual mobs - filtering by
+     * category keeps future asset types out of the browser without chasing their names.
+     */
+    private static boolean isRoleBuilder(BuilderInfo info) {
+        if (info == null) return false;
+        try {
+            Builder<?> builder = info.getBuilder();
+            return builder != null && builder.category() == Role.class;
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isRoleBuilderName(BuilderManager manager, String name) {
+        if (name == null || name.isEmpty()) return false;
+        try {
+            var nameToIndex = manager.getNameToIndexMap();
+            return nameToIndex.containsKey(name)
+                    && isRoleBuilder(manager.tryGetBuilderInfo(nameToIndex.getInt(name)));
+        } catch (Exception ignored) {
+            return false;
         }
     }
 
@@ -207,19 +249,65 @@ public final class MobMetadataRegistry {
         }
     }
 
+    /**
+     * Adds mobs that ship a portrait but have no NPC role of their own. Reads the plugin's own
+     * code source so this behaves the same on a real server (jar) as in development (classes
+     * directory) - a plain relative source path only ever resolved in the dev workspace.
+     */
     private static void collectPortraitMobIds(Set<String> ids) {
+        for (String name : listPortraitNames()) {
+            if (!name.equalsIgnoreCase("Construction_Sign")) {
+                addMobId(ids, name);
+            }
+        }
+    }
+
+    private static List<String> listPortraitNames() {
+        List<String> names = new ArrayList<>();
         try {
-            Path portraits = Path.of("src/main/resources/Common/UI/Custom/hytems/ui/Assets/MobPortraits");
-            if (!Files.isDirectory(portraits)) return;
-            try (var stream = Files.list(portraits)) {
-                stream.filter(Files::isRegularFile)
-                        .map(path -> path.getFileName().toString())
-                        .filter(name -> name.toLowerCase(Locale.ENGLISH).endsWith(".png"))
-                        .map(name -> name.substring(0, name.length() - 4))
-                        .filter(name -> !name.equalsIgnoreCase("Construction_Sign"))
-                        .forEach(name -> addMobId(ids, name));
+            URL location = MobMetadataRegistry.class.getProtectionDomain().getCodeSource().getLocation();
+            Path source = Path.of(location.toURI());
+
+            if (Files.isRegularFile(source)) {
+                try (ZipFile zip = new ZipFile(source.toFile())) {
+                    zip.stream()
+                            .map(ZipEntry::getName)
+                            .filter(name -> name.startsWith(PORTRAIT_RESOURCE_DIR))
+                            .map(name -> name.substring(PORTRAIT_RESOURCE_DIR.length()))
+                            .forEach(name -> addPortraitName(names, name));
+                }
+            } else if (Files.isDirectory(source)) {
+                collectPortraitNamesFrom(source.resolve(PORTRAIT_RESOURCE_DIR), names);
             }
         } catch (Exception ignored) {
+        }
+
+        if (names.isEmpty()) {
+            collectPortraitNamesFrom(DEV_PORTRAIT_DIR, names);
+        }
+        return names;
+    }
+
+    private static void collectPortraitNamesFrom(Path directory, List<String> names) {
+        if (directory == null || !Files.isDirectory(directory)) {
+            return;
+        }
+        try (var stream = Files.list(directory)) {
+            stream.filter(Files::isRegularFile)
+                    .map(path -> path.getFileName().toString())
+                    .forEach(name -> addPortraitName(names, name));
+        } catch (Exception ignored) {
+        }
+    }
+
+    private static void addPortraitName(List<String> names, String fileName) {
+        if (fileName == null || fileName.indexOf('/') >= 0
+                || !fileName.toLowerCase(Locale.ENGLISH).endsWith(".png")) {
+            return;
+        }
+        String name = fileName.substring(0, fileName.length() - 4);
+        if (!name.isEmpty() && !names.contains(name)) {
+            names.add(name);
         }
     }
 
@@ -231,18 +319,16 @@ public final class MobMetadataRegistry {
     }
 
     private static MobMetadata load(String mobId) {
-        Role role = tryGetRole(mobId);
         BuilderInfo builderInfo = tryGetBuilderInfo(mobId);
         Object builder = builderInfo != null ? builderInfo.getBuilder() : null;
         JsonObject roleConfig = loadRoleConfig(builderInfo);
         List<AttributeRow> attributes = new ArrayList<>();
         addFamilyAttributes(attributes, mobId, builderInfo);
         addRoleConfigAttributes(attributes, roleConfig);
-        addRoleAttributes(attributes, role);
         addBuilderAttributes(attributes, builder);
-        addModelAttributes(attributes, builder, role);
+        addModelAttributes(attributes, builder);
 
-        String dropListId = firstNonBlank(jsonString(roleConfig, "DropList"), stringValue(call(role, "getDropListId")),
+        String dropListId = firstNonBlank(jsonString(roleConfig, "DropList"),
                 stringValue(readAny(builder, "dropList", "dropListId", "drops", "droplist")));
         if (dropListId == null || dropListId.isEmpty()) {
             dropListId = "Drop_" + mobId;
@@ -250,7 +336,7 @@ public final class MobMetadataRegistry {
         addAttribute(attributes, "DropList", TextFormatters.dropSourceName(dropListId));
 
         List<DropEntry> drops = loadDrops(dropListId);
-        List<VariantEntry> variants = loadVariants(builder, role, roleConfig);
+        List<VariantEntry> variants = loadVariants(builder, roleConfig);
         List<SpawnGroup> spawns = loadSpawns(mobId);
 
         return new MobMetadata(mobId, TextFormatters.mobName(mobId), MobPortraitPath(mobId), dedupeAttributes(attributes), drops, variants, spawns);
@@ -297,19 +383,6 @@ public final class MobMetadataRegistry {
         return parts.toArray(new String[0]);
     }
 
-    private static void addRoleAttributes(List<AttributeRow> rows, Role role) {
-        if (role == null) return;
-        addAttribute(rows, "Health", call(role, "getInitialMaxHealth"));
-        addAttribute(rows, "IsMemory", call(role, "isMemory"));
-        addAttribute(rows, "Memories Name", call(role, "getMemoriesNameOverride"));
-        addAttribute(rows, "Breathes In Water", call(role, "isBreathesInWater"));
-        addAttribute(rows, "Breathes In Air", call(role, "isBreathesInAir"));
-        addAttribute(rows, "Apply Separation", call(role, "isApplySeparation"));
-        addAttribute(rows, "Appearance", call(role, "getAppearanceName"));
-        addAttribute(rows, "Balance", call(role, "getBalanceAsset"));
-        addAttribute(rows, "Attack", simpleClassName(call(role, "getRootInstruction")));
-    }
-
     private static void addBuilderAttributes(List<AttributeRow> rows, Object builder) {
         if (builder == null) return;
         for (String name : List.of("MaxHealth", "Health", "AttackDistance", "TargetRange", "DesiredAttackDistanceRange",
@@ -333,8 +406,8 @@ public final class MobMetadataRegistry {
         if (weapons.length > 0) addAttribute(rows, "Weapons", joinHumanized(weapons));
     }
 
-    private static void addModelAttributes(List<AttributeRow> rows, Object builder, Role role) {
-        String modelId = firstNonBlank(stringValue(readAny(builder, "model", "modelAsset", "appearanceModel")), stringValue(call(role, "getAppearanceName")));
+    private static void addModelAttributes(List<AttributeRow> rows, Object builder) {
+        String modelId = stringValue(readAny(builder, "model", "modelAsset", "appearanceModel"));
         ModelAsset model = findModel(modelId);
         if (model == null) return;
         addAttribute(rows, "Model", model.getId());
@@ -426,10 +499,9 @@ public final class MobMetadataRegistry {
         acc.chance = Math.max(acc.chance, chance);
     }
 
-    private static List<VariantEntry> loadVariants(Object builder, Role role, JsonObject roleConfig) {
+    private static List<VariantEntry> loadVariants(Object builder, JsonObject roleConfig) {
         LinkedHashSet<String> itemIds = new LinkedHashSet<>();
         collectItems(itemIds, readAny(builder, "weapons", "weapon", "armor", "tools", "hotbarItems", "offHandItems", "inventoryItems", "equipment"));
-        collectItems(itemIds, call(role, "getAppearanceName"));
         for (String key : List.of("Weapons", "Weapon", "Armor", "HotbarItems", "OffHandItems", "Tools", "InventoryItems")) {
             collectItems(itemIds, jsonValue(roleConfig, key));
         }
@@ -806,18 +878,6 @@ public final class MobMetadataRegistry {
         return String.join(", ", filtered);
     }
 
-    private static Role tryGetRole(String mobId) {
-        try {
-            NPCPlugin plugin = NPCPlugin.get();
-            if (plugin == null) return null;
-            int index = plugin.getIndex(mobId);
-            Object maybeRole = plugin.tryGetCachedValidRole(index);
-            return maybeRole instanceof Role role ? role : null;
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
     private static BuilderInfo tryGetBuilderInfo(String mobId) {
         try {
             NPCPlugin plugin = NPCPlugin.get();
@@ -931,9 +991,24 @@ public final class MobMetadataRegistry {
             Object value = call(target, "get" + capitalize(name));
             if (value == null) value = call(target, "is" + capitalize(name));
             if (value == null) value = readField(target, name);
-            if (value != null) return value;
+            if (value != null && !isUnreadableBuilderValue(value)) return value;
         }
         return null;
+    }
+
+    /**
+     * NPC builders keep their fields in ValueHolder wrappers (IntHolder, AssetHolder, ...) whose
+     * value can only be resolved with an ExecutionContext that is not available here. Without this
+     * guard formatValue() falls back to the class name and the overview shows rows like
+     * "Max Health: Int Holder". The authored value still comes through the role config JSON.
+     */
+    private static boolean isUnreadableBuilderValue(Object value) {
+        try {
+            value.getClass().getMethod("getExpressionString");
+            return true;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private static Object call(Object target, String methodName) {

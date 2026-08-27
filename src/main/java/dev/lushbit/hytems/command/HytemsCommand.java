@@ -18,15 +18,11 @@ public class HytemsCommand extends AbstractPlayerCommand {
     public HytemsCommand() {
         super("hytems", "Opens the Hytems menu");
         this.addAliases("h");
+        this.requireNoPermission();
 
         this.addSubCommand(new BrowserSubCommand());
         this.addSubCommand(new PinsSubCommand());
         this.addSubCommand(new MobsSubCommand());
-    }
-
-    @Override
-    protected boolean canGeneratePermission() {
-        return false;
     }
 
     @Override

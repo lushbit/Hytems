@@ -69,6 +69,13 @@ public class HytemsLexiconOpenInteraction extends SimpleInteraction {
     }
 
     private static void runCloseChain(InteractionContext context, InteractionType type) {
+        var rootInteractions = RootInteraction.getAssetMap();
+        int closeRootIndex = rootInteractions.getIndexOrDefault(CLOSE_ROOT_INTERACTION, -1);
+        RootInteraction closeRoot = closeRootIndex < 0 ? null : rootInteractions.getAsset(closeRootIndex);
+        if (closeRoot == null) {
+            return;
+        }
+
         InteractionManager manager = context.getInteractionManager();
         InteractionContext closeContext = InteractionContext.forInteraction(
                 manager,
@@ -80,7 +87,7 @@ public class HytemsLexiconOpenInteraction extends SimpleInteraction {
         manager.queueExecuteChain(manager.initChain(
                 type,
                 closeContext,
-                RootInteraction.getRootInteractionOrUnknown(CLOSE_ROOT_INTERACTION),
+                closeRoot,
                 false
         ));
     }

@@ -18,11 +18,7 @@ public class BrowserSubCommand extends AbstractPlayerCommand {
 
     public BrowserSubCommand() {
         super("browser", "Opens the Hytems item browser");
-    }
-
-    @Override
-    protected boolean canGeneratePermission() {
-        return false;
+        this.requireNoPermission();
     }
 
     @Override

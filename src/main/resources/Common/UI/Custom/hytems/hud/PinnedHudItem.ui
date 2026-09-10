@@ -58,6 +58,14 @@ Group {
       Visible: false;
     }
 
+    Label #MoreIngredientsLabel {
+      Text: "";
+      Anchor: (Height: 16);
+      Padding: (Top: 2);
+      Visible: false;
+      Style: (FontSize: 11, TextColor: #888888);
+    }
+
     Label #DropsTitle {
       Text: "Drops from:";
       Anchor: (Height: 20);

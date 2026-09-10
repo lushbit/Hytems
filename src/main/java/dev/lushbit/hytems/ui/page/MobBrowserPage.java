@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import dev.lushbit.hytems.asset.MobMetadataRegistry;
+import dev.lushbit.hytems.asset.SearchText;
 import dev.lushbit.hytems.ui.HytemsUiTemplates;
 import dev.lushbit.hytems.ui.MobPortraitResolver;
 import dev.lushbit.hytems.ui.TextFormatters;
@@ -149,7 +150,7 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
     }
 
     private void filterMobs() {
-        String query = normalizeSearch(this.searchQuery);
+        String query = this.searchQuery;
         List<String> allMobs = MobMetadataRegistry.knownMobIds();
         if (query.isEmpty()) {
             this.filteredMobs = allMobs;
@@ -159,7 +160,7 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
         List<String> matches = new ArrayList<>();
         for (String mobId : allMobs) {
             String name = TextFormatters.mobName(mobId);
-            if (normalizeSearch(mobId).contains(query) || normalizeSearch(name).contains(query)) {
+            if (SearchText.matches(mobId, query) || SearchText.matches(name, query)) {
                 matches.add(mobId);
             }
         }
@@ -238,13 +239,6 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
             return name;
         }
         return name.substring(0, GRID_LABEL_MAX_CHARS - 3) + "...";
-    }
-
-    private String normalizeSearch(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.toLowerCase(Locale.ENGLISH).replaceAll("[^a-z0-9]", "");
     }
 
     public static class MobBrowserData {

@@ -5,12 +5,17 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public final class MobPortraitResolver {
     private static final String BASE_PATH = "hytems/ui/Assets/MobPortraits/";
     public static final String FALLBACK_PORTRAIT_PATH = BASE_PATH + "Construction_Sign.png";
     private static final String RESOURCE_BASE_PATH = "Common/UI/Custom/" + BASE_PATH;
     private static final Path DEV_RESOURCE_BASE_PATH = Path.of("src/main/resources/Common/UI/Custom").resolve(BASE_PATH);
+    private static final Map<String, String> PORTRAIT_ALIASES = Map.of(
+            "Spectre_Void", "Void_Spectre",
+            "Spawn_Void", "Void_Spawn_Entombed"
+    );
 
     private MobPortraitResolver() {
     }
@@ -52,6 +57,10 @@ public final class MobPortraitResolver {
 
         String stripped = stripNamespace(mobType);
         addCandidate(candidates, stripped);
+        addCandidate(candidates, PORTRAIT_ALIASES.get(stripped));
+        PORTRAIT_ALIASES.forEach((oldId, newId) -> {
+            if (newId.equalsIgnoreCase(stripped)) addCandidate(candidates, oldId);
+        });
         addCandidate(candidates, stripped.replaceFirst("(?i)^drop_", ""));
         addCandidate(candidates, stripped.replaceFirst("(?i)^drops_", ""));
 

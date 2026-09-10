@@ -75,7 +75,11 @@ public class HytemsPlugin extends JavaPlugin {
         this.getEventRegistry().register(LoadedAssetsEvent.class, ItemDropList.class, this::onDropListAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, WorldNPCSpawn.class, this::onWorldNpcSpawnAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, BeaconNPCSpawn.class, this::onBeaconNpcSpawnAssetLoad);
-        this.getEventRegistry().registerGlobal(AllNPCsLoadedEvent.class, event -> MobMetadataRegistry.markNpcDataDirty());
+        this.getEventRegistry().registerGlobal(AllNPCsLoadedEvent.class, event -> {
+            MobMetadataRegistry.markNpcDataDirty();
+            this.getLogger().at(Level.INFO).log("Discovered %d mobs and linked %d NPC drop lists for Hytems",
+                    MobMetadataRegistry.knownMobIds().size(), MobMetadataRegistry.mappedDropListCount());
+        });
 
         this.getEventRegistry().register(PlayerConnectEvent.class, event -> {
             playerDataManager.loadData(event.getPlayerRef());
@@ -128,6 +132,9 @@ public class HytemsPlugin extends JavaPlugin {
 
     private void onItemAssetLoad(LoadedAssetsEvent<String, Item, DefaultAssetMap<String, Item>> event) {
         ITEMS = event.getAssetMap().getAssetMap();
+        ItemSearchService.invalidateAll();
+        ItemUiSupport.invalidateCaches();
+        MobMetadataRegistry.invalidateAll();
 
         this.getLogger().at(Level.INFO).log("Loaded %d items for Hytems browser", ITEMS.size());
     }
@@ -135,6 +142,7 @@ public class HytemsPlugin extends JavaPlugin {
     private void onRecipeAssetLoad(LoadedAssetsEvent<String, CraftingRecipe, DefaultAssetMap<String, CraftingRecipe>> event) {
         Map<String, CraftingRecipe> recipes = event.getAssetMap().getAssetMap();
         recipeManager.initialize(recipes);
+        ItemSearchService.invalidateAll();
 
         this.getLogger().at(Level.INFO).log("Loaded %d recipes for Hytems browser", recipeManager.getTotalRecipeCount());
     }
@@ -143,7 +151,8 @@ public class HytemsPlugin extends JavaPlugin {
         Map<String, ItemDropList> dropLists = event.getAssetMap().getAssetMap();
         if (dropLists != null && !dropLists.isEmpty()) {
             dropListRegistry.reload(dropLists);
-            PrefabDropMetadataRegistry.startAsyncPreload();
+            PrefabDropMetadataRegistry.invalidate();
+            MobMetadataRegistry.invalidateAll();
             this.getLogger().at(Level.INFO).log("Loaded %d drop lists for Hytems browser", dropListRegistry.size());
         } else {
             this.getLogger().at(Level.WARNING).log("[Hytems] No drop lists in LoadedAssetsEvent");

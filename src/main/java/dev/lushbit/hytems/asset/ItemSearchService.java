@@ -30,7 +30,7 @@ public final class ItemSearchService {
             "weapon", "weapons", "tool", "tools", "armor", "armour",
             "block", "blocks", "food", "consumable", "consumables",
             "material", "materials", "resource", "resources",
-            "furniture", "craftable", "ingredient", "ingredients"
+            "furniture", "craftable", "ingredient", "ingredients", "rune", "runes"
     ));
     private static final Set<String> HIDDEN_QUALITIES = Set.of("Developer", "Tool", "Technical");
     private static final Map<String, List<Map.Entry<String, Item>>> BASE_RESULTS_CACHE = new ConcurrentHashMap<>();
@@ -46,6 +46,8 @@ public final class ItemSearchService {
     private final Map<String, ModQuery> modQueryCache = new HashMap<>();
     private List<String> nativeCategoryPaths = List.of();
     private int indexedItemCount = -1;
+    private long indexedGeneration = -1;
+    private static volatile long assetGeneration;
 
     public ItemSearchService(@Nonnull PlayerRef playerRef) {
         this.playerRef = playerRef;
@@ -68,6 +70,12 @@ public final class ItemSearchService {
                 .filter(entry -> matchesQuery(entry, searchQuery))
                 .sorted((a, b) -> translatedName(a).compareToIgnoreCase(translatedName(b)))
                 .collect(Collectors.toList());
+    }
+
+    public static void invalidateAll() {
+        assetGeneration++;
+        BASE_RESULTS_CACHE.clear();
+        BASE_RESULTS_ITEM_COUNT.clear();
     }
 
     public List<Map.Entry<String, Item>> filter(@Nonnull Map<String, Item> items, @Nonnull String searchQuery,
@@ -134,8 +142,8 @@ public final class ItemSearchService {
     private boolean matchesText(Map.Entry<String, Item> entry, String lowerQuery) {
         if (entry.getValue() == null) return false;
 
-        return entry.getKey().toLowerCase(Locale.ENGLISH).contains(lowerQuery)
-                || translatedName(entry).toLowerCase(Locale.ENGLISH).contains(lowerQuery);
+        return SearchText.matches(entry.getKey(), lowerQuery)
+                || SearchText.matches(translatedName(entry), lowerQuery);
     }
 
     private boolean isFromTodoBench(String itemId) {
@@ -176,6 +184,9 @@ public final class ItemSearchService {
                 case "ingredient":
                 case "ingredients":
                     return itemId.contains("Ingredient");
+                case "rune":
+                case "runes":
+                    return item.getAbility() != null || itemId.toLowerCase(Locale.ENGLISH).startsWith("rune_");
                 default:
                     return itemId.toLowerCase(Locale.ENGLISH).contains(category) || hasComponent(item, category);
             }
@@ -203,7 +214,7 @@ public final class ItemSearchService {
     }
 
     private void ensureSearchIndexes(@Nonnull Map<String, Item> items) {
-        if (indexedItemCount == items.size()) return;
+        if (indexedItemCount == items.size() && indexedGeneration == assetGeneration) return;
 
         nativeCategoryAliases.clear();
         modItemsByPack.clear();
@@ -245,6 +256,7 @@ public final class ItemSearchService {
             if (!normalizedDisplayName.isEmpty()) modSearchAliases.add(normalizedDisplayName);
         }
         indexedItemCount = items.size();
+        indexedGeneration = assetGeneration;
     }
 
     private String resolveNativeCategoryPath(String category) {
@@ -309,6 +321,9 @@ public final class ItemSearchService {
         if (category == null || category.isEmpty() || BrowserFilterSettings.ALL.equalsIgnoreCase(category)) return true;
         if (item == null) return false;
         String normalized = category.replaceFirst("(?i)^category:", "").toLowerCase(Locale.ENGLISH);
+        if (normalized.equals("rune") || normalized.equals("runes")) {
+            return item.getAbility() != null;
+        }
         if (item.getCategories() != null) {
             for (String itemCategory : item.getCategories()) {
                 if (itemCategory != null && (itemCategory.equalsIgnoreCase(normalized)

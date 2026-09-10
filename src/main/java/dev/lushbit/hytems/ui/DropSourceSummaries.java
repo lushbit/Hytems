@@ -1,6 +1,7 @@
 package dev.lushbit.hytems.ui;
 import dev.lushbit.hytems.asset.DropSourceParser;
 import dev.lushbit.hytems.asset.PrefabDropMetadataRegistry;
+import dev.lushbit.hytems.asset.MobMetadataRegistry;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
@@ -46,26 +47,27 @@ public final class DropSourceSummaries {
         }
 
         for (String dropSourceId : dropSources) {
-            DropSourceParser.ParsedDropSource parsed = DropSourceParser.parse(dropSourceId);
-            String displayName = displayName(parsed);
-            String groupingKey = groupingKey(parsed, displayName);
+            for (DropSourceParser.ParsedDropSource parsed : expandDropSource(dropSourceId)) {
+                String displayName = displayName(parsed);
+                String groupingKey = groupingKey(parsed, displayName);
 
-            DisplayDropSource summary = summaries.computeIfAbsent(
-                    groupingKey,
-                    ignored -> new DisplayDropSource(parsed.kind, displayName, parsed)
-            );
+                DisplayDropSource summary = summaries.computeIfAbsent(
+                        groupingKey,
+                        ignored -> new DisplayDropSource(parsed.kind, displayName, parsed)
+                );
 
-            if (parsed.kind == DropSourceParser.DropSourceKind.STRUCTURE) {
-                PrefabDropMetadataRegistry.PrefabDropMetadata metadata = PrefabDropMetadataRegistry.lookup(parsed.rawName);
-                if (metadata.hasStructureLabels()) {
-                    summary.structureLabels.addAll(metadata.structureLabels());
+                if (parsed.kind == DropSourceParser.DropSourceKind.STRUCTURE) {
+                    PrefabDropMetadataRegistry.PrefabDropMetadata metadata = PrefabDropMetadataRegistry.lookup(parsed.rawName);
+                    if (metadata.hasStructureLabels()) {
+                        summary.structureLabels.addAll(metadata.structureLabels());
+                    }
                 }
-            }
 
-            if (parsed.hasZoneContext()) {
-                summary.zoneData.computeIfAbsent(parsed.zone, ignored -> new ArrayList<>());
-                if (parsed.tier != null) {
-                    summary.zoneData.get(parsed.zone).add(parsed.tier);
+                if (parsed.hasZoneContext()) {
+                    summary.zoneData.computeIfAbsent(parsed.zone, ignored -> new ArrayList<>());
+                    if (parsed.tier != null) {
+                        summary.zoneData.get(parsed.zone).add(parsed.tier);
+                    }
                 }
             }
         }
@@ -79,6 +81,29 @@ public final class DropSourceSummaries {
             return String.CASE_INSENSITIVE_ORDER.compare(a.displayName, b.displayName);
         });
         return ordered;
+    }
+
+    private static List<DropSourceParser.ParsedDropSource> expandDropSource(String dropSourceId) {
+        DropSourceParser.ParsedDropSource parsed = DropSourceParser.parse(dropSourceId);
+        List<String> actualMobs = MobMetadataRegistry.mobIdsForDropList(dropSourceId);
+        if (actualMobs.isEmpty()) return List.of(parsed);
+
+        List<DropSourceParser.ParsedDropSource> expanded = new ArrayList<>();
+        for (String mobId : actualMobs) {
+            DropSourceParser.ParsedDropSource mob = new DropSourceParser.ParsedDropSource();
+            mob.kind = DropSourceParser.DropSourceKind.MOB;
+            mob.rawId = parsed.rawId;
+            mob.normalizedId = parsed.normalizedId;
+            mob.rawName = parsed.rawName;
+            mob.topLevelCategory = parsed.topLevelCategory;
+            mob.subCategory = parsed.subCategory;
+            mob.sourceName = mobId;
+            mob.mobType = mobId;
+            mob.zone = parsed.zone;
+            mob.tier = parsed.tier;
+            expanded.add(mob);
+        }
+        return expanded;
     }
 
     private static int kindOrder(DropSourceParser.DropSourceKind kind) {

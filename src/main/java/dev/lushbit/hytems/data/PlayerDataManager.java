@@ -20,6 +20,7 @@ public class PlayerDataManager {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     
     private final Map<UUID, LinkedHashSet<String>> playerPinnedItems = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<String, Integer>> playerPinnedRecipeIndexes = new ConcurrentHashMap<>();
     private final Map<UUID, LinkedHashSet<String>> playerFavoriteItems = new ConcurrentHashMap<>();
     private final Map<UUID, LinkedList<String>> playerSearchHistoryItems = new ConcurrentHashMap<>();
     private final Map<UUID, String> playerLastViewedItems = new ConcurrentHashMap<>();
@@ -50,6 +51,18 @@ public class PlayerDataManager {
                 if (data != null) {
                     if (data.pinnedItems != null && !data.pinnedItems.isEmpty()) {
                         playerPinnedItems.put(uuid, new LinkedHashSet<>(data.pinnedItems));
+                    }
+                    if (data.pinnedRecipeIndexes != null && data.pinnedItems != null) {
+                        Map<String, Integer> recipeIndexes = new ConcurrentHashMap<>();
+                        for (Map.Entry<String, Integer> entry : data.pinnedRecipeIndexes.entrySet()) {
+                            if (entry.getKey() != null && data.pinnedItems.contains(entry.getKey())
+                                    && entry.getValue() != null && entry.getValue() >= 0) {
+                                recipeIndexes.put(entry.getKey(), entry.getValue());
+                            }
+                        }
+                        if (!recipeIndexes.isEmpty()) {
+                            playerPinnedRecipeIndexes.put(uuid, recipeIndexes);
+                        }
                     }
                     if (data.favoriteItems != null && !data.favoriteItems.isEmpty()) {
                         playerFavoriteItems.put(uuid, new LinkedHashSet<>(data.favoriteItems));
@@ -98,6 +111,7 @@ public class PlayerDataManager {
         if (!loadedPlayers.contains(uuid)) return; // CRITICAL: Don't save if not loaded
 
         LinkedHashSet<String> pinned = playerPinnedItems.get(uuid);
+        Map<String, Integer> pinnedRecipeIndexes = playerPinnedRecipeIndexes.get(uuid);
         LinkedHashSet<String> favorites = playerFavoriteItems.get(uuid);
         LinkedList<String> searchHistory = playerSearchHistoryItems.get(uuid);
         String lastViewedItem = playerLastViewedItems.get(uuid);
@@ -122,6 +136,15 @@ public class PlayerDataManager {
 
         PlayerData data = new PlayerData();
         data.pinnedItems = pinned != null ? new ArrayList<>(pinned) : new ArrayList<>();
+        data.pinnedRecipeIndexes = new LinkedHashMap<>();
+        if (pinned != null && pinnedRecipeIndexes != null) {
+            for (String itemId : pinned) {
+                Integer recipeIndex = pinnedRecipeIndexes.get(itemId);
+                if (recipeIndex != null && recipeIndex > 0) {
+                    data.pinnedRecipeIndexes.put(itemId, recipeIndex);
+                }
+            }
+        }
         data.favoriteItems = favorites != null ? new ArrayList<>(favorites) : new ArrayList<>();
         data.searchHistoryItems = searchHistory != null ? new ArrayList<>(searchHistory) : new ArrayList<>();
         data.lastViewedItem = lastViewedItem;
@@ -141,9 +164,29 @@ public class PlayerDataManager {
     }
     
     public boolean togglePin(PlayerRef playerRef, String itemId) {
+        return togglePin(playerRef, itemId, 0);
+    }
+
+    public boolean togglePin(PlayerRef playerRef, String itemId, int recipeIndex) {
+        UUID uuid = playerRef.getUuid();
+        boolean wasPinned = isPinned(playerRef, itemId);
         boolean result = toggleItem(playerRef, itemId, playerPinnedItems, MAX_PINNED_ITEMS);
+        if (result) {
+            playerPinnedRecipeIndexes.computeIfAbsent(uuid, ignored -> new ConcurrentHashMap<>())
+                    .put(itemId, Math.max(0, recipeIndex));
+        } else if (wasPinned) {
+            Map<String, Integer> recipeIndexes = playerPinnedRecipeIndexes.get(uuid);
+            if (recipeIndexes != null) {
+                recipeIndexes.remove(itemId);
+            }
+        }
         saveData(playerRef);
         return result;
+    }
+
+    public int getPinnedRecipeIndex(PlayerRef playerRef, String itemId) {
+        Map<String, Integer> recipeIndexes = playerPinnedRecipeIndexes.get(playerRef.getUuid());
+        return recipeIndexes != null ? Math.max(0, recipeIndexes.getOrDefault(itemId, 0)) : 0;
     }
     
     public boolean isPinned(PlayerRef playerRef, String itemId) {
@@ -157,6 +200,11 @@ public class PlayerDataManager {
     
     public void setPinnedItems(PlayerRef playerRef, Collection<String> items) {
         setItems(playerRef, items, playerPinnedItems);
+        Map<String, Integer> recipeIndexes = playerPinnedRecipeIndexes.get(playerRef.getUuid());
+        if (recipeIndexes != null) {
+            recipeIndexes.keySet().retainAll(items);
+        }
+        saveData(playerRef);
     }
 
     public boolean toggleFavorite(PlayerRef playerRef, String itemId) {
@@ -258,6 +306,10 @@ public class PlayerDataManager {
         LinkedHashSet<String> pinnedItems = playerPinnedItems.get(uuid);
         if (pinnedItems != null && pinnedItems.contains(itemId)) {
             pinnedItems.remove(itemId);
+            Map<String, Integer> recipeIndexes = playerPinnedRecipeIndexes.get(uuid);
+            if (recipeIndexes != null) {
+                recipeIndexes.remove(itemId);
+            }
             saveData(playerRef);
             return true;
         }
@@ -328,6 +380,7 @@ public class PlayerDataManager {
         UUID uuid = playerRef.getUuid();
         saveDataForUuid(uuid);
         playerPinnedItems.remove(uuid);
+        playerPinnedRecipeIndexes.remove(uuid);
         playerFavoriteItems.remove(uuid);
         playerSearchHistoryItems.remove(uuid);
         playerLastViewedItems.remove(uuid);
@@ -339,6 +392,7 @@ public class PlayerDataManager {
 
     private static class PlayerData {
         List<String> pinnedItems;
+        Map<String, Integer> pinnedRecipeIndexes;
         List<String> favoriteItems;
         List<String> searchHistoryItems;
         String lastViewedItem;

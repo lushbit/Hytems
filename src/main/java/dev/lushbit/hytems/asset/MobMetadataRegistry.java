@@ -32,7 +32,6 @@ import javax.annotation.Nonnull;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -49,18 +48,19 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 public final class MobMetadataRegistry {
     private static final MobMetadata EMPTY = new MobMetadata("", "Unknown", null,
             Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
     private static final String MISSING_ITEM_ID = "__HYTEMS_MISSING_ITEM__";
-    private static final String PORTRAIT_RESOURCE_DIR = "Common/UI/Custom/hytems/ui/Assets/MobPortraits/";
-    private static final Path DEV_PORTRAIT_DIR = Path.of("src/main/resources").resolve(PORTRAIT_RESOURCE_DIR);
     private static final Map<String, MobMetadata> CACHE = new ConcurrentHashMap<>();
     private static final Map<String, String> ITEM_ID_LOOKUP = new ConcurrentHashMap<>();
     private static final Set<String> LOADING = ConcurrentHashMap.newKeySet();
+    private static final Map<String, String> MOB_ID_ALIASES = Map.of(
+            "spectrevoid", "Void_Spectre",
+            "spawnvoid", "Void_Spawn_Entombed"
+    );
+    private static volatile Map<String, List<String>> mobsByDropList = Collections.emptyMap();
     private static volatile Map<String, WorldNPCSpawn> worldNpcSpawns = Collections.emptyMap();
     private static volatile Map<String, BeaconNPCSpawn> beaconNpcSpawns = Collections.emptyMap();
 
@@ -73,7 +73,7 @@ public final class MobMetadataRegistry {
             return EMPTY;
         }
 
-        String normalized = normalizeId(mobId);
+        String normalized = canonicalMobId(mobId);
         MobMetadata cached = CACHE.get(normalized);
         if (cached != null) {
             return cached;
@@ -87,7 +87,7 @@ public final class MobMetadataRegistry {
             return;
         }
 
-        String normalized = normalizeId(mobId);
+        String normalized = canonicalMobId(mobId);
         if (CACHE.containsKey(normalized)) {
             return;
         }
@@ -96,9 +96,16 @@ public final class MobMetadataRegistry {
     }
 
     public static void markNpcDataDirty() {
+        mobsByDropList = Collections.emptyMap();
         for (String mobId : new ArrayList<>(CACHE.keySet())) {
             ensureLoadedAsync(mobId);
         }
+    }
+
+    public static void invalidateAll() {
+        CACHE.clear();
+        ITEM_ID_LOOKUP.clear();
+        mobsByDropList = Collections.emptyMap();
     }
 
     public static void reloadWorldNpcSpawns(Map<String, WorldNPCSpawn> spawns) {
@@ -117,8 +124,6 @@ public final class MobMetadataRegistry {
         collectBuilderMobIds(ids);
         collectSpawnMobIds(ids, currentWorldNpcSpawns());
         collectSpawnMobIds(ids, currentBeaconNpcSpawns());
-        collectPortraitMobIds(ids);
-
         List<String> sorted = new ArrayList<>(ids);
         sorted.removeIf(MobMetadataRegistry::shouldHideFromMobBrowser);
         sorted.sort(Comparator.comparing(TextFormatters::mobName, String.CASE_INSENSITIVE_ORDER)
@@ -138,6 +143,14 @@ public final class MobMetadataRegistry {
 
         // Wander_Circle / Wander_Rect / Wander_Simple are movement components, not mobs.
         if (normalized.startsWith("wander")) {
+            return true;
+        }
+
+        // Script helpers and difficulty-specific hunt roles are implementation details, not
+        // distinct bestiary entries. Their data is driven by the hunt/encounter itself.
+        if (normalized.endsWith("marker")
+                || normalized.matches("bearvoidtakend[123]")
+                || normalized.equals("bearvoidtakententacle")) {
             return true;
         }
 
@@ -249,73 +262,41 @@ public final class MobMetadataRegistry {
         }
     }
 
-    /**
-     * Adds mobs that ship a portrait but have no NPC role of their own. Reads the plugin's own
-     * code source so this behaves the same on a real server (jar) as in development (classes
-     * directory) - a plain relative source path only ever resolved in the dev workspace.
-     */
-    private static void collectPortraitMobIds(Set<String> ids) {
-        for (String name : listPortraitNames()) {
-            if (!name.equalsIgnoreCase("Construction_Sign")) {
-                addMobId(ids, name);
-            }
-        }
-    }
-
-    private static List<String> listPortraitNames() {
-        List<String> names = new ArrayList<>();
-        try {
-            URL location = MobMetadataRegistry.class.getProtectionDomain().getCodeSource().getLocation();
-            Path source = Path.of(location.toURI());
-
-            if (Files.isRegularFile(source)) {
-                try (ZipFile zip = new ZipFile(source.toFile())) {
-                    zip.stream()
-                            .map(ZipEntry::getName)
-                            .filter(name -> name.startsWith(PORTRAIT_RESOURCE_DIR))
-                            .map(name -> name.substring(PORTRAIT_RESOURCE_DIR.length()))
-                            .forEach(name -> addPortraitName(names, name));
-                }
-            } else if (Files.isDirectory(source)) {
-                collectPortraitNamesFrom(source.resolve(PORTRAIT_RESOURCE_DIR), names);
-            }
-        } catch (Exception ignored) {
-        }
-
-        if (names.isEmpty()) {
-            collectPortraitNamesFrom(DEV_PORTRAIT_DIR, names);
-        }
-        return names;
-    }
-
-    private static void collectPortraitNamesFrom(Path directory, List<String> names) {
-        if (directory == null || !Files.isDirectory(directory)) {
-            return;
-        }
-        try (var stream = Files.list(directory)) {
-            stream.filter(Files::isRegularFile)
-                    .map(path -> path.getFileName().toString())
-                    .forEach(name -> addPortraitName(names, name));
-        } catch (Exception ignored) {
-        }
-    }
-
-    private static void addPortraitName(List<String> names, String fileName) {
-        if (fileName == null || fileName.indexOf('/') >= 0
-                || !fileName.toLowerCase(Locale.ENGLISH).endsWith(".png")) {
-            return;
-        }
-        String name = fileName.substring(0, fileName.length() - 4);
-        if (!name.isEmpty() && !names.contains(name)) {
-            names.add(name);
-        }
-    }
-
     private static void addMobId(Set<String> ids, String value) {
-        String id = normalizeId(value);
+        String id = canonicalMobId(value);
         if (!id.isEmpty()) {
             ids.add(id);
         }
+    }
+
+    @Nonnull
+    public static List<String> mobIdsForDropList(String dropListId) {
+        if (dropListId == null || dropListId.isEmpty()) return Collections.emptyList();
+        Map<String, List<String>> index = mobsByDropList;
+        if (index.isEmpty()) {
+            synchronized (MobMetadataRegistry.class) {
+                if (mobsByDropList.isEmpty()) mobsByDropList = buildDropListMobIndex();
+                index = mobsByDropList;
+            }
+        }
+        return index.getOrDefault(normalizeDropListKey(dropListId), Collections.emptyList());
+    }
+
+    public static int mappedDropListCount() {
+        mobIdsForDropList("__initialize__");
+        return mobsByDropList.size();
+    }
+
+    private static Map<String, List<String>> buildDropListMobIndex() {
+        Map<String, List<String>> index = new LinkedHashMap<>();
+        for (String mobId : knownMobIds()) {
+            BuilderInfo info = tryGetBuilderInfo(mobId);
+            String dropListId = resolveDropListId(mobId, info, info != null ? info.getBuilder() : null,
+                    loadRoleConfig(info));
+            index.computeIfAbsent(normalizeDropListKey(dropListId), ignored -> new ArrayList<>()).add(mobId);
+        }
+        index.replaceAll((key, value) -> Collections.unmodifiableList(value));
+        return Collections.unmodifiableMap(index);
     }
 
     private static MobMetadata load(String mobId) {
@@ -328,11 +309,7 @@ public final class MobMetadataRegistry {
         addBuilderAttributes(attributes, builder);
         addModelAttributes(attributes, builder);
 
-        String dropListId = firstNonBlank(jsonString(roleConfig, "DropList"),
-                stringValue(readAny(builder, "dropList", "dropListId", "drops", "droplist")));
-        if (dropListId == null || dropListId.isEmpty()) {
-            dropListId = "Drop_" + mobId;
-        }
+        String dropListId = resolveDropListId(mobId, builderInfo, builder, roleConfig);
         addAttribute(attributes, "DropList", TextFormatters.dropSourceName(dropListId));
 
         List<DropEntry> drops = loadDrops(dropListId);
@@ -340,6 +317,35 @@ public final class MobMetadataRegistry {
         List<SpawnGroup> spawns = loadSpawns(mobId);
 
         return new MobMetadata(mobId, TextFormatters.mobName(mobId), MobPortraitPath(mobId), dedupeAttributes(attributes), drops, variants, spawns);
+    }
+
+    private static String resolveDropListId(String mobId, BuilderInfo info, Object builder, JsonObject roleConfig) {
+        String configured = firstNonBlank(jsonString(roleConfig, "DropList"),
+                stringValue(readAny(builder, "dropList", "dropListId", "drops", "droplist")));
+        if (configured != null && !configured.isEmpty()) return configured;
+
+        // Role files frequently only reference a template. Read that template's authored
+        // DropList directly when the runtime builder exposes it through a ValueHolder.
+        String referenced = referencedTemplateId(info);
+        if (referenced != null) {
+            BuilderInfo referencedInfo = tryGetBuilderInfo(referenced);
+            JsonObject referencedConfig = loadRoleConfig(referencedInfo);
+            configured = firstNonBlank(jsonString(referencedConfig, "DropList"),
+                    stringValue(readAny(referencedInfo != null ? referencedInfo.getBuilder() : null,
+                            "dropList", "dropListId", "drops", "droplist")));
+            if (configured != null && !configured.isEmpty()) return configured;
+        }
+        return "Drop_" + mobId;
+    }
+
+    private static String referencedTemplateId(BuilderInfo info) {
+        if (info == null || info.getPath() == null || !Files.isRegularFile(info.getPath())) return null;
+        try {
+            JsonObject raw = JsonParser.parseString(Files.readString(info.getPath(), StandardCharsets.UTF_8)).getAsJsonObject();
+            return jsonPrimitiveString(raw.get("Reference"));
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private static void addFamilyAttributes(List<AttributeRow> rows, String mobId, BuilderInfo info) {
@@ -422,7 +428,7 @@ public final class MobMetadataRegistry {
         }
 
         Map<String, DropAccumulator> merged = new LinkedHashMap<>();
-        extractDrops(list.getContainer(), merged, new HashSet<>(), 1.0d);
+        extractDrops(list.getContainer(), merged, new HashSet<>(), 1.0d, true);
         List<DropEntry> drops = new ArrayList<>();
         for (DropAccumulator acc : merged.values()) {
             String known = findKnownItemId(acc.itemId);
@@ -441,9 +447,10 @@ public final class MobMetadataRegistry {
                 || normalized.contains("goblinscrapper");
     }
 
-    private static void extractDrops(ItemDropContainer container, Map<String, DropAccumulator> out, Set<String> seenDropLists, double chance) {
+    private static void extractDrops(ItemDropContainer container, Map<String, DropAccumulator> out,
+                                     Set<String> seenDropLists, double chance, boolean applyOwnWeight) {
         if (container == null) return;
-        double weightedChance = chance * normalizeChanceWeight(container.getWeight());
+        double weightedChance = chance * (applyOwnWeight ? normalizeChanceWeight(container.getWeight()) : 1.0d);
         if (container instanceof SingleItemDropContainer single) {
             addDrop(out, single.getDrop(), weightedChance);
             return;
@@ -451,18 +458,33 @@ public final class MobMetadataRegistry {
         if (container instanceof MultipleItemDropContainer) {
             Object children = readField(container, "containers");
             forEachArrayOrCollection(children, child -> {
-                if (child instanceof ItemDropContainer childContainer) extractDrops(childContainer, out, seenDropLists, weightedChance);
+                if (!(child instanceof ItemDropContainer childContainer)) return;
+                Map<String, DropAccumulator> childDrops = new LinkedHashMap<>();
+                extractDrops(childContainer, childDrops, new HashSet<>(seenDropLists), 1.0d, true);
+                int minCount = positiveInt(readField(container, "minCount"), 1);
+                int maxCount = Math.max(minCount, positiveInt(readField(container, "maxCount"), minCount));
+                mergeRepeatedDrops(out, childDrops, weightedChance, minCount, maxCount);
             });
             return;
         }
         if (container instanceof ChoiceItemDropContainer) {
             Object weighted = readField(container, "containers");
             if (weighted instanceof IWeightedMap<?> map) {
+                List<WeightedContainer> choices = new ArrayList<>();
                 map.forEachEntry((child, weight) -> {
-                    if (child instanceof ItemDropContainer childContainer) {
-                        extractDrops(childContainer, out, seenDropLists, weightedChance * normalizeChanceWeight(weight));
+                    if (child instanceof ItemDropContainer childContainer && weight > 0) {
+                        choices.add(new WeightedContainer(childContainer, weight));
                     }
                 });
+                double totalWeight = choices.stream().mapToDouble(WeightedContainer::weight).sum();
+                int rollsMin = positiveInt(readField(container, "rollsMin"), 1);
+                int rollsMax = Math.max(rollsMin, positiveInt(readField(container, "rollsMax"), rollsMin));
+                for (WeightedContainer choice : choices) {
+                    Map<String, DropAccumulator> childDrops = new LinkedHashMap<>();
+                    extractDrops(choice.container(), childDrops, new HashSet<>(seenDropLists), 1.0d, false);
+                    double share = totalWeight <= 0 ? 0 : choice.weight() / totalWeight;
+                    mergeChoiceDrops(out, childDrops, weightedChance, share, rollsMin, rollsMax);
+                }
             }
             return;
         }
@@ -470,7 +492,8 @@ public final class MobMetadataRegistry {
             String referenced = stringValue(readField(container, "droplistId"));
             if (referenced != null && seenDropLists.add(referenced)) {
                 ItemDropList referencedList = findDropList(referenced);
-                if (referencedList != null) extractDrops(referencedList.getContainer(), out, seenDropLists, weightedChance);
+                if (referencedList != null) extractDrops(referencedList.getContainer(), out, seenDropLists, weightedChance, true);
+                seenDropLists.remove(referenced);
             }
             return;
         }
@@ -496,7 +519,47 @@ public final class MobMetadataRegistry {
         DropAccumulator acc = out.computeIfAbsent(id, DropAccumulator::new);
         acc.min = Math.min(acc.min, drop.getQuantityMin());
         acc.max = Math.max(acc.max, drop.getQuantityMax());
-        acc.chance = Math.max(acc.chance, chance);
+        acc.chance = combineChance(acc.chance, chance);
+    }
+
+    private static void mergeRepeatedDrops(Map<String, DropAccumulator> out, Map<String, DropAccumulator> source,
+                                           double parentChance, int minCount, int maxCount) {
+        for (DropAccumulator child : source.values()) {
+            DropAccumulator target = out.computeIfAbsent(child.itemId, DropAccumulator::new);
+            target.min = Math.min(target.min, child.min * minCount);
+            target.max = Math.max(target.max, child.max * maxCount);
+            target.chance = combineChance(target.chance,
+                    parentChance * averageRepeatedChance(child.chance, minCount, maxCount));
+        }
+    }
+
+    private static void mergeChoiceDrops(Map<String, DropAccumulator> out, Map<String, DropAccumulator> source,
+                                         double parentChance, double choiceShare, int rollsMin, int rollsMax) {
+        for (DropAccumulator child : source.values()) {
+            DropAccumulator target = out.computeIfAbsent(child.itemId, DropAccumulator::new);
+            target.min = Math.min(target.min, child.min);
+            target.max = Math.max(target.max, child.max * rollsMax);
+            double chancePerRoll = choiceShare * child.chance;
+            target.chance = combineChance(target.chance,
+                    parentChance * averageRepeatedChance(chancePerRoll, rollsMin, rollsMax));
+        }
+    }
+
+    static double averageRepeatedChance(double chance, int minRolls, int maxRolls) {
+        if (chance <= 0) return 0;
+        double total = 0;
+        for (int rolls = minRolls; rolls <= maxRolls; rolls++) {
+            total += 1.0d - Math.pow(1.0d - Math.min(1.0d, chance), rolls);
+        }
+        return total / Math.max(1, maxRolls - minRolls + 1);
+    }
+
+    static double combineChance(double existing, double additional) {
+        return 1.0d - ((1.0d - Math.min(1.0d, existing)) * (1.0d - Math.min(1.0d, additional)));
+    }
+
+    private static int positiveInt(Object value, int fallback) {
+        return value instanceof Number number && number.intValue() > 0 ? number.intValue() : fallback;
     }
 
     private static List<VariantEntry> loadVariants(Object builder, JsonObject roleConfig) {
@@ -611,10 +674,35 @@ public final class MobMetadataRegistry {
                         aggregate.structures.add(beaconStructure);
                     }
                 }
+                addSpawnConditions(aggregate.conditions, spawn);
             }
         }
         for (SpawnHabitatAggregate aggregate : aggregates.values()) {
             entries.add(new SpawnEntry(aggregate.zone(), aggregate.detailLines()));
+        }
+    }
+
+    private static void addSpawnConditions(Set<String> conditions, NPCSpawn spawn) {
+        if (spawn == null) return;
+        double[] lightRange = spawn.getLightRange(LightType.Light);
+        if (lightRange != null && lightRange.length > 0
+                && !java.util.Arrays.equals(lightRange, NPCSpawn.FULL_LIGHT_RANGE)) {
+            conditions.add("Light level: " + range(lightRange));
+        }
+
+        double[] dayTime = spawn.getDayTimeRange();
+        if (dayTime != null && dayTime.length > 0
+                && !java.util.Arrays.equals(dayTime, NPCSpawn.DEFAULT_DAY_TIME_RANGE)) {
+            conditions.add("Time: " + formatDayTimeRange(dayTime));
+        }
+        if (spawn instanceof BeaconNPCSpawn beacon) {
+            if (beacon.getWeatherIds() != null && beacon.getWeatherIds().length > 0) {
+                conditions.add("Weather: " + joinHumanized(beacon.getWeatherIds()));
+            }
+            int[] yRange = beacon.getYRange();
+            if (yRange != null && yRange.length > 0 && !java.util.Arrays.equals(yRange, BeaconNPCSpawn.DEFAULT_Y_RANGE)) {
+                conditions.add("Height: " + range(yRange));
+            }
         }
     }
 
@@ -1110,20 +1198,25 @@ public final class MobMetadataRegistry {
         return seconds < 60 ? seconds + "s" : (seconds / 60) + "m";
     }
 
+    static String formatDayTimeRange(double[] values) {
+        if (values == null || values.length == 0) return null;
+        if (values.length == 1) return formatClockTime(values[0]);
+        return formatClockTime(values[0]) + "-" + formatClockTime(values[values.length - 1]);
+    }
+
+    private static String formatClockTime(double value) {
+        double hours = Math.abs(value) <= 1.0d ? value * NPCSpawn.HOURS_PER_DAY : value;
+        int totalMinutes = (int) Math.round(hours * 60.0d);
+        if (totalMinutes == (int) NPCSpawn.HOURS_PER_DAY * 60) return "24:00";
+        totalMinutes = Math.floorMod(totalMinutes, (int) NPCSpawn.HOURS_PER_DAY * 60);
+        return String.format(Locale.ENGLISH, "%02d:%02d", totalMinutes / 60, totalMinutes % 60);
+    }
+
     private static String joinHumanized(String[] values) {
         if (values == null || values.length == 0) return null;
         List<String> labels = new ArrayList<>();
         for (String value : values) labels.add(TextFormatters.dropSourceName(value));
         return String.join(", ", labels);
-    }
-
-    private static String formatLightRanges(NPCSpawn spawn) {
-        List<String> parts = new ArrayList<>();
-        for (LightType type : LightType.values()) {
-            String range = range(spawn.getLightRange(type));
-            if (range != null && !"0-1".equals(range)) parts.add(TextFormatters.dropSourceName(type.name()) + " " + range);
-        }
-        return String.join(", ", parts);
     }
 
     private static String simpleClassName(Object value) {
@@ -1146,6 +1239,15 @@ public final class MobMetadataRegistry {
 
     private static String normalizeKey(String value) {
         return normalizeId(value).replaceAll("[^A-Za-z0-9]", "").toLowerCase(Locale.ENGLISH);
+    }
+
+    private static String canonicalMobId(String value) {
+        String id = normalizeId(value);
+        return MOB_ID_ALIASES.getOrDefault(normalizeKey(id), id);
+    }
+
+    private static String normalizeDropListKey(String value) {
+        return normalizeKey(value).replaceFirst("^drops?", "");
     }
 
     private static String capitalize(String value) {
@@ -1181,6 +1283,9 @@ public final class MobMetadataRegistry {
         }
     }
 
+    private record WeightedContainer(ItemDropContainer container, double weight) {
+    }
+
     public record MobMetadata(String mobId, String displayName, String portraitPath, List<AttributeRow> attributes,
                               List<DropEntry> drops, List<VariantEntry> variants, List<SpawnGroup> spawnGroups) {
     }
@@ -1209,6 +1314,7 @@ public final class MobMetadataRegistry {
         private final String region;
         private final Set<String> specialLabels = new LinkedHashSet<>();
         private final Set<String> structures = new LinkedHashSet<>();
+        private final Set<String> conditions = new LinkedHashSet<>();
 
         private SpawnHabitatAggregate(String zone, String biome, String region) {
             this.zone = zone;
@@ -1228,6 +1334,7 @@ public final class MobMetadataRegistry {
             if (!this.structures.isEmpty()) {
                 addDetail(details, "Structure", String.join(", ", this.structures));
             }
+            details.addAll(this.conditions);
             return dedupeDetailLines(details);
         }
     }

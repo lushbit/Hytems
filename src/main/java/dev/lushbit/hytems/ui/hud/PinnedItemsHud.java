@@ -67,7 +67,14 @@ public class PinnedItemsHud extends CustomUIHud {
         List<CraftingRecipe> recipes = HytemsPlugin.recipeManager.getCraftingRecipes(itemId);
         List<String> dropSources = HytemsPlugin.dropListRegistry.getDropSourcesForItem(itemId);
         
-        boolean hasRecipe = recipes != null && !recipes.isEmpty() && recipes.size() == 1;
+        List<CraftingRecipe> usableRecipes = recipes == null ? List.of() : recipes.stream()
+                .filter(recipe -> !RecipeUtils.hasSalvagerBench(recipe))
+                .toList();
+        int trackedRecipeIndex = usableRecipes.isEmpty() ? 0 : Math.floorMod(
+                playerDataManager.getPinnedRecipeIndex(playerRef, itemId), usableRecipes.size()
+        );
+        CraftingRecipe trackedRecipe = usableRecipes.isEmpty() ? null : usableRecipes.get(trackedRecipeIndex);
+        boolean hasRecipe = trackedRecipe != null;
         boolean hasDrops = dropSources != null && !dropSources.isEmpty();
         
         cmd.append("#PinnedItemsList", HytemsUiTemplates.PINNED_HUD_ITEM);
@@ -78,13 +85,15 @@ public class PinnedItemsHud extends CustomUIHud {
         cmd.set(selector + " #Header #ItemName.Text", translatedName);
         cmd.set(selector + " #Header #ItemName.Style.TextColor", rarityColor);
         cmd.set(selector + " #RecipeTitle.Visible", hasRecipe);
+        cmd.set(selector + " #RecipeTitle.Text", usableRecipes.size() > 1
+                ? "Recipe " + (trackedRecipeIndex + 1) + " of " + usableRecipes.size() + ":" : "Recipe:");
         cmd.set(selector + " #IngredientsList.Visible", hasRecipe);
         cmd.set(selector + " #DropsTitle.Visible", hasDrops);
         cmd.set(selector + " #DropsList.Visible", hasDrops);
         cmd.set(selector + " #EmptyInfo.Visible", !hasRecipe && !hasDrops);
         
         if (hasRecipe) {
-            displayRecipeIngredients(cmd, selector + " #IngredientsList", recipes.get(0));
+            displayRecipeIngredients(cmd, selector, trackedRecipe);
         }
         
         if (hasDrops) {
@@ -92,18 +101,20 @@ public class PinnedItemsHud extends CustomUIHud {
         }
     }
     
-    private void displayRecipeIngredients(@Nonnull UICommandBuilder cmd, @Nonnull String listSelector, @Nonnull CraftingRecipe recipe) {
+    private void displayRecipeIngredients(@Nonnull UICommandBuilder cmd, @Nonnull String itemSelector,
+                                          @Nonnull CraftingRecipe recipe) {
         try {
             List<MaterialQuantity> ingredients = RecipeUtils.getInputs(recipe);
-            if (ingredients == null || ingredients.isEmpty() || ingredients.size() > 4) {
+            if (ingredients == null || ingredients.isEmpty()) {
                 return;
             }
-            
+            String listSelector = itemSelector + " #IngredientsList";
             Map<String, Integer> playerInventory = PinnedItemsInventoryTracker.scanPlayerInventory(store, ref);
             
             int renderedIndex = 0;
             for (MaterialQuantity ingredient : ingredients) {
                 if (ingredient == null) continue;
+                if (renderedIndex >= 4) break;
                 
                 String ingredientId = ingredient.getItemId();
                 String resourceTypeId = ingredient.getResourceTypeId();
@@ -111,10 +122,7 @@ public class PinnedItemsHud extends CustomUIHud {
                 
                 if (ingredientId == null && resourceTypeId == null) continue;
                 
-                int inventoryCount = 0;
-                if (ingredientId != null) {
-                    inventoryCount = playerInventory.getOrDefault(ingredientId, 0);
-                }
+                int inventoryCount = PinnedItemsInventoryTracker.countIngredient(ingredient, playerInventory);
                 
                 String countColor = inventoryCount >= quantity ? "#4CAF50" : "#F44336";
                 String rowSelector = listSelector + "[" + renderedIndex + "]";
@@ -156,6 +164,10 @@ public class PinnedItemsHud extends CustomUIHud {
                     }
                 }
             }
+            int remaining = Math.max(0, ingredients.size() - renderedIndex);
+            cmd.set(itemSelector + " #MoreIngredientsLabel.Visible", remaining > 0);
+            cmd.set(itemSelector + " #MoreIngredientsLabel.Text", remaining > 0
+                    ? "+ " + remaining + " more ingredient" + (remaining == 1 ? "" : "s") + " in /h" : "");
         } catch (Exception e) {
             System.err.println("[Hytems] Error displaying ingredients: " + e.getMessage());
             e.printStackTrace();

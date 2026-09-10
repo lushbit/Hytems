@@ -11,6 +11,8 @@ import javax.annotation.Nonnull;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class ItemUiSupport {
     public static final String ICON_PIN_EMPTY = "hytems/textures/unpinned.png";
@@ -23,6 +25,9 @@ public final class ItemUiSupport {
     public static final String RARITY_DEFAULT_BACKGROUND = "hytems/textures/rarity_default.png";
     private static final Map<String, String> TRANSLATED_NAME_CACHE = new ConcurrentHashMap<>();
     private static final Set<String> WARMED_LANGUAGES = ConcurrentHashMap.newKeySet();
+    private static final Pattern ITEM_MARKUP = Pattern.compile(
+            "(?i)<item\\s+is\\s*=\\s*[\\\"']([^\\\"']+)[\\\"']\\s*/?>"
+    );
 
     private ItemUiSupport() {
     }
@@ -57,6 +62,49 @@ public final class ItemUiSupport {
         for (Map.Entry<String, Item> entry : items.entrySet()) {
             translatedName(playerRef, entry.getValue(), entry.getKey());
         }
+    }
+
+    public static void invalidateCaches() {
+        TRANSLATED_NAME_CACHE.clear();
+        WARMED_LANGUAGES.clear();
+    }
+
+    public static String translatedDescription(@Nonnull PlayerRef playerRef, Item item) {
+        if (item == null || item.getDescriptionTranslationKey() == null
+                || item.getDescriptionTranslationKey().isEmpty()) return "";
+        try {
+            String translated = I18nModule.get().getMessage(playerRef.getLanguage(), item.getDescriptionTranslationKey());
+            return translated == null || translated.equals(item.getDescriptionTranslationKey())
+                    ? "" : sanitizeDescription(translated);
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    static String sanitizeDescription(String value) {
+        if (value == null || value.isEmpty()) return "";
+        String decoded = value
+                .replace("&nbsp;", " ")
+                .replace("&amp;", "&")
+                .replace("&lt;", "<")
+                .replace("&gt;", ">")
+                .replace("&quot;", "\"")
+                .replace("&#39;", "'");
+        Matcher matcher = ITEM_MARKUP.matcher(decoded);
+        StringBuffer resolvedItems = new StringBuffer();
+        while (matcher.find()) {
+            matcher.appendReplacement(resolvedItems, Matcher.quoteReplacement(TextFormatters.itemName(matcher.group(1))));
+        }
+        matcher.appendTail(resolvedItems);
+
+        return resolvedItems.toString()
+                .replaceAll("(?i)<br\\s*/?>", "\n")
+                .replaceAll("(?i)</?(p|div|li|ul|ol|h[1-6])[^>]*>", "\n")
+                .replaceAll("<[^>]+>", "")
+                .replaceAll("[ \\t]+", " ")
+                .replaceAll(" *\\n *", "\n")
+                .replaceAll("\\n{3,}", "\n\n")
+                .trim();
     }
 
     public static String rarityBackground(Item item) {

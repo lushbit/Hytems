@@ -11,6 +11,7 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.item.config.ItemAbility;
 import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
@@ -44,6 +45,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Comparator;
 
@@ -396,7 +398,11 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
 
         if (data.pinItem != null && !data.pinItem.isEmpty()) {
-            HytemsPlugin.playerDataManager.togglePin(this.playerRef, data.pinItem);
+            HytemsPlugin.playerDataManager.togglePin(
+                    this.playerRef,
+                    data.pinItem,
+                    currentRecipeIndexForPin(data.pinItem)
+            );
             updatePinnedItemsHud();
             needsUpdate = true;
             needsGridUpdate = true;
@@ -493,6 +499,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                     int baseHeight = hasVisibleCraftingStation(currentRecipe)
                             ? RECIPE_SECTION_BASE_HEIGHT
                             : RECIPE_SECTION_NO_STATION_BASE_HEIGHT;
+                    if (!formatRecipeRequirements(currentRecipe, currentRecipe.getBenchRequirement()).isEmpty()) {
+                        baseHeight += 102;
+                    }
                     List<MaterialQuantity> ingredients = RecipeUtils.getInputs(currentRecipe);
                     if (ingredients != null && !ingredients.isEmpty()) {
                         recipeSectionHeight = baseHeight + (ingredients.size() * LIST_ROW_HEIGHT);
@@ -516,7 +525,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 + SECTION_GAP
                 + recipeSectionHeight
                 + SECTION_GAP
-                + DETAILS_SECTION_HEIGHT
+                + estimateDetailsSectionHeight()
                 + INFO_CONTAINER_SCROLL_BUFFER;
     }
 
@@ -554,7 +563,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                 + SECTION_GAP
                 + dropsSectionHeight
                 + SECTION_GAP
-                + DETAILS_SECTION_HEIGHT
+                + estimateDetailsSectionHeight()
                 + INFO_CONTAINER_SCROLL_BUFFER;
     }
 
@@ -563,6 +572,18 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         for (DropSourceSummaries.DisplayDropSource summary : otherDrops) {
             boolean hasSecondaryLabel = summary.secondaryLabel() != null && !summary.secondaryLabel().isEmpty();
             height += hasSecondaryLabel ? DROP_ROW_HEIGHT : DROP_ROW_COMPACT_HEIGHT;
+        }
+        return height;
+    }
+
+    private int estimateDetailsSectionHeight() {
+        Item item = selectedItemId == null ? null : HytemsPlugin.ITEMS.get(selectedItemId);
+        int height = DETAILS_SECTION_HEIGHT;
+        if (item != null) {
+            String description = ItemUiSupport.translatedDescription(playerRef, item);
+            if (!description.isEmpty()) height += estimateDescriptionHeight(description) + 4;
+            String abilityDetails = formatAbilityDetails(item.getAbility());
+            if (!abilityDetails.isEmpty()) height += 20 + estimateAbilityDetailsHeight(abilityDetails) + 4;
         }
         return height;
     }
@@ -678,6 +699,19 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
                     cmd.set("#DetailDurability.Text", "N/A");
                 }
 
+                String description = ItemUiSupport.translatedDescription(playerRef, item);
+                cmd.set("#DescriptionSection.Visible", !description.isEmpty());
+                cmd.set("#DetailDescription.Text", description);
+                Anchor descriptionAnchor = new Anchor();
+                descriptionAnchor.setHeight(Value.of(estimateDescriptionHeight(description)));
+                cmd.setObject("#DetailDescription.Anchor", descriptionAnchor);
+                String abilityDetails = formatAbilityDetails(item.getAbility());
+                cmd.set("#AbilitySection.Visible", !abilityDetails.isEmpty());
+                cmd.set("#AbilityDetails.Text", abilityDetails);
+                Anchor abilityAnchor = new Anchor();
+                abilityAnchor.setHeight(Value.of(estimateAbilityDetailsHeight(abilityDetails)));
+                cmd.setObject("#AbilityDetails.Anchor", abilityAnchor);
+
                 loadRecipes(cmd, events, selectedItemId);
             } else {
                 cmd.set("#DetailMaxStack.Text", "N/A");
@@ -742,6 +776,9 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             bindRecipePaginationEvents(events);
 
             BenchRequirement[] benchReqs = currentRecipe.getBenchRequirement();
+            String requirements = formatRecipeRequirements(currentRecipe, benchReqs);
+            cmd.set("#RecipeRequirementsSection.Visible", !requirements.isEmpty());
+            cmd.set("#RecipeRequirementsText.Text", requirements);
 
             if (benchReqs != null && benchReqs.length > 0) {
                 BenchRequirement bench = benchReqs[0];
@@ -787,6 +824,89 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             cmd.set("#NoRecipeContainer.Visible", true);
             cmd.set("#RecipeContent.Visible", false);
         }
+    }
+
+    private String formatRecipeRequirements(CraftingRecipe recipe, BenchRequirement[] benches) {
+        List<String> lines = new ArrayList<>();
+        if (benches != null && benches.length > 0) {
+            List<String> stationNames = new ArrayList<>();
+            LinkedHashSet<String> augmentTags = new LinkedHashSet<>();
+            for (BenchRequirement bench : benches) {
+                if (bench == null) continue;
+                String name = bench.id == null ? String.valueOf(bench.type) : TextFormatters.dropSourceName(bench.id);
+                if (bench.requiredTierLevel > 0) name += " (Tier " + bench.requiredTierLevel + ")";
+                stationNames.add(name);
+                if (bench.requiredAugmentTags != null) Collections.addAll(augmentTags, bench.requiredAugmentTags);
+            }
+            if (stationNames.size() > 1) lines.add("Stations: " + String.join(", ", stationNames));
+            if (!augmentTags.isEmpty()) {
+                lines.add("Power: " + augmentTags.stream().map(TextFormatters::dropSourceName).collect(java.util.stream.Collectors.joining(", ")));
+            }
+        }
+        if (recipe.isKnowledgeRequired()) lines.add("Knowledge required");
+        if (recipe.getRequiredMemoriesLevel() > 0) lines.add("Memories level: " + recipe.getRequiredMemoriesLevel());
+        if (recipe.getTimeSeconds() > 0) lines.add("Craft time: " + formatSeconds(recipe.getTimeSeconds()));
+
+        int outputQuantity = recipe.getPrimaryOutput() != null ? recipe.getPrimaryOutput().getQuantity() : 1;
+        if (outputQuantity > 1) lines.add("Produces: " + outputQuantity);
+        return String.join("\n", lines);
+    }
+
+    private String formatAbilityDetails(ItemAbility ability) {
+        if (ability == null) return "";
+        List<String> lines = new ArrayList<>();
+        if (ability.getSlot() != null) lines.add("Slot: " + TextFormatters.dropSourceName(ability.getSlot().name()));
+        if (ability.getCost() > 0) {
+            String costType = ability.getCostType() == null ? "" : " " + TextFormatters.dropSourceName(ability.getCostType().name());
+            lines.add("Cost: " + formatNumber(ability.getCost()) + costType);
+        }
+        if (ability.getCooldownS() > 0) lines.add("Cooldown: " + formatSeconds(ability.getCooldownS()));
+        if (ability.getTags() != null && ability.getTags().length > 0) {
+            lines.add("Tags: " + java.util.Arrays.stream(ability.getTags())
+                    .map(TextFormatters::dropSourceName).collect(java.util.stream.Collectors.joining(", ")));
+        }
+        if (ability.getConvertElement() != null && !ability.getConvertElement().isEmpty()) {
+            lines.add("Element: " + TextFormatters.dropSourceName(ability.getConvertElement()));
+        }
+        return String.join("\n", lines);
+    }
+
+    private String formatSeconds(float seconds) {
+        return formatNumber(seconds) + "s";
+    }
+
+    private String formatNumber(float value) {
+        return Math.abs(value - Math.round(value)) < 0.001f
+                ? Integer.toString(Math.round(value))
+                : String.format(Locale.ENGLISH, "%.1f", value);
+    }
+
+    private int estimateDescriptionHeight(String description) {
+        if (description == null || description.isEmpty()) return 0;
+        int lines = 0;
+        for (String paragraph : description.split("\\n", -1)) {
+            lines += Math.max(1, (int) Math.ceil(paragraph.length() / 66.0d));
+        }
+        return Math.max(24, lines * 16 + 2);
+    }
+
+    private int estimateAbilityDetailsHeight(String abilityDetails) {
+        if (abilityDetails == null || abilityDetails.isEmpty()) return 0;
+        int lines = 0;
+        for (String line : abilityDetails.split("\\n", -1)) {
+            lines += Math.max(1, (int) Math.ceil(line.length() / 66.0d));
+        }
+        return Math.max(17, lines * 17);
+    }
+
+    private int currentRecipeIndexForPin(String itemId) {
+        if (!Objects.equals(itemId, this.selectedItemId)) {
+            return 0;
+        }
+        List<CraftingRecipe> craftingRecipes = getVisibleRecipes(itemId).stream()
+                .filter(recipe -> !RecipeUtils.hasSalvagerBench(recipe))
+                .toList();
+        return craftingRecipes.isEmpty() ? 0 : Math.floorMod(this.currentRecipeIndex, craftingRecipes.size());
     }
 
     private void displaySingleRecipe(@Nonnull UICommandBuilder cmd, @Nonnull UIEventBuilder events,
@@ -1286,6 +1406,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private List<DropdownEntryInfo> categoryEntries() {
         List<DropdownEntryInfo> entries = new ArrayList<>();
         entries.add(new DropdownEntryInfo(LocalizableString.fromString("All categories"), BrowserFilterSettings.ALL));
+        entries.add(new DropdownEntryInfo(LocalizableString.fromString("Rune abilities"), "category:runes"));
         for (String category : itemSearchService.getNativeCategoryPaths(HytemsPlugin.ITEMS)) {
             String[] parts = category.split("\\.");
             int depth = parts.length - 1;

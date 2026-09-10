@@ -6,6 +6,9 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.InventoryComponent;
+import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
+import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.protocol.ItemResourceType;
 import com.hypixel.hytale.server.core.event.events.ecs.InventoryChangeEvent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -69,6 +72,30 @@ public class PinnedItemsInventoryTracker {
             PinnedItemsHud hud = new PinnedItemsHud(playerRef, HytemsPlugin.playerDataManager, store, ref);
             player.getHudManager().addCustomHud(playerRef, hud);
         }
+    }
+
+    public static int countIngredient(@Nonnull MaterialQuantity ingredient,
+                                      @Nonnull Map<String, Integer> inventory) {
+        if (ingredient.getItemId() != null) {
+            return inventory.getOrDefault(ingredient.getItemId(), 0);
+        }
+        String resourceTypeId = ingredient.getResourceTypeId();
+        if (resourceTypeId == null) return 0;
+
+        int total = 0;
+        for (Map.Entry<String, Integer> entry : inventory.entrySet()) {
+            if (ingredient.isItemExcluded(entry.getKey())) continue;
+            Item item = HytemsPlugin.ITEMS.get(entry.getKey());
+            if (item == null || item.getResourceTypes() == null) continue;
+            for (ItemResourceType resourceType : item.getResourceTypes()) {
+                if (resourceType != null && resourceType.id != null
+                        && resourceType.id.equalsIgnoreCase(resourceTypeId)) {
+                    total += entry.getValue() * Math.max(1, resourceType.quantity);
+                    break;
+                }
+            }
+        }
+        return total;
     }
     
     public static void clearCache(UUID playerId) {

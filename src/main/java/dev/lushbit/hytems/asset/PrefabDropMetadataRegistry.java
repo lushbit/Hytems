@@ -34,6 +34,7 @@ public final class PrefabDropMetadataRegistry {
     private static volatile Map<String, PrefabDropMetadata> cachedMetadata = Collections.emptyMap();
     private static volatile boolean loaded;
     private static volatile boolean loading;
+    private static volatile long generation;
 
     private PrefabDropMetadataRegistry() {
     }
@@ -54,22 +55,38 @@ public final class PrefabDropMetadataRegistry {
         ensureLoadedAsync();
     }
 
+    public static synchronized void invalidate() {
+        cachedMetadata = Collections.emptyMap();
+        loaded = false;
+        loading = false;
+        generation++;
+    }
+
+    public static synchronized void invalidateAndReload() {
+        invalidate();
+        ensureLoadedAsync();
+    }
+
     private static void ensureLoadedAsync() {
         if (loaded || loading) return;
 
         synchronized (PrefabDropMetadataRegistry.class) {
             if (loaded || loading) return;
             loading = true;
+            long loadGeneration = generation;
 
             Thread loaderThread = new Thread(() -> {
                 try {
-                    cachedMetadata = Collections.unmodifiableMap(loadMetadata());
+                    Map<String, PrefabDropMetadata> metadata = Collections.unmodifiableMap(loadMetadata());
+                    if (loadGeneration == generation) cachedMetadata = metadata;
                 } catch (Exception e) {
                     System.err.println("[Hytems] Failed to load prefab drop metadata: " + e.getMessage());
-                    cachedMetadata = Collections.emptyMap();
+                    if (loadGeneration == generation) cachedMetadata = Collections.emptyMap();
                 } finally {
-                    loaded = true;
-                    loading = false;
+                    if (loadGeneration == generation) {
+                        loaded = true;
+                        loading = false;
+                    }
                 }
             }, "Hytems-PrefabDropMetadataLoader");
             loaderThread.setDaemon(true);

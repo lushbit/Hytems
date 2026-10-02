@@ -146,7 +146,7 @@ Group #DetailContent {
       Padding: (Bottom: 4);
 
       Label {
-        Text: "Rune Ability";
+        Text: "Runestone";
         Anchor: (Height: 20);
         Style: (FontSize: 12, TextColor: #d9a7ff, RenderBold: true);
       }

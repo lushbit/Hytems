@@ -11,7 +11,10 @@ import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.asset.type.item.config.CoreItemAbility;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemAbility;
+import com.hypixel.hytale.server.core.asset.type.item.config.SupportItemAbility;
 import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
@@ -89,6 +92,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private String dropsItemId = null;
     private int currentMobDropIndex = 0;
     private int currentRecipeIndex = 0;
+    private Map<String, String> benchItemIdsByBenchId;
     private InfoTab activeInfoTab = InfoTab.RECIPES;
 
     private List<Map.Entry<String, Item>> filteredItems = new ArrayList<>();
@@ -856,19 +860,30 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         if (ability == null) return "";
         List<String> lines = new ArrayList<>();
         if (ability.getSlot() != null) lines.add("Slot: " + TextFormatters.dropSourceName(ability.getSlot().name()));
-        if (ability.getCost() > 0) {
-            String costType = ability.getCostType() == null ? "" : " " + TextFormatters.dropSourceName(ability.getCostType().name());
-            lines.add("Cost: " + formatNumber(ability.getCost()) + costType);
-        }
-        if (ability.getCooldownS() > 0) lines.add("Cooldown: " + formatSeconds(ability.getCooldownS()));
-        if (ability.getTags() != null && ability.getTags().length > 0) {
-            lines.add("Tags: " + java.util.Arrays.stream(ability.getTags())
-                    .map(TextFormatters::dropSourceName).collect(java.util.stream.Collectors.joining(", ")));
-        }
-        if (ability.getConvertElement() != null && !ability.getConvertElement().isEmpty()) {
-            lines.add("Element: " + TextFormatters.dropSourceName(ability.getConvertElement()));
+        if (ability instanceof CoreItemAbility core) {
+            lines.add("Type: Ability Runestone");
+            if (core.getCost() > 0) {
+                String costType = core.getCostType() == null ? "" : " " + TextFormatters.dropSourceName(core.getCostType().name());
+                lines.add("Cost: " + formatNumber(core.getCost()) + costType);
+            }
+            if (core.getCooldownS() > 0) lines.add("Cooldown: " + formatSeconds(core.getCooldownS()));
+            addAbilityKeywordLine(lines, "Tags", core.getAbilityKeywords());
+        } else if (ability instanceof SupportItemAbility support) {
+            lines.add("Type: Modifier Runestone");
+            addAbilityKeywordLine(lines, "Requires any", support.getRequiresAnyAbilityKeyword());
+            addAbilityKeywordLine(lines, "Requires all", support.getRequiresAllAbilityKeywords());
+            addAbilityKeywordLine(lines, "Excludes", support.getExcludesAnyAbilityKeyword());
+            if (support.getConvertElement() != null && !support.getConvertElement().isEmpty()) {
+                lines.add("Element: " + TextFormatters.dropSourceName(support.getConvertElement()));
+            }
         }
         return String.join("\n", lines);
+    }
+
+    private void addAbilityKeywordLine(List<String> lines, String label, String[] keywords) {
+        if (keywords == null || keywords.length == 0) return;
+        lines.add(label + ": " + java.util.Arrays.stream(keywords)
+                .map(TextFormatters::dropSourceName).collect(java.util.stream.Collectors.joining(", ")));
     }
 
     private String formatSeconds(float seconds) {
@@ -1406,7 +1421,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
     private List<DropdownEntryInfo> categoryEntries() {
         List<DropdownEntryInfo> entries = new ArrayList<>();
         entries.add(new DropdownEntryInfo(LocalizableString.fromString("All categories"), BrowserFilterSettings.ALL));
-        entries.add(new DropdownEntryInfo(LocalizableString.fromString("Rune abilities"), "category:runes"));
+        entries.add(new DropdownEntryInfo(LocalizableString.fromString("Runestones"), "category:runes"));
         for (String category : itemSearchService.getNativeCategoryPaths(HytemsPlugin.ITEMS)) {
             String[] parts = category.split("\\.");
             int depth = parts.length - 1;
@@ -1691,6 +1706,13 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
             return null;
         }
 
+        // The item whose block actually defines this bench wins over any name guessing
+        // (e.g. bench "GoblinLab_Workbench" belongs to item "GoblinLab_Tinkering_Bench").
+        String definingItemId = benchItemIdsByBenchId().get(benchId.toLowerCase(Locale.ENGLISH));
+        if (definingItemId != null) {
+            return definingItemId;
+        }
+
         String strippedBenchId = stripNamespace(benchId);
         String stationCore = stationCoreName(strippedBenchId);
         // Recipes also spell the bench without a separator (e.g. "ArmorBench", "Cookingbench"),
@@ -1734,6 +1756,38 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
         }
 
         return fallbackScore > 0 ? fallback : null;
+    }
+
+    private Map<String, String> benchItemIdsByBenchId() {
+        if (this.benchItemIdsByBenchId != null) {
+            return this.benchItemIdsByBenchId;
+        }
+
+        Map<String, String> result = new LinkedHashMap<>();
+        try {
+            for (Map.Entry<String, Item> entry : HytemsPlugin.ITEMS.entrySet()) {
+                String itemId = entry.getKey();
+                Item item = entry.getValue();
+                // Generated state variants ("*Bench_..._State_...") share the bench of their base item.
+                if (item == null || itemId.startsWith("*") || !item.hasBlockType() || item.getBlockId() == null) {
+                    continue;
+                }
+                BlockType blockType = BlockType.getAssetMap().getAsset(item.getBlockId());
+                if (blockType == null || blockType.getBench() == null || blockType.getBench().getId() == null) {
+                    continue;
+                }
+                String key = blockType.getBench().getId().toLowerCase(Locale.ENGLISH);
+                String existing = result.get(key);
+                if (existing == null || itemId.length() < existing.length()
+                        || (itemId.length() == existing.length() && itemId.compareTo(existing) < 0)) {
+                    result.put(key, itemId);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[Hytems] Error indexing crafting benches: " + e.getMessage());
+        }
+        this.benchItemIdsByBenchId = result;
+        return result;
     }
 
     private String canonicalBenchItemId(String stationCore) {

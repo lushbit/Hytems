@@ -30,7 +30,8 @@ public final class ItemSearchService {
             "weapon", "weapons", "tool", "tools", "armor", "armour",
             "block", "blocks", "food", "consumable", "consumables",
             "material", "materials", "resource", "resources",
-            "furniture", "craftable", "ingredient", "ingredients", "rune", "runes"
+            "furniture", "craftable", "ingredient", "ingredients",
+            "runestone", "runestones", "rune", "runes"
     ));
     private static final Set<String> HIDDEN_QUALITIES = Set.of("Developer", "Tool", "Technical");
     private static final Map<String, List<Map.Entry<String, Item>>> BASE_RESULTS_CACHE = new ConcurrentHashMap<>();
@@ -184,6 +185,8 @@ public final class ItemSearchService {
                 case "ingredient":
                 case "ingredients":
                     return itemId.contains("Ingredient");
+                case "runestone":
+                case "runestones":
                 case "rune":
                 case "runes":
                     return item.getAbility() != null || itemId.toLowerCase(Locale.ENGLISH).startsWith("rune_");
@@ -321,7 +324,8 @@ public final class ItemSearchService {
         if (category == null || category.isEmpty() || BrowserFilterSettings.ALL.equalsIgnoreCase(category)) return true;
         if (item == null) return false;
         String normalized = category.replaceFirst("(?i)^category:", "").toLowerCase(Locale.ENGLISH);
-        if (normalized.equals("rune") || normalized.equals("runes")) {
+        if (normalized.equals("runestone") || normalized.equals("runestones")
+                || normalized.equals("rune") || normalized.equals("runes")) {
             return item.getAbility() != null;
         }
         if (item.getCategories() != null) {

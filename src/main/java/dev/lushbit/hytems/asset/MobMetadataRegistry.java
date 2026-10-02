@@ -305,7 +305,7 @@ public final class MobMetadataRegistry {
         JsonObject roleConfig = loadRoleConfig(builderInfo);
         List<AttributeRow> attributes = new ArrayList<>();
         addFamilyAttributes(attributes, mobId, builderInfo);
-        addRoleConfigAttributes(attributes, roleConfig);
+        addRoleConfigAttributes(attributes, builderInfo, roleConfig);
         addBuilderAttributes(attributes, builder);
         addModelAttributes(attributes, builder);
 
@@ -399,7 +399,7 @@ public final class MobMetadataRegistry {
         }
     }
 
-    private static void addRoleConfigAttributes(List<AttributeRow> rows, JsonObject roleConfig) {
+    private static void addRoleConfigAttributes(List<AttributeRow> rows, BuilderInfo info, JsonObject roleConfig) {
         if (roleConfig == null) return;
         for (String key : List.of("MaxHealth", "Health", "AttackDistance", "TargetRange", "DesiredAttackDistanceRange",
                 "CombatBehaviorDistance", "HearingRange", "ViewSector", "IsMemory", "MemoriesCategory",
@@ -407,9 +407,35 @@ public final class MobMetadataRegistry {
                 "FollowPatrolPath", "ApplySeparation", "WakingPeriod", "LeashMinPlayerDistance",
                 "LeashDistance", "HardLeashDistance", "Attack", "RootInteraction", "Appearance")) {
             addAttribute(rows, humanLabel(key), jsonValue(roleConfig, key));
+            if (key.equals("MemoriesNameOverride")) addMemoryUnlockAttributes(rows, info, roleConfig);
         }
         String[] weapons = jsonStringArray(roleConfig, "Weapons");
         if (weapons.length > 0) addAttribute(rows, "Weapons", joinHumanized(weapons));
+    }
+
+    private static void addMemoryUnlockAttributes(List<AttributeRow> rows, BuilderInfo info, JsonObject roleConfig) {
+        if (!Boolean.TRUE.equals(jsonValue(roleConfig, "IsMemory"))) return;
+        addAttribute(rows, humanLabel("MemoriesUnlockedBy"), inheritedRoleValue(info, roleConfig, "MemoriesUnlockedBy"));
+        // A kill range of 0 means "server default", which tells the player nothing.
+        Object killRange = inheritedRoleValue(info, roleConfig, "MemoriesKillRange");
+        if (killRange instanceof Number number && number.doubleValue() > 0) {
+            addAttribute(rows, humanLabel("MemoriesKillRange"), killRange);
+        }
+    }
+
+    /** Variants usually leave these to their template, so walk up the Reference chain. */
+    private static Object inheritedRoleValue(BuilderInfo info, JsonObject roleConfig, String key) {
+        BuilderInfo cursor = info;
+        JsonObject config = roleConfig;
+        for (int depth = 0; depth < 5 && cursor != null; depth++) {
+            Object value = jsonValue(config, key);
+            if (value != null) return value;
+            String referenced = referencedTemplateId(cursor);
+            if (referenced == null) return null;
+            cursor = tryGetBuilderInfo(referenced);
+            config = loadRoleConfig(cursor);
+        }
+        return null;
     }
 
     private static void addModelAttributes(List<AttributeRow> rows, Object builder) {

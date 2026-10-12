@@ -1,1 +1,29 @@
 items.Item_Lexicon.name=Item Lexicon
+
+# Boss pages. Everything is generated from the game files; these entries only replace text that
+# reads poorly. Keys: hytems.boss.<BossKey>.(name|description|location), .phase.<State>.(name|desc),
+# .attack.<AttackKey>.(name|desc) and hytems.reward.<RewardId>.
+hytems.reward.Reward_Cosmetics_Chapter1=Chapter I boss cosmetic
+
+hytems.boss.Goblin_Gobliterator.location=The Deepworks
+hytems.boss.Goblin_Gobliterator.description=The final boss of the Deepworks: a goblin war machine fought in three phases. Its health scales with up to four players, stalactites fall during the fight and health packs spawn around the arena. Pick Normal or Hard mode with the button at the arena before the fight starts.
+hytems.boss.Goblin_Gobliterator.phase.Phase_1.name=Phase 1
+hytems.boss.Goblin_Gobliterator.phase.Phase_1.desc=The Gobliterator fights with its club, cannon and furnace. Health packs spawn around the arena every 45 seconds.
+hytems.boss.Goblin_Gobliterator.phase.SawTransition.name=Saw Transition
+hytems.boss.Goblin_Gobliterator.phase.SawTransition.desc=The machine switches to its saws and part of the arena floor drops away.
+hytems.boss.Goblin_Gobliterator.phase.Phase_2.name=Phase 2
+hytems.boss.Goblin_Gobliterator.phase.Phase_2.desc=Armed with saws, it spins out of control while chasing players.
+hytems.boss.Goblin_Gobliterator.phase.Transition_Phase3.name=Breakdown
+hytems.boss.Goblin_Gobliterator.phase.Transition_Phase3.desc=The machine breaks down, the arena floor changes and the sky darkens. Its legs are spawned as a separate part.
+hytems.boss.Goblin_Gobliterator.phase.Phase_3.name=Phase 3
+hytems.boss.Goblin_Gobliterator.phase.Phase_3.desc=The final phase: flamethrowers, fire across whole arena quadrants and rocket rain with marked landing spots, while stalactites keep falling. Defeating it ends the fight and grants the reward.
+hytems.boss.Goblin_Gobliterator.attack.FurnaceBlast.desc=Blasts fire around itself when you stay close and keep dealing damage.
+
+hytems.boss.Goblin_Feastmaster.location=The Deepworks
+hytems.boss.Goblin_Feastmaster.description=The Elite Goblin Feastmaster, first boss of the Deepworks. Food carriers bring food from the piles around the room to heal it while goblin scrappers join the fight, so break the food piles. Its health scales with up to four players.
+hytems.boss.Goblin_Feastmaster.phase.Fight.name=Fight
+hytems.boss.Goblin_Feastmaster.phase.Fight.desc=Charges at players and slams the ground. Crashing into a wall makes stalactites fall, the cauldron fires goo bombs at marked spots and every food pile sends a carrier every 20 seconds.
+hytems.boss.Goblin_Feastmaster.phase.Feeding.name=Feeding
+hytems.boss.Goblin_Feastmaster.phase.Feeding.desc=The Feastmaster feeds at the centre of the room and cannot be damaged. Carriers run from every remaining pile and scrappers pour in.
+hytems.boss.Goblin_Feastmaster.attack.Slam.desc=Heavy ground slam at close range.
+hytems.boss.Goblin_Feastmaster.attack.Guard.desc=Raises its guard to block incoming attacks.

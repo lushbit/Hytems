@@ -1,0 +1,96 @@
+Group {
+  Anchor: (Height: 128);
+  LayoutMode: Top;
+
+  Group #PhaseCard {
+    FlexWeight: 1;
+    LayoutMode: Left;
+    Background: #182331(0.7);
+
+    Group #PhaseAccent {
+      Anchor: (Width: 4);
+      Background: #7a9cc6;
+    }
+
+    Group {
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+
+      Group {
+        Anchor: (Height: 24);
+        LayoutMode: Left;
+
+        Label #PhaseIndex {
+          Anchor: (Width: 26);
+          Text: "";
+          Style: (
+            FontSize: 15,
+            TextColor: #7a9cc6,
+            RenderBold: true,
+            VerticalAlignment: Center
+          );
+        }
+
+        Label #PhaseName {
+          FlexWeight: 1;
+          Text: "";
+          Style: (
+            FontSize: 15,
+            TextColor: #ffffff,
+            RenderBold: true,
+            VerticalAlignment: Center
+          );
+        }
+
+        Label #PhaseWindow {
+          Anchor: (Width: 260);
+          Text: "";
+          Style: (
+            FontSize: 13,
+            TextColor: #e8a93b,
+            RenderBold: true,
+            HorizontalAlignment: End,
+            VerticalAlignment: Center
+          );
+        }
+      }
+
+      Label #PhaseTrigger {
+        Anchor: (Height: 18);
+        Text: "";
+        Padding: (Left: 26);
+        Style: (
+          FontSize: 11,
+          TextColor: #96a9be,
+          VerticalAlignment: Center
+        );
+      }
+
+      Label #PhaseDescription {
+        Anchor: (Height: 20);
+        Text: "";
+        Padding: (Left: 26);
+        Style: (
+          FontSize: 12,
+          TextColor: #d8e2ec,
+          Wrap: true,
+          VerticalAlignment: Start
+        );
+      }
+
+      Group #PhaseAttackSpacer {
+        Anchor: (Height: 6);
+      }
+
+      Group #Attacks {
+        LayoutMode: Top;
+        Padding: (Left: 26);
+      }
+    }
+  }
+
+  Group {
+    Anchor: (Height: 8);
+  }
+}

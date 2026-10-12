@@ -143,25 +143,36 @@ Group {
 
       Group #NavigationSection {
         Anchor: (Height: 34);
-        LayoutMode: Center;
+        LayoutMode: Left;
 
-        Group {
-          LayoutMode: Left;
+        // Lines the filter up with the left edge of the 760px search field.
+        Group { Anchor: (Width: 46); }
 
-          $C.@SecondaryTextButton #BackButton {
-            @Text = "BACK";
-            @Anchor = (Width: 120, Height: 28);
-          }
-
-          Group #BackButtonSpacer {
-            Anchor: (Width: 12);
-          }
-
-          $C.@CancelTextButton #CloseButton {
-            @Text = "CLOSE";
-            @Anchor = (Width: 120, Height: 28);
-          }
+        $C.@CheckBoxWithLabel #BossesOnly {
+          @Text = "Bosses only";
+          Anchor: (Width: 150, Height: 28);
         }
+
+        Group { FlexWeight: 1; }
+
+        $C.@SecondaryTextButton #BackButton {
+          @Text = "BACK";
+          @Anchor = (Width: 120, Height: 28);
+        }
+
+        Group #BackButtonSpacer {
+          Anchor: (Width: 12);
+        }
+
+        $C.@CancelTextButton #CloseButton {
+          @Text = "CLOSE";
+          @Anchor = (Width: 120, Height: 28);
+        }
+
+        Group { FlexWeight: 1; }
+
+        // Same width as the filter side so the buttons stay centered.
+        Group { Anchor: (Width: 196); }
       }
     }
   }

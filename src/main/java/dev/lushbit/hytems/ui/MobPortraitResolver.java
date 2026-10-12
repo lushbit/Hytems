@@ -1,5 +1,7 @@
 package dev.lushbit.hytems.ui;
 
+import dev.lushbit.hytems.asset.MobMetadataRegistry;
+
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,6 +18,8 @@ public final class MobPortraitResolver {
             "Spectre_Void", "Void_Spectre",
             "Spawn_Void", "Void_Spawn_Entombed"
     );
+    // Encounter/instance copies of a mob (Coffer_Goblin_Miner, Cinematic_Dragon_Void, ...).
+    private static final String INSTANCE_PREFIX = "(?i)^(Cinematic|Coffer|Dungeon|Temple|Tamed)_";
 
     private MobPortraitResolver() {
     }
@@ -25,11 +29,13 @@ public final class MobPortraitResolver {
             return null;
         }
 
-        List<String> candidates = buildCandidates(mobType);
-        if (candidates.isEmpty()) {
-            return null;
-        }
+        String stripped = stripNamespace(mobType);
+        String path = firstExistingPortrait(directCandidates(mobType, stripped));
+        // Role hints read role files, so only consult them when the id itself has no portrait.
+        return path != null ? path : firstExistingPortrait(fallbackCandidates(stripped));
+    }
 
+    private static String firstExistingPortrait(List<String> candidates) {
         for (String candidate : candidates) {
             String path = BASE_PATH + candidate + ".png";
             if (portraitExists(path)) {
@@ -51,16 +57,23 @@ public final class MobPortraitResolver {
         return Files.isRegularFile(devPath);
     }
 
-    private static List<String> buildCandidates(String mobType) {
+    private static List<String> directCandidates(String mobType, String stripped) {
         List<String> candidates = new ArrayList<>();
         addCandidate(candidates, mobType);
-
-        String stripped = stripNamespace(mobType);
         addCandidate(candidates, stripped);
         addCandidate(candidates, PORTRAIT_ALIASES.get(stripped));
         PORTRAIT_ALIASES.forEach((oldId, newId) -> {
             if (newId.equalsIgnoreCase(stripped)) addCandidate(candidates, oldId);
         });
+        addCandidate(candidates, stripped.replaceFirst(INSTANCE_PREFIX, ""));
+        return candidates;
+    }
+
+    private static List<String> fallbackCandidates(String stripped) {
+        List<String> candidates = new ArrayList<>();
+        for (String hint : MobMetadataRegistry.portraitHints(stripped)) {
+            addCandidate(candidates, hint);
+        }
         addCandidate(candidates, stripped.replaceFirst("(?i)^drop_", ""));
         addCandidate(candidates, stripped.replaceFirst("(?i)^drops_", ""));
 

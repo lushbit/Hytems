@@ -28,6 +28,9 @@ public final class HytemsUiTemplates {
     public static final String MOB_ITEM_ROW = "hytems/ui/MobItemRow.ui";
     public static final String MOB_SPAWN_GROUP = "hytems/ui/MobSpawnGroup.ui";
     public static final String MOB_SPAWN_ENTRY = "hytems/ui/MobSpawnEntry.ui";
+    public static final String BOSS_OVERVIEW = "hytems/ui/BossOverview.ui";
+    public static final String BOSS_PHASE = "hytems/ui/BossPhase.ui";
+    public static final String BOSS_ATTACK_ROW = "hytems/ui/BossAttackRow.ui";
 
     private HytemsUiTemplates() {
     }

@@ -15,11 +15,13 @@ import com.hypixel.hytale.server.core.asset.type.item.config.container.MultipleI
 import com.hypixel.hytale.server.core.asset.type.item.config.container.SingleItemDropContainer;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAsset;
 import com.hypixel.hytale.server.core.asset.type.model.config.ModelAttachment;
+import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderInfo;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderManager;
 import com.hypixel.hytale.server.npc.role.Role;
+import com.hypixel.hytale.server.spawning.assets.spawnmarker.config.SpawnMarker;
 import com.hypixel.hytale.server.spawning.assets.spawns.LightType;
 import com.hypixel.hytale.server.spawning.assets.spawns.config.BeaconNPCSpawn;
 import com.hypixel.hytale.server.spawning.assets.spawns.config.NPCSpawn;
@@ -56,6 +58,14 @@ public final class MobMetadataRegistry {
     private static final Map<String, MobMetadata> CACHE = new ConcurrentHashMap<>();
     private static final Map<String, String> ITEM_ID_LOOKUP = new ConcurrentHashMap<>();
     private static final Set<String> LOADING = ConcurrentHashMap.newKeySet();
+    private static final Map<String, List<String>> PORTRAIT_HINTS = new ConcurrentHashMap<>();
+    private static final Map<String, Set<String>> FLOCK_MEMBERS = new ConcurrentHashMap<>();
+    private static volatile Set<String> deprecatedRoles;
+    private static volatile Set<String> deprecatedRoleKeys;
+    private static volatile Map<String, String> portalWorlds;
+    private static volatile Map<String, String> environmentBiomes;
+    private static final Set<String> ROLE_STRUCTURE_KEYS = Set.of("Type", "Reference", "Parameters", "Modify");
+    public static final String PLACED_SPAWNS_TITLE = "Structures & Dungeons";
     private static final Map<String, String> MOB_ID_ALIASES = Map.of(
             "spectrevoid", "Void_Spectre",
             "spawnvoid", "Void_Spawn_Entombed"
@@ -97,6 +107,13 @@ public final class MobMetadataRegistry {
 
     public static void markNpcDataDirty() {
         mobsByDropList = Collections.emptyMap();
+        PORTRAIT_HINTS.clear();
+        FLOCK_MEMBERS.clear();
+        deprecatedRoles = null;
+        deprecatedRoleKeys = null;
+        portalWorlds = null;
+        environmentBiomes = null;
+        BossRegistry.invalidate();
         for (String mobId : new ArrayList<>(CACHE.keySet())) {
             ensureLoadedAsync(mobId);
         }
@@ -105,7 +122,96 @@ public final class MobMetadataRegistry {
     public static void invalidateAll() {
         CACHE.clear();
         ITEM_ID_LOOKUP.clear();
+        PORTRAIT_HINTS.clear();
+        BossRegistry.invalidate();
         mobsByDropList = Collections.emptyMap();
+    }
+
+    /**
+     * Ids the game itself ties a role to, most specific first: its Reference chain, then the
+     * authored Appearance (portrait icons are named after models) and MemoriesNameOverride. This
+     * lets variants like Coffer_Goblin_Miner, Risen_Knight or the Gobliterator phases reuse the
+     * portrait of the mob they are built from.
+     */
+    @Nonnull
+    public static List<String> portraitHints(String mobId) {
+        if (mobId == null || mobId.isEmpty()) return Collections.emptyList();
+        return PORTRAIT_HINTS.computeIfAbsent(normalizeId(mobId), MobMetadataRegistry::loadPortraitHints);
+    }
+
+    /** Hytale parks retired content (the Goblin Duke, old goblin variants) in _Deprecated folders. */
+    public static boolean isDeprecatedRole(String roleId) {
+        Set<String> keys = deprecatedRoleKeys;
+        if (keys == null) {
+            Set<String> built = new LinkedHashSet<>();
+            for (String id : deprecatedRoleIds()) built.add(normalizeKey(id));
+            deprecatedRoleKeys = keys = Collections.unmodifiableSet(built);
+        }
+        return keys.contains(normalizeKey(roleId));
+    }
+
+    /**
+     * Spawn files named after a retired role belong to it, e.g. the Goblin_Duke_Phase_1 beacon that
+     * sent reinforcements during the Goblin Duke fight.
+     */
+    private static boolean belongsToDeprecatedRole(String spawnId) {
+        String key = normalizeId(spawnId).toLowerCase(Locale.ENGLISH);
+        for (String roleId : deprecatedRoleIds()) {
+            String role = roleId.toLowerCase(Locale.ENGLISH);
+            if (key.equals(role) || key.startsWith(role + "_")) return true;
+        }
+        return false;
+    }
+
+    private static Set<String> deprecatedRoleIds() {
+        Set<String> cached = deprecatedRoles;
+        if (cached != null) return cached;
+        Set<String> ids = new LinkedHashSet<>();
+        for (String roleId : allRoleIds()) {
+            if (roleDirectory(roleId).toLowerCase(Locale.ENGLISH).contains("_deprecated")) ids.add(roleId);
+        }
+        deprecatedRoles = Collections.unmodifiableSet(ids);
+        return deprecatedRoles;
+    }
+
+    /** Every NPC role id, including the ones the mob browser hides. */
+    @Nonnull
+    public static Set<String> allRoleIds() {
+        LinkedHashSet<String> ids = new LinkedHashSet<>();
+        collectBuilderMobIds(ids);
+        return ids;
+    }
+
+    /** A string value authored on the role or inherited from its Reference chain, e.g. "_CombatConfig". */
+    public static String inheritedRoleString(String roleId, String key) {
+        BuilderInfo info = tryGetBuilderInfo(roleId);
+        Object value = inheritedRoleValue(info, loadRoleConfig(info), key);
+        return value instanceof String text && !text.isEmpty() ? text : null;
+    }
+
+    /** The role's folder below NPC/Roles, e.g. "Boss/Goblin_Gobliterator". */
+    public static String roleDirectory(String roleId) {
+        String[] parts = rolePathParts(tryGetBuilderInfo(roleId));
+        return parts.length <= 1 ? "" : String.join("/", java.util.Arrays.copyOf(parts, parts.length - 1));
+    }
+
+    private static List<String> loadPortraitHints(String mobId) {
+        List<String> hints = new ArrayList<>();
+        String appearance = null;
+        String memoryName = null;
+        BuilderInfo cursor = tryGetBuilderInfo(mobId);
+        for (int depth = 0; depth < 5 && cursor != null; depth++) {
+            JsonObject config = loadRoleConfig(cursor);
+            if (appearance == null) appearance = jsonString(config, "Appearance");
+            if (memoryName == null) memoryName = jsonString(config, "MemoriesNameOverride");
+            String referenced = referencedTemplateId(cursor);
+            if (referenced == null) break;
+            hints.add(referenced);
+            cursor = tryGetBuilderInfo(referenced);
+        }
+        if (appearance != null) hints.add(appearance);
+        if (memoryName != null) hints.add(memoryName);
+        return Collections.unmodifiableList(hints);
     }
 
     public static void reloadWorldNpcSpawns(Map<String, WorldNPCSpawn> spawns) {
@@ -125,7 +231,10 @@ public final class MobMetadataRegistry {
         collectSpawnMobIds(ids, currentWorldNpcSpawns());
         collectSpawnMobIds(ids, currentBeaconNpcSpawns());
         List<String> sorted = new ArrayList<>(ids);
-        sorted.removeIf(MobMetadataRegistry::shouldHideFromMobBrowser);
+        // A boss is listed once (its first phase); its other phase roles are shown on the boss page.
+        // Dungeon-only bosses like Dungeon_Feastmaster_Boss stay visible despite the name filters.
+        sorted.removeIf(id -> isDeprecatedRole(id) || BossRegistry.isHiddenMember(id)
+                || (shouldHideFromMobBrowser(id) && !BossRegistry.isRepresentative(id)));
         sorted.sort(Comparator.comparing(TextFormatters::mobName, String.CASE_INSENSITIVE_ORDER)
                 .thenComparing(String.CASE_INSENSITIVE_ORDER));
         return sorted;
@@ -290,13 +399,25 @@ public final class MobMetadataRegistry {
     private static Map<String, List<String>> buildDropListMobIndex() {
         Map<String, List<String>> index = new LinkedHashMap<>();
         for (String mobId : knownMobIds()) {
-            BuilderInfo info = tryGetBuilderInfo(mobId);
-            String dropListId = resolveDropListId(mobId, info, info != null ? info.getBuilder() : null,
-                    loadRoleConfig(info));
-            index.computeIfAbsent(normalizeDropListKey(dropListId), ignored -> new ArrayList<>()).add(mobId);
+            // Boss loot usually sits on a later phase role (Gobliterator Phase 3), so credit the boss entry.
+            BossRegistry.BossInfo boss = BossRegistry.forMob(mobId);
+            Set<String> roles = boss != null ? boss.memberMobIds() : Set.of(mobId);
+            Set<String> dropKeys = new LinkedHashSet<>();
+            for (String roleId : roles) {
+                String dropListId = dropListIdForRole(roleId);
+                if (!dropListId.equalsIgnoreCase("Empty")) dropKeys.add(normalizeDropListKey(dropListId));
+            }
+            for (String dropKey : dropKeys) {
+                index.computeIfAbsent(dropKey, ignored -> new ArrayList<>()).add(mobId);
+            }
         }
         index.replaceAll((key, value) -> Collections.unmodifiableList(value));
         return Collections.unmodifiableMap(index);
+    }
+
+    private static String dropListIdForRole(String roleId) {
+        BuilderInfo info = tryGetBuilderInfo(roleId);
+        return resolveDropListId(roleId, info, info != null ? info.getBuilder() : null, loadRoleConfig(info));
     }
 
     private static MobMetadata load(String mobId) {
@@ -647,7 +768,117 @@ public final class MobMetadataRegistry {
         addNpcSpawns(mobId, entries, currentBeaconNpcSpawns());
         entries.sort(Comparator.comparing(SpawnEntry::title, String.CASE_INSENSITIVE_ORDER)
                 .thenComparing(entry -> String.join(" ", entry.details()), String.CASE_INSENSITIVE_ORDER));
-        return entries.isEmpty() ? Collections.emptyList() : List.of(new SpawnGroup("Spawn & Habitat", entries));
+        List<SpawnGroup> groups = new ArrayList<>();
+        if (!entries.isEmpty()) groups.add(new SpawnGroup("Spawn & Habitat", entries));
+        List<SpawnEntry> placed = loadMarkerSpawns(mobId);
+        if (!placed.isEmpty()) groups.add(new SpawnGroup(PLACED_SPAWNS_TITLE, placed));
+        return groups;
+    }
+
+    /**
+     * Spawn markers are hand-placed in structures and dungeons. Bosses, camps and dungeon mobs
+     * only spawn this way, so world/beacon spawns alone leave their overview empty.
+     */
+    @Nonnull
+    public static List<SpawnEntry> loadMarkerSpawns(String mobId) {
+        Map<String, Set<String>> detailsByLocation = new LinkedHashMap<>();
+        String target = normalizeKey(mobId);
+        for (SpawnMarker marker : MobMetadataRegistry.<SpawnMarker>safeMap(SpawnMarker.getAssetMap()).values()) {
+            if (marker == null || marker.getWeightedConfigurations() == null || isIgnoredMarker(marker)) continue;
+            List<SpawnMarker.SpawnConfiguration> matching = new ArrayList<>();
+            double[] totalWeight = {0};
+            marker.getWeightedConfigurations().forEach(config -> {
+                if (config == null) return;
+                totalWeight[0] += Math.max(0, config.getWeight());
+                if (normalizeKey(config.getNpc()).equals(target)) matching.add(config);
+            });
+            if (matching.isEmpty()) continue;
+
+            List<String> details = markerDetails(marker, matching, totalWeight[0]);
+            List<String> locations = PrefabDropMetadataRegistry.markerLocations(marker.getId());
+            if (locations.isEmpty()) {
+                // A marker without a known structure only tells "respawns after a day", which reads as noise.
+                String instance = markerInstanceLocation(marker);
+                if (instance == null) continue;
+                locations = List.of(instance);
+            }
+            for (String location : locations) {
+                detailsByLocation.computeIfAbsent(location, ignored -> new LinkedHashSet<>()).addAll(details);
+            }
+        }
+
+        List<SpawnEntry> entries = new ArrayList<>();
+        detailsByLocation.forEach((location, details) -> entries.add(new SpawnEntry(location, new ArrayList<>(details))));
+        entries.sort(Comparator.comparing(SpawnEntry::title, String.CASE_INSENSITIVE_ORDER));
+        return entries;
+    }
+
+    private static boolean isIgnoredMarker(SpawnMarker marker) {
+        String path = markerAssetPath(marker);
+        String id = normalizeKey(marker.getId());
+        return id.contains("test") || id.contains("debug")
+                || path.contains("/tests/") || path.contains("/_deprecated/");
+    }
+
+    private static List<String> markerDetails(SpawnMarker marker, List<SpawnMarker.SpawnConfiguration> matching,
+                                              double totalWeight) {
+        List<String> details = new ArrayList<>();
+        if (marker.isManualTrigger()) details.add("Spawned by an event or encounter");
+        for (SpawnMarker.SpawnConfiguration config : matching) {
+            if (marker.isRealtimeRespawn() && config.getRealtimeRespawnTime() > 0) {
+                details.add("Respawns after " + formatSeconds(config.getRealtimeRespawnTime()) + " (real time)");
+            } else if (config.getSpawnAfterGameTime() != null && !config.getSpawnAfterGameTime().isZero()) {
+                details.add("Respawns after " + formatGameDuration(config.getSpawnAfterGameTime()) + " (in-game)");
+            }
+            if (totalWeight > 0 && config.getWeight() < totalWeight) {
+                details.add("Spawn chance: " + Math.round(config.getWeight() * 100 / totalWeight) + "%");
+            }
+        }
+        return details;
+    }
+
+    /** Markers that only live in instance chunk data are grouped by instance, e.g. Instance/Forgotten_Temple. */
+    private static String markerInstanceLocation(SpawnMarker marker) {
+        String path = originalMarkerPath(marker);
+        int index = path.toLowerCase(Locale.ENGLISH).indexOf("/instance/");
+        if (index >= 0) {
+            String rest = path.substring(index + "/instance/".length());
+            int slash = rest.indexOf('/');
+            // Marker folders can be named after instances that no longer exist (Instance/Dungeon_Goblin).
+            if (slash > 0 && PrefabDropMetadataRegistry.isKnownInstance(rest.substring(0, slash))) {
+                return TextFormatters.dropSourceName(rest.substring(0, slash));
+            }
+        }
+        return null;
+    }
+
+    private static String markerAssetPath(SpawnMarker marker) {
+        return originalMarkerPath(marker).toLowerCase(Locale.ENGLISH);
+    }
+
+    private static String originalMarkerPath(SpawnMarker marker) {
+        try {
+            Path path = SpawnMarker.getAssetMap().getPath(marker.getId());
+            return path == null ? "" : path.toString().replace('\\', '/');
+        } catch (Exception ignored) {
+            return "";
+        }
+    }
+
+    private static String formatGameDuration(Duration duration) {
+        long minutes = duration.toMinutes();
+        if (minutes >= 1440 && minutes % 1440 == 0) return plural(minutes / 1440, "day");
+        if (minutes >= 60 && minutes % 60 == 0) return plural(minutes / 60, "hour");
+        if (minutes > 0) return plural(minutes, "minute");
+        return plural(duration.toSeconds(), "second");
+    }
+
+    private static String formatSeconds(double seconds) {
+        return seconds >= 60 && seconds % 60 == 0 ? plural((long) seconds / 60, "minute") : plural(Math.round(seconds), "second");
+    }
+
+    private static String plural(long value, String unit) {
+        return value + " " + unit + (value == 1 ? "" : "s");
     }
 
     private static Map<String, WorldNPCSpawn> currentWorldNpcSpawns() {
@@ -665,14 +896,21 @@ public final class MobMetadataRegistry {
         for (NPCSpawn spawn : map.values()) {
             if (spawn == null || spawn.getNPCs() == null) continue;
             for (RoleSpawnParameters npc : spawn.getNPCs()) {
-                if (!matchesMob(mobId, npc.getId())) continue;
+                if (!spawnsMob(mobId, npc.getId())) continue;
                 HabitatLabel label = habitatLabelForSpawn(spawn);
                 String spawnId = normalizeId(spawn.getId());
-                if (isIgnoredSpawnId(spawnId) || isEventSpawnLabel(label.zone())) continue;
+                boolean portalWorld = portalWorldName(spawn.getEnvironments()) != null;
+                if (!portalWorld && (isIgnoredSpawnId(spawnId) || isEventSpawnLabel(label.zone()))) continue;
+                if (belongsToDeprecatedRole(spawnId)) continue;
                 String elementalCircle = elementalCircleLabel(spawnId);
-                String goblinDukePhase = goblinDukePhaseLabel(spawnId, npc.getId());
-                if (goblinDukePhase != null) {
-                    label = new HabitatLabel("Goblin Duke", null, null);
+                if (isTriggeredBeacon(spawn, spawnId)) {
+                    // Beacons without environments are fired by events (hunt sites, encounters), not by the
+                    // world; their light/height values are relative to the trigger and mean nothing here.
+                    HabitatLabel eventLabel = new HabitatLabel("Event Spawn", null, null);
+                    aggregates.computeIfAbsent(eventLabel.zone() + "|null|null",
+                                    ignored -> new SpawnHabitatAggregate(eventLabel.zone(), null, null))
+                            .specialLabels.add("Triggered by an event or encounter");
+                    continue;
                 }
 
                 String key = label.zone() + "|" + label.biome() + "|" + label.region();
@@ -682,11 +920,6 @@ public final class MobMetadataRegistry {
 
                 if (elementalCircle != null) {
                     aggregate.specialLabels.add(elementalCircle);
-                    continue;
-                }
-
-                if (goblinDukePhase != null) {
-                    aggregate.specialLabels.add(goblinDukePhase);
                     continue;
                 }
 
@@ -700,7 +933,7 @@ public final class MobMetadataRegistry {
                         aggregate.structures.add(beaconStructure);
                     }
                 }
-                addSpawnConditions(aggregate.conditions, spawn);
+                addSpawnConditions(aggregate, spawn);
             }
         }
         for (SpawnHabitatAggregate aggregate : aggregates.values()) {
@@ -708,8 +941,9 @@ public final class MobMetadataRegistry {
         }
     }
 
-    private static void addSpawnConditions(Set<String> conditions, NPCSpawn spawn) {
+    private static void addSpawnConditions(SpawnHabitatAggregate aggregate, NPCSpawn spawn) {
         if (spawn == null) return;
+        Set<String> conditions = aggregate.conditions;
         double[] lightRange = spawn.getLightRange(LightType.Light);
         if (lightRange != null && lightRange.length > 0
                 && !java.util.Arrays.equals(lightRange, NPCSpawn.FULL_LIGHT_RANGE)) {
@@ -722,18 +956,24 @@ public final class MobMetadataRegistry {
             conditions.add("Time: " + formatDayTimeRange(dayTime));
         }
         if (spawn instanceof BeaconNPCSpawn beacon) {
-            if (beacon.getWeatherIds() != null && beacon.getWeatherIds().length > 0) {
-                conditions.add("Weather: " + joinHumanized(beacon.getWeatherIds()));
-            }
-            int[] yRange = beacon.getYRange();
-            if (yRange != null && yRange.length > 0 && !java.util.Arrays.equals(yRange, BeaconNPCSpawn.DEFAULT_Y_RANGE)) {
-                conditions.add("Height: " + range(yRange));
+            // Several beacons often share one habitat (void surge tiers), so merge their weathers into one line.
+            // Beacon height ranges are offsets around the beacon, not world heights, so they are not shown.
+            if (beacon.getWeatherIds() != null) {
+                for (String weather : beacon.getWeatherIds()) {
+                    if (weather != null && !weather.isEmpty()) aggregate.weathers.add(TextFormatters.dropSourceName(weather));
+                }
             }
         }
     }
 
     private static HabitatLabel habitatLabelForSpawn(NPCSpawn spawn) {
         String[] environments = spawn == null ? null : spawn.getEnvironments();
+        String portalWorld = portalWorldName(environments);
+        if (portalWorld != null) {
+            if (environments.length != 1) return new HabitatLabel(portalWorld, null, null);
+            String area = portalArea(environments[0]);
+            return new HabitatLabel(portalWorld, environmentBiome(environments[0]), area == null ? null : TextFormatters.humanize(area));
+        }
         String zone = zoneFromEnvironmentNames(environments);
         if (zone == null && spawn != null) {
             zone = zoneFromPath(normalizeId(spawn.getId()));
@@ -828,6 +1068,81 @@ public final class MobMetadataRegistry {
         return lower.contains("event") || lower.contains("portal") || lower.contains("test");
     }
 
+    private static final java.util.regex.Pattern PORTAL_ENVIRONMENT =
+            java.util.regex.Pattern.compile("(?i)^Env_Portals?_([A-Za-z]+?)(?:_(.+))?$");
+
+    /**
+     * Portal worlds (the Guttering Hollows behind a Goblin Breach) have their own environments named
+     * after the portal instance: Env_Portal_Goblin_Cave belongs to instance Portals/Portals_Goblins,
+     * whose PortalType carries the display name.
+     */
+    private static String portalWorldName(String[] environments) {
+        if (environments == null) return null;
+        for (String environment : environments) {
+            if (environment == null) continue;
+            java.util.regex.Matcher matcher = PORTAL_ENVIRONMENT.matcher(normalizeId(environment));
+            if (!matcher.matches()) continue;
+            String name = portalWorldNames().get(portalToken(matcher.group(1)));
+            return name != null ? name : TextFormatters.dropSourceName(matcher.group(1)) + " Portal World";
+        }
+        return null;
+    }
+
+    /** The part of a portal world an environment covers, e.g. Env_Portal_Goblin_Cave_Deep -> "Cave_Deep" (formatted later). */
+    private static String portalArea(String environment) {
+        java.util.regex.Matcher matcher = PORTAL_ENVIRONMENT.matcher(normalizeId(environment));
+        return matcher.matches() ? matcher.group(2) : null;
+    }
+
+    /** First biome tag of an environment, e.g. Env_Portal_Goblin_Surface is tagged Zone1: [Forests]. */
+    private static String environmentBiome(String environment) {
+        Map<String, String> biomes = environmentBiomes;
+        if (biomes == null) {
+            Map<String, String> loaded = new LinkedHashMap<>();
+            for (ServerAssetRoots.JsonFile file : ServerAssetRoots.loadJsonFiles("Environments").values()) {
+                JsonElement tags = file.json().get("Tags");
+                if (tags == null || !tags.isJsonObject()) continue;
+                for (Map.Entry<String, JsonElement> tag : tags.getAsJsonObject().entrySet()) {
+                    // A "Portals" tag only repeats the portal name.
+                    if (tag.getKey().equalsIgnoreCase("Portals") || !tag.getValue().isJsonArray()
+                            || tag.getValue().getAsJsonArray().isEmpty()) continue;
+                    String biome = jsonPrimitiveString(tag.getValue().getAsJsonArray().get(0));
+                    if (biome != null) loaded.put(normalizeKey(file.name()), TextFormatters.humanize(biome));
+                    break;
+                }
+            }
+            environmentBiomes = biomes = Collections.unmodifiableMap(loaded);
+        }
+        return biomes.get(normalizeKey(environment));
+    }
+
+    private static String portalToken(String value) {
+        return value.toLowerCase(Locale.ENGLISH).replaceFirst("s$", "");
+    }
+
+    private static Map<String, String> portalWorldNames() {
+        Map<String, String> cached = portalWorlds;
+        if (cached != null) return cached;
+        Map<String, String> names = new LinkedHashMap<>();
+        for (ServerAssetRoots.JsonFile file : ServerAssetRoots.loadJsonFiles("PortalTypes").values()) {
+            String instanceId = jsonPrimitiveString(file.json().get("InstanceId"));
+            JsonElement description = file.json().get("Description");
+            String nameKey = description != null && description.isJsonObject()
+                    ? jsonPrimitiveString(description.getAsJsonObject().get("DisplayName")) : null;
+            if (instanceId == null) continue;
+            String instance = instanceId.substring(instanceId.lastIndexOf('/') + 1).replaceFirst("(?i)^Portals?_", "");
+            String name = null;
+            try {
+                if (nameKey != null) name = I18nModule.get().getMessage(I18nModule.DEFAULT_LANGUAGE, nameKey);
+            } catch (Exception ignored) {
+            }
+            if (name == null || name.equals(nameKey)) name = TextFormatters.dropSourceName(file.name());
+            names.put(portalToken(instance), name);
+        }
+        portalWorlds = Collections.unmodifiableMap(names);
+        return portalWorlds;
+    }
+
     private static boolean isIgnoredSpawnId(String value) {
         if (value == null) return false;
         String lower = value.toLowerCase(Locale.ENGLISH);
@@ -841,17 +1156,6 @@ public final class MobMetadataRegistry {
                 .matcher(normalizeId(value));
         if (matcher.find()) {
             return "Elemental Circle Tier " + matcher.group(1);
-        }
-        return null;
-    }
-
-    private static String goblinDukePhaseLabel(String spawnId, String npcId) {
-        String combined = normalizeId(spawnId) + "_" + normalizeId(npcId);
-        java.util.regex.Matcher matcher = java.util.regex.Pattern
-                .compile("(?i)goblin[_\\s-]*duke[_\\s-]*phase[_\\s-]*(\\d+)")
-                .matcher(combined);
-        if (matcher.find()) {
-            return "Goblin Duke Phase " + matcher.group(1);
         }
         return null;
     }
@@ -908,8 +1212,29 @@ public final class MobMetadataRegistry {
     private static JsonObject flattenRoleConfig(JsonObject raw) {
         JsonObject flattened = new JsonObject();
         copyRoleConfigSection(raw, "Parameters", flattened, true);
+        copyRoleConfigTopLevel(raw, flattened);
         copyRoleConfigSection(raw, "Modify", flattened, false);
         return flattened;
+    }
+
+    /**
+     * Generic and Abstract roles author DropList, Appearance, MemoriesNameOverride, ... at the top
+     * level instead of in Modify (e.g. the Gobliterator boss templates since 0.7.0).
+     */
+    private static void copyRoleConfigTopLevel(JsonObject source, JsonObject target) {
+        for (Map.Entry<String, JsonElement> entry : source.entrySet()) {
+            String key = entry.getKey();
+            if (ROLE_STRUCTURE_KEYS.contains(key) || key.startsWith("$") || target.has(key)) continue;
+            JsonElement value = entry.getValue();
+            if (value.isJsonPrimitive()) {
+                target.add(key, value);
+            } else if (value.isJsonObject() && value.getAsJsonObject().has("Compute")) {
+                String computedKey = jsonPrimitiveString(value.getAsJsonObject().get("Compute"));
+                if (computedKey != null && target.has(computedKey)) {
+                    target.add(key, target.get(computedKey));
+                }
+            }
+        }
     }
 
     private static void copyRoleConfigSection(JsonObject source, String sectionName, JsonObject target, boolean parameterSection) {
@@ -1046,18 +1371,28 @@ public final class MobMetadataRegistry {
         return Collections.emptyMap();
     }
 
-    private static boolean matchesMob(String mobId, String candidate) {
+    /**
+     * World and beacon spawns name exact roles. A mob also spawns as part of another role's herd when
+     * that role lists it in its FlockArray (Cow spawns with Cow_Calf), so babies keep their habitat.
+     */
+    private static boolean spawnsMob(String mobId, String spawnedRole) {
         String target = normalizeKey(mobId);
-        String value = normalizeKey(candidate);
-        return value.equals(target)
-                || value.startsWith(target)
-                || target.startsWith(value)
-                || isTokenSubsetMatch(target, value);
+        if (normalizeKey(spawnedRole).equals(target)) return true;
+        return FLOCK_MEMBERS.computeIfAbsent(normalizeKey(spawnedRole), ignored -> flockMembers(spawnedRole)).contains(target);
     }
 
-    private static boolean isTokenSubsetMatch(String first, String second) {
-        if (first.length() < 4 || second.length() < 4) return false;
-        return first.contains(second) || second.contains(first);
+    private static Set<String> flockMembers(String roleId) {
+        Object flock = inheritedRoleValue(tryGetBuilderInfo(roleId), loadRoleConfig(tryGetBuilderInfo(roleId)), "FlockArray");
+        if (!(flock instanceof List<?> members)) return Set.of();
+        Set<String> keys = new LinkedHashSet<>();
+        for (Object member : members) if (member instanceof String id) keys.add(normalizeKey(id));
+        return keys;
+    }
+
+    private static boolean isTriggeredBeacon(NPCSpawn spawn, String spawnId) {
+        return spawn instanceof BeaconNPCSpawn
+                && (spawn.getEnvironments() == null || spawn.getEnvironments().length == 0)
+                && zoneFromPath(spawnId) == null;
     }
 
     private static String findKnownItemId(String id) {
@@ -1341,6 +1676,7 @@ public final class MobMetadataRegistry {
         private final Set<String> specialLabels = new LinkedHashSet<>();
         private final Set<String> structures = new LinkedHashSet<>();
         private final Set<String> conditions = new LinkedHashSet<>();
+        private final Set<String> weathers = new LinkedHashSet<>();
 
         private SpawnHabitatAggregate(String zone, String biome, String region) {
             this.zone = zone;
@@ -1355,12 +1691,14 @@ public final class MobMetadataRegistry {
         private List<String> detailLines() {
             List<String> details = new ArrayList<>();
             details.addAll(sortedSpecialLabels(this.specialLabels));
-            addDetail(details, "Biome", this.biome);
-            addDetail(details, "Region", this.region);
+            // Biome and region are already readable; formatting them again doubles the spaces.
+            if (this.biome != null && !this.biome.isEmpty()) details.add("Biome: " + this.biome);
+            if (this.region != null && !this.region.isEmpty()) details.add("Region: " + this.region);
             if (!this.structures.isEmpty()) {
                 addDetail(details, "Structure", String.join(", ", this.structures));
             }
             details.addAll(this.conditions);
+            if (!this.weathers.isEmpty()) details.add("Weather: " + String.join(", ", this.weathers));
             return dedupeDetailLines(details);
         }
     }

@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.lushbit.hytems.asset.BossRegistry;
 import dev.lushbit.hytems.asset.MobMetadataRegistry;
 import dev.lushbit.hytems.asset.SearchText;
 import dev.lushbit.hytems.ui.HytemsUiTemplates;
@@ -34,6 +35,7 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
     private final PlayerRef playerRef;
     private final boolean openedFromBrowser;
     private String searchQuery = "";
+    private boolean bossesOnly;
     private int currentPage = 0;
     private List<String> filteredMobs = new ArrayList<>();
 
@@ -42,9 +44,22 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
     }
 
     public MobBrowserPage(@Nonnull PlayerRef playerRef, boolean openedFromBrowser) {
+        this(playerRef, openedFromBrowser, null);
+    }
+
+    /** @param state search, page and filter to restore when returning from a mob or boss overview */
+    public MobBrowserPage(@Nonnull PlayerRef playerRef, boolean openedFromBrowser, State state) {
         super(playerRef, CustomPageLifetime.CanDismiss, MobBrowserData.CODEC);
         this.playerRef = playerRef;
         this.openedFromBrowser = openedFromBrowser;
+        if (state != null) {
+            this.searchQuery = state.searchQuery();
+            this.currentPage = state.page();
+            this.bossesOnly = state.bossesOnly();
+        }
+    }
+
+    public record State(String searchQuery, int page, boolean bossesOnly) {
     }
 
     @Override
@@ -52,6 +67,7 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
                       @Nonnull UIEventBuilder events, @Nonnull Store<EntityStore> store) {
         cmd.append(HytemsUiTemplates.MOB_BROWSER);
         cmd.set("#SearchInput.Value", this.searchQuery);
+        cmd.set("#BossesOnly #CheckBox.Value", this.bossesOnly);
         cmd.set("#BackButton.Visible", this.openedFromBrowser);
         cmd.set("#BackButtonSpacer.Visible", this.openedFromBrowser);
 
@@ -59,6 +75,12 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
                 CustomUIEventBindingType.ValueChanged,
                 "#SearchInput",
                 EventData.of("@SearchQuery", "#SearchInput.Value"),
+                false
+        );
+        events.addEventBinding(
+                CustomUIEventBindingType.ValueChanged,
+                "#BossesOnly #CheckBox",
+                EventData.of("@BossesOnly", "#BossesOnly #CheckBox.Value"),
                 false
         );
         if (this.openedFromBrowser) {
@@ -105,6 +127,13 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
             needsUpdate = true;
         }
 
+        if (data.bossesOnly != null && data.bossesOnly != this.bossesOnly) {
+            this.bossesOnly = data.bossesOnly;
+            this.currentPage = 0;
+            filterMobs();
+            needsUpdate = true;
+        }
+
         if (data.pageAction != null) {
             int totalPages = getTotalPages();
             if ("prev".equals(data.pageAction)) {
@@ -135,7 +164,8 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
         if (data.selectedMob != null && !data.selectedMob.isEmpty()) {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
-                player.getPageManager().openCustomPage(ref, store, new MobOverviewPage(this.playerRef, data.selectedMob));
+                player.getPageManager().openCustomPage(ref, store, BossOverviewPage.forMob(this.playerRef, data.selectedMob,
+                        new State(this.searchQuery, this.currentPage, this.bossesOnly)));
             }
             return;
         }
@@ -152,6 +182,9 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
     private void filterMobs() {
         String query = this.searchQuery;
         List<String> allMobs = MobMetadataRegistry.knownMobIds();
+        if (this.bossesOnly) {
+            allMobs = allMobs.stream().filter(BossRegistry::isRepresentative).toList();
+        }
         if (query.isEmpty()) {
             this.filteredMobs = allMobs;
             return;
@@ -160,7 +193,8 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
         List<String> matches = new ArrayList<>();
         for (String mobId : allMobs) {
             String name = TextFormatters.mobName(mobId);
-            if (SearchText.matches(mobId, query) || SearchText.matches(name, query)) {
+            if (SearchText.matches(mobId, query) || SearchText.matches(name, query)
+                    || (BossRegistry.isRepresentative(mobId) && SearchText.matches("boss", query))) {
                 matches.add(mobId);
             }
         }
@@ -201,19 +235,25 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
         cmd.set(selector + " #CardBackground.Background", "hytems/textures/rarity_default.png");
         cmd.set(selector + " #MobPortrait.Visible", true);
         cmd.set(selector + " #MobPortrait.Background", hasPortrait ? portraitPath : MobPortraitResolver.FALLBACK_PORTRAIT_PATH);
+        cmd.set(selector + " #BossBadge.Visible", BossRegistry.isRepresentative(mobId));
         events.addEventBinding(
                 CustomUIEventBindingType.Activating,
                 selector + " #InteractButton",
                 EventData.of("SelectedMob", mobId),
                 false
         );
-        MobMetadataRegistry.preload(mobId);
+        BossRegistry.BossInfo boss = BossRegistry.forMob(mobId);
+        if (boss != null) {
+            boss.memberMobIds().forEach(MobMetadataRegistry::preload);
+        } else {
+            MobMetadataRegistry.preload(mobId);
+        }
     }
 
     private void updatePagination(@Nonnull UICommandBuilder cmd) {
         int totalPages = getTotalPages();
         cmd.set("#PageLabel.Text", "Page " + (this.currentPage + 1) + " / " + totalPages);
-        cmd.set("#MobCountLabel.Text", this.filteredMobs.size() + " mobs found");
+        cmd.set("#MobCountLabel.Text", this.filteredMobs.size() + (this.bossesOnly ? " bosses found" : " mobs found"));
         cmd.set("#PrevPageButton.Visible", true);
         cmd.set("#NextPageButton.Visible", true);
     }
@@ -266,11 +306,17 @@ public class MobBrowserPage extends InteractiveCustomUIPage<MobBrowserPage.MobBr
                         (data, value) -> data.selectedMob = value,
                         data -> data.selectedMob
                 ).add()
+                .append(
+                        new KeyedCodec<>("@BossesOnly", Codec.BOOLEAN),
+                        (data, value) -> data.bossesOnly = value,
+                        data -> data.bossesOnly
+                ).add()
                 .build();
 
         private String searchQuery;
         private String pageAction;
         private String navAction;
         private String selectedMob;
+        private Boolean bossesOnly;
     }
 }

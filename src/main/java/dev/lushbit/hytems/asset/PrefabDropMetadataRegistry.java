@@ -4,8 +4,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import com.hypixel.hytale.assetstore.AssetMap;
-import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import dev.lushbit.hytems.HytemsPlugin;
 import dev.lushbit.hytems.ui.TextFormatters;
 
@@ -29,9 +27,13 @@ import java.util.stream.Stream;
 
 public final class PrefabDropMetadataRegistry {
     private static final Pattern PREFAB_DROP_ID_PATTERN = Pattern.compile("Zone\\d+_[A-Za-z]+_Tier\\d+");
+    private static final Pattern SPAWN_MARKER_PATTERN = Pattern.compile("\"SpawnMarker\"\\s*:\\s*\"([^\"]+)\"");
+    private static final Pattern MARKER_TYPE_PATTERN = Pattern.compile("\"MarkerType\"\\s*:\\s*\"([^\"]+)\"");
     private static final PrefabDropMetadata EMPTY = new PrefabDropMetadata(null, Collections.emptyList());
 
     private static volatile Map<String, PrefabDropMetadata> cachedMetadata = Collections.emptyMap();
+    private static volatile Map<String, List<String>> markerLocations = Collections.emptyMap();
+    private static final Set<String> instanceNames = java.util.concurrent.ConcurrentHashMap.newKeySet();
     private static volatile boolean loaded;
     private static volatile boolean loading;
     private static volatile long generation;
@@ -51,12 +53,26 @@ public final class PrefabDropMetadataRegistry {
         return metadata != null ? metadata : EMPTY;
     }
 
+    /** Structures and instances a spawn marker is placed in, e.g. "Scarak Hives" or "The Deepworks". */
+    @Nonnull
+    public static List<String> markerLocations(String markerId) {
+        ensureLoadedAsync();
+        if (markerId == null || markerId.isEmpty()) return Collections.emptyList();
+        return markerLocations.getOrDefault(markerId.toLowerCase(Locale.ENGLISH), Collections.emptyList());
+    }
+
+    /** Whether an instance (dungeon world) with this folder name exists, e.g. "Forgotten_Temple". */
+    public static boolean isKnownInstance(String folderName) {
+        return folderName != null && instanceNames.contains(folderName.toLowerCase(Locale.ENGLISH));
+    }
+
     public static void startAsyncPreload() {
         ensureLoadedAsync();
     }
 
     public static synchronized void invalidate() {
         cachedMetadata = Collections.emptyMap();
+        markerLocations = Collections.emptyMap();
         loaded = false;
         loading = false;
         generation++;
@@ -77,8 +93,14 @@ public final class PrefabDropMetadataRegistry {
 
             Thread loaderThread = new Thread(() -> {
                 try {
-                    Map<String, PrefabDropMetadata> metadata = Collections.unmodifiableMap(loadMetadata());
-                    if (loadGeneration == generation) cachedMetadata = metadata;
+                    Map<String, Set<String>> markers = new LinkedHashMap<>();
+                    Map<String, PrefabDropMetadata> metadata = Collections.unmodifiableMap(loadMetadata(markers));
+                    if (loadGeneration == generation) {
+                        cachedMetadata = metadata;
+                        markerLocations = sortedLocations(markers);
+                        // Mob overviews cached before the scan finished have no marker locations yet.
+                        MobMetadataRegistry.markNpcDataDirty();
+                    }
                 } catch (Exception e) {
                     System.err.println("[Hytems] Failed to load prefab drop metadata: " + e.getMessage());
                     if (loadGeneration == generation) cachedMetadata = Collections.emptyMap();
@@ -94,13 +116,8 @@ public final class PrefabDropMetadataRegistry {
         }
     }
 
-    private static Map<String, PrefabDropMetadata> loadMetadata() {
-        AssetMap<String, ItemDropList> dropMap = ItemDropList.getAssetMap();
-        if (dropMap == null || dropMap.getAssetMap() == null || dropMap.getAssetMap().isEmpty()) {
-            return Collections.emptyMap();
-        }
-
-        Set<Path> serverRoots = collectServerRoots(dropMap);
+    private static Map<String, PrefabDropMetadata> loadMetadata(Map<String, Set<String>> markers) {
+        Set<Path> serverRoots = ServerAssetRoots.serverRoots();
         if (serverRoots.isEmpty()) {
             return Collections.emptyMap();
         }
@@ -110,7 +127,8 @@ public final class PrefabDropMetadataRegistry {
 
         for (Path serverRoot : serverRoots) {
             loadSpawnerMappings(serverRoot, containerByDropId);
-            loadPrefabStructureMappings(serverRoot, structuresByDropId);
+            loadPrefabStructureMappings(serverRoot, structuresByDropId, markers);
+            loadInstanceMarkerMappings(serverRoot, markers);
         }
 
         Map<String, PrefabDropMetadata> metadata = new LinkedHashMap<>();
@@ -127,34 +145,6 @@ public final class PrefabDropMetadataRegistry {
         }
 
         return metadata;
-    }
-
-    private static Set<Path> collectServerRoots(AssetMap<String, ItemDropList> dropMap) {
-        Set<Path> roots = new LinkedHashSet<>();
-        for (String dropId : dropMap.getAssetMap().keySet()) {
-            if (dropId == null) {
-                continue;
-            }
-            Path path = dropMap.getPath(dropId);
-            Path root = findServerRoot(path);
-            if (root != null && Files.exists(root)) {
-                roots.add(root);
-            }
-        }
-        return roots;
-    }
-
-    private static Path findServerRoot(Path path) {
-        if (path == null) {
-            return null;
-        }
-        Path normalized = path.normalize();
-        for (Path cursor = normalized; cursor != null; cursor = cursor.getParent()) {
-            if ("Server".equalsIgnoreCase(String.valueOf(cursor.getFileName()))) {
-                return cursor;
-            }
-        }
-        return null;
     }
 
     private static void loadSpawnerMappings(Path serverRoot, Map<String, String> containerByDropId) {
@@ -198,7 +188,8 @@ public final class PrefabDropMetadataRegistry {
         }
     }
 
-    private static void loadPrefabStructureMappings(Path serverRoot, Map<String, Set<String>> structuresByDropId) {
+    private static void loadPrefabStructureMappings(Path serverRoot, Map<String, Set<String>> structuresByDropId,
+                                                    Map<String, Set<String>> markers) {
         Path prefabsDir = serverRoot.resolve("Prefabs");
         if (!Files.isDirectory(prefabsDir)) {
             return;
@@ -210,6 +201,8 @@ public final class PrefabDropMetadataRegistry {
                     .forEach(path -> {
                         try {
                             String text = Files.readString(path, StandardCharsets.UTF_8);
+                            String relativePath = serverRoot.relativize(path).toString().replace('\\', '/');
+                            collectMarkerPlacements(text, relativePath, markers);
                             Matcher matcher = PREFAB_DROP_ID_PATTERN.matcher(text);
                             Set<String> matches = new LinkedHashSet<>();
                             while (matcher.find()) {
@@ -220,8 +213,7 @@ public final class PrefabDropMetadataRegistry {
                                 return;
                             }
 
-                            String relative = serverRoot.relativize(path).toString().replace('\\', '/');
-                            String structureLabel = structureLabelFromPrefabPath(relative);
+                            String structureLabel = structureLabelFromPrefabPath(relativePath);
                             if (structureLabel == null || structureLabel.isEmpty()) {
                                 return;
                             }
@@ -234,6 +226,140 @@ public final class PrefabDropMetadataRegistry {
                     });
         } catch (IOException ignored) {
         }
+    }
+
+    private static void collectMarkerPlacements(String text, String relativePath, Map<String, Set<String>> markers) {
+        if (!text.contains("\"SpawnMarker\"")) return;
+        String location = markerLocationFromPrefabPath(relativePath);
+        if (location == null) return;
+        Matcher matcher = SPAWN_MARKER_PATTERN.matcher(text);
+        while (matcher.find()) {
+            markers.computeIfAbsent(matcher.group(1).toLowerCase(Locale.ENGLISH), ignored -> new LinkedHashSet<>()).add(location);
+        }
+    }
+
+    /** Instances (dungeons like The Deepworks) trigger their markers from trigger volumes. */
+    private static void loadInstanceMarkerMappings(Path serverRoot, Map<String, Set<String>> markers) {
+        Path instancesDir = serverRoot.resolve("Instances");
+        if (!Files.isDirectory(instancesDir)) return;
+        try (Stream<Path> files = Files.walk(instancesDir)) {
+            files.forEach(path -> {
+                String fileName = path.getFileName().toString();
+                if (fileName.equalsIgnoreCase("instance.bson") && path.getParent() != null) {
+                    instanceNames.add(path.getParent().getFileName().toString().toLowerCase(Locale.ENGLISH));
+                    return;
+                }
+                if (!fileName.equalsIgnoreCase("TriggerVolumeData.json")) return;
+                Path resources = path.getParent();
+                Path instanceDir = resources == null ? null : resources.getParent();
+                if (instanceDir == null) return;
+                String location = TextFormatters.dropSourceName(instanceDir.getFileName().toString());
+                try {
+                    Matcher matcher = MARKER_TYPE_PATTERN.matcher(Files.readString(path, StandardCharsets.UTF_8));
+                    while (matcher.find()) {
+                        markers.computeIfAbsent(matcher.group(1).toLowerCase(Locale.ENGLISH),
+                                ignored -> new LinkedHashSet<>()).add(location);
+                    }
+                } catch (Exception ignored) {
+                }
+            });
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static Map<String, List<String>> sortedLocations(Map<String, Set<String>> markers) {
+        Map<String, List<String>> sorted = new LinkedHashMap<>();
+        markers.forEach((markerId, locations) -> {
+            List<String> list = new ArrayList<>(locations);
+            list.sort(String.CASE_INSENSITIVE_ORDER);
+            sorted.put(markerId, Collections.unmodifiableList(list));
+        });
+        return Collections.unmodifiableMap(sorted);
+    }
+
+    /** Readable name for the structure a prefab belongs to, e.g. Prefabs/Npc/Scarak/Scarak_Hives/... -> "Scarak Hives". */
+    static String markerLocationFromPrefabPath(String path) {
+        String[] parts = path.replace('\\', '/').split("/");
+        int start = 0;
+        while (start < parts.length && !parts[start].equalsIgnoreCase("Prefabs")) start++;
+        if (start + 2 >= parts.length) return null;
+        String category = parts[start + 1];
+        String first = parts[start + 2];
+        String second = start + 3 < parts.length - 1 ? parts[start + 3] : null;
+        switch (category.toLowerCase(Locale.ENGLISH)) {
+            case "testing":
+                return null;
+            case "mineshaft":
+                return "Mineshaft";
+            case "dungeon": {
+                String name = TextFormatters.dropSourceName(first);
+                return name.matches("(?i).*(Lair|Temple|Crypt|Ruins|Labyrinth)") ? name : name + " Dungeon";
+            }
+            case "monuments": {
+                String structure = structureLabelFromPrefabPath(path);
+                if (structure != null) return structure;
+                if (first.equalsIgnoreCase("Incidental") && second != null) {
+                    return second.equalsIgnoreCase("Shipwrecks") ? "Shipwreck" : TextFormatters.dropSourceName(second) + " Ruins";
+                }
+                if (second == null) return "Monument";
+                if (second.equalsIgnoreCase("Temple")) return "Portal Temple";
+                if (second.equalsIgnoreCase("Start_Den")) return "Starting Den";
+                return TextFormatters.dropSourceName(second);
+            }
+            case "npc": {
+                String faction = TextFormatters.dropSourceName(first);
+                if (first.equalsIgnoreCase("Dragons")) {
+                    return second == null ? "Dragon Lair" : TextFormatters.dropSourceName(second) + " Dragon Lair";
+                }
+                if (second == null) return faction + " Camp";
+                String lower = second.toLowerCase(Locale.ENGLISH);
+                if (lower.contains(first.toLowerCase(Locale.ENGLISH))) return TextFormatters.dropSourceName(second);
+                if (lower.contains("fort")) return faction + " Fort";
+                if (lower.contains("outpost")) return faction + " Outpost";
+                if (lower.contains("portal")) return faction + " Portal";
+                if (lower.contains("gate")) return faction + " Gate";
+                if (lower.contains("throne")) return faction + " Throne";
+                return first.equalsIgnoreCase("Kweebec") ? "Kweebec Village" : faction + " Camp";
+            }
+            case "orbis":
+                return orbisLocation(first, second);
+            case "spawn":
+                return "Starting Area";
+            case "cave":
+                return first.equalsIgnoreCase("Nodes") ? "Cave" : TextFormatters.dropSourceName(first) + " Cave";
+            case "plants":
+                return first.equalsIgnoreCase("Coral") ? "Coral Reef" : null;
+            default:
+                return TextFormatters.dropSourceName(category);
+        }
+    }
+
+    /** Update 7 Orbis content, e.g. Orbis/Goblins/Encounter_Surface_Objective_Outpost_Void -> "Goblin Outpost (Void)". */
+    private static String orbisLocation(String group, String folder) {
+        if (folder == null) return TextFormatters.dropSourceName(group);
+        String lower = folder.toLowerCase(Locale.ENGLISH);
+        if (lower.contains("debug") || lower.startsWith("temp_")) return null;
+        if (group.equalsIgnoreCase("WorldEvent")) return TextFormatters.dropSourceName(folder.replaceFirst("(?i)s$", "")) + " World Event";
+        if (lower.contains("voidanomaly")) return "Void Anomaly";
+        if (lower.contains("enkindled_quarry")) return "Enkindled Quarry";
+        if (lower.contains("enkindled_ruin")) return "Enkindled Ruin";
+        if (lower.contains("mountain_statue")) return "Goblin Mountain Statue";
+        for (String structure : new String[]{"Outpost", "Tower", "Shack"}) {
+            int index = lower.indexOf("_" + structure.toLowerCase(Locale.ENGLISH) + "_");
+            if (index >= 0) {
+                String variant = folder.substring(index + structure.length() + 2);
+                return "Goblin " + structure + (variant.equalsIgnoreCase("Goblin") ? "" : " (" + TextFormatters.dropSourceName(variant) + ")");
+            }
+        }
+        String voidSuffix = lower.contains("void") ? " (Void)" : "";
+        if (lower.contains("slum_dungeon")) return "Goblin Slum Dungeon";
+        if (lower.contains("slum")) return "Goblin Slum";
+        if (lower.contains("cave_mine")) return "Goblin Mine";
+        if (lower.contains("cave_crypt")) return "Goblin Crypt";
+        if (lower.contains("cave_spider")) return "Goblin Spider Cave";
+        if (lower.startsWith("incidental_cave")) return "Goblin Cave Camp" + voidSuffix;
+        return TextFormatters.dropSourceName(group.replaceFirst("(?i)s$", "")) + " "
+                + TextFormatters.dropSourceName(folder.replaceFirst("(?i)^(Encounter|Incidental)_", ""));
     }
 
     private static String translatedItemName(String itemId) {

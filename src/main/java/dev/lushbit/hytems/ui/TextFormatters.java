@@ -1,5 +1,7 @@
 package dev.lushbit.hytems.ui;
 
+import dev.lushbit.hytems.asset.BossRegistry;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -42,7 +44,10 @@ public final class TextFormatters {
     }
 
     public static String mobName(String mobType) {
-        return mobType == null ? "Unknown" : humanize(trimGeneratedSuffix(mobType));
+        if (mobType == null) return "Unknown";
+        BossRegistry.BossInfo boss = BossRegistry.forMob(mobType);
+        if (boss != null && boss.representativeMobId().equalsIgnoreCase(mobType)) return BossText.defaultName(boss);
+        return humanize(trimGeneratedSuffix(mobType));
     }
 
     public static String cropName(String cropType) {
@@ -288,7 +293,7 @@ public final class TextFormatters {
         return humanize(lastToken + "_" + base) + " " + suffix;
     }
 
-    private static String humanize(String value) {
+    public static String humanize(String value) {
         StringBuilder result = new StringBuilder();
         boolean capitalizeNext = true;
 

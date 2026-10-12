@@ -30,6 +30,24 @@ Group {
       }
     }
 
+    Group #BossBadge {
+      Anchor: (Top: 4, Left: 4, Width: 34, Height: 14);
+      LayoutMode: Center;
+      Background: #8e2a2a(0.95);
+      Visible: false;
+
+      Label {
+        Text: "BOSS";
+        Style: (
+          FontSize: 9,
+          TextColor: #ffe2c4,
+          RenderBold: true,
+          HorizontalAlignment: Center,
+          VerticalAlignment: Center
+        );
+      }
+    }
+
     Button #InteractButton {
       Anchor: (Top: 3, Bottom: 3, Left: 3, Right: 3);
       Background: #000000(0);

@@ -41,11 +41,17 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
 
     private final PlayerRef playerRef;
     private final String mobId;
+    private final MobBrowserPage.State browserState;
 
     public MobOverviewPage(@Nonnull PlayerRef playerRef, @Nonnull String mobId) {
+        this(playerRef, mobId, null);
+    }
+
+    public MobOverviewPage(@Nonnull PlayerRef playerRef, @Nonnull String mobId, MobBrowserPage.State browserState) {
         super(playerRef, CustomPageLifetime.CanDismiss, MobOverviewData.CODEC);
         this.playerRef = playerRef;
         this.mobId = mobId;
+        this.browserState = browserState;
     }
 
     @Override
@@ -66,7 +72,7 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
         if ("back".equals(data.action)) {
             Player player = store.getComponent(ref, Player.getComponentType());
             if (player != null) {
-                player.getPageManager().openCustomPage(ref, store, new MobBrowserPage(this.playerRef, true));
+                player.getPageManager().openCustomPage(ref, store, new MobBrowserPage(this.playerRef, true, this.browserState));
             }
             return;
         }
@@ -213,16 +219,17 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
     private void renderSpawns(@Nonnull UICommandBuilder cmd, @Nonnull List<SpawnGroup> groups) {
         cmd.clear("#SpawnGroups");
         cmd.set("#NoSpawnLabel.Visible", groups.isEmpty());
-        int groupIndex = 0;
+        // Habitat entries and titled groups share #SpawnGroups, so index by appended child.
+        int childIndex = 0;
         for (SpawnGroup group : groups) {
             if ("Spawn & Habitat".equals(group.title())) {
-                for (int entryIndex = 0; entryIndex < group.entries().size(); entryIndex++) {
-                    appendSpawnEntry(cmd, "#SpawnGroups", entryIndex, group.entries().get(entryIndex));
+                for (SpawnEntry entry : group.entries()) {
+                    appendSpawnEntry(cmd, "#SpawnGroups", childIndex++, entry);
                 }
                 continue;
             }
             cmd.append("#SpawnGroups", HytemsUiTemplates.MOB_SPAWN_GROUP);
-            String groupSelector = "#SpawnGroups[" + groupIndex + "]";
+            String groupSelector = "#SpawnGroups[" + childIndex + "]";
             cmd.set(groupSelector + " #GroupTitle.Text", group.title());
             int height = SPAWN_GROUP_BASE_HEIGHT;
             for (int entryIndex = 0; entryIndex < group.entries().size(); entryIndex++) {
@@ -231,7 +238,7 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
                 height += entryHeight + 6;
             }
             setHeight(cmd, groupSelector, height);
-            groupIndex++;
+            childIndex++;
         }
     }
 
@@ -260,7 +267,7 @@ public class MobOverviewPage extends InteractiveCustomUIPage<MobOverviewPage.Mob
 
     private boolean isCompactSpecialSpawnDetails(@Nonnull List<String> detailLines) {
         return !detailLines.isEmpty() && detailLines.stream().allMatch(line ->
-                line.startsWith("Elemental Circle Tier ") || line.startsWith("Goblin Duke Phase "));
+                line.startsWith("Elemental Circle Tier "));
     }
 
     private void setHeight(@Nonnull UICommandBuilder cmd, @Nonnull String selector, int height) {

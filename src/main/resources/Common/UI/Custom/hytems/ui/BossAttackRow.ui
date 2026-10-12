@@ -1,0 +1,28 @@
+Group {
+  Anchor: (Height: 22);
+  LayoutMode: Left;
+  Padding: (Left: 8, Right: 8);
+  Background: #0f1822(0.6);
+
+  Label #AttackName {
+    Anchor: (Width: 150);
+    Text: "";
+    Style: (
+      FontSize: 11,
+      TextColor: #e8a93b,
+      RenderBold: true,
+      VerticalAlignment: Center
+    );
+  }
+
+  Label #AttackDescription {
+    FlexWeight: 1;
+    Text: "";
+    Style: (
+      FontSize: 11,
+      TextColor: #b9c7d6,
+      Wrap: true,
+      VerticalAlignment: Center
+    );
+  }
+}

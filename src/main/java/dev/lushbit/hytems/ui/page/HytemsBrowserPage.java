@@ -1569,7 +1569,7 @@ public class HytemsBrowserPage extends InteractiveCustomUIPage<HytemsBrowserPage
 
         Player player = this.pageStore.getComponent(this.pageRef, Player.getComponentType());
         if (player != null) {
-            player.getPageManager().openCustomPage(this.pageRef, this.pageStore, new MobOverviewPage(this.playerRef, mobId));
+            player.getPageManager().openCustomPage(this.pageRef, this.pageStore, BossOverviewPage.forMob(this.playerRef, mobId));
         }
     }
 

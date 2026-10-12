@@ -26,6 +26,7 @@ import com.hypixel.hytale.server.spawning.assets.spawns.config.BeaconNPCSpawn;
 import com.hypixel.hytale.server.spawning.assets.spawns.config.WorldNPCSpawn;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import dev.lushbit.hytems.asset.BossRegistry;
 import dev.lushbit.hytems.asset.DropListRegistry;
 import dev.lushbit.hytems.asset.ItemSearchService;
 import dev.lushbit.hytems.asset.MobMetadataRegistry;
@@ -79,6 +80,8 @@ public class HytemsPlugin extends JavaPlugin {
             MobMetadataRegistry.markNpcDataDirty();
             this.getLogger().at(Level.INFO).log("Discovered %d mobs and linked %d NPC drop lists for Hytems",
                     MobMetadataRegistry.knownMobIds().size(), MobMetadataRegistry.mappedDropListCount());
+            this.getLogger().at(Level.INFO).log("Discovered %d bosses for Hytems: %s", BossRegistry.all().size(),
+                    BossRegistry.all().stream().map(BossRegistry.BossInfo::key).collect(java.util.stream.Collectors.joining(", ")));
         });
 
         this.getEventRegistry().register(PlayerConnectEvent.class, event -> {

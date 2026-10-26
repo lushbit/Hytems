@@ -8,17 +8,25 @@ import dev.lushbit.hytems.ui.hud.PinnedItemsInventoryTracker;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class PlayerDataManager {
     private static final int MAX_PINNED_ITEMS = 3;
     private static final int MAX_FAVORITE_ITEMS = 8;
     private static final int MAX_SEARCH_HISTORY_ITEMS = 12;
+    private static final long SAVE_DELAY_MS = 3000L;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    
+    private static final PlayerData DELETE_FILE = new PlayerData();
+    private final Map<UUID, PlayerData> pendingWrites = new ConcurrentHashMap<>();
+    private ScheduledExecutorService writer;
     private final Map<UUID, LinkedHashSet<String>> playerPinnedItems = new ConcurrentHashMap<>();
     private final Map<UUID, Map<String, Integer>> playerPinnedRecipeIndexes = new ConcurrentHashMap<>();
     private final Map<UUID, LinkedHashSet<String>> playerFavoriteItems = new ConcurrentHashMap<>();
@@ -31,6 +39,13 @@ public class PlayerDataManager {
     
     public void setDataDirectory(Path dataDirectory) {
         this.dataDirectory = dataDirectory;
+        if (writer == null || writer.isShutdown()) {
+            writer = Executors.newSingleThreadScheduledExecutor(runnable -> {
+                Thread thread = new Thread(runnable, "Hytems-PlayerData");
+                thread.setDaemon(true);
+                return thread;
+            });
+        }
         try {
             Files.createDirectories(dataDirectory.resolve("players"));
         } catch (IOException e) {
@@ -41,59 +56,82 @@ public class PlayerDataManager {
     public void loadData(PlayerRef playerRef) {
         if (dataDirectory == null) return;
         UUID uuid = playerRef.getUuid();
-        Path playerFile = dataDirectory.resolve("players").resolve(uuid.toString() + ".json");
+        Path playerFile = playerFile(uuid);
 
         loadedPlayers.add(uuid);
-        
+
+        PlayerData pending = pendingWrites.get(uuid);
+        if (pending != null) {
+            if (pending != DELETE_FILE) applyLoadedData(uuid, pending);
+            return;
+        }
+
         if (Files.exists(playerFile)) {
+            PlayerData data;
             try (Reader reader = Files.newBufferedReader(playerFile)) {
-                PlayerData data = GSON.fromJson(reader, PlayerData.class);
-                if (data != null) {
-                    if (data.pinnedItems != null && !data.pinnedItems.isEmpty()) {
-                        playerPinnedItems.put(uuid, new LinkedHashSet<>(data.pinnedItems));
-                    }
-                    if (data.pinnedRecipeIndexes != null && data.pinnedItems != null) {
-                        Map<String, Integer> recipeIndexes = new ConcurrentHashMap<>();
-                        for (Map.Entry<String, Integer> entry : data.pinnedRecipeIndexes.entrySet()) {
-                            if (entry.getKey() != null && data.pinnedItems.contains(entry.getKey())
-                                    && entry.getValue() != null && entry.getValue() >= 0) {
-                                recipeIndexes.put(entry.getKey(), entry.getValue());
-                            }
-                        }
-                        if (!recipeIndexes.isEmpty()) {
-                            playerPinnedRecipeIndexes.put(uuid, recipeIndexes);
-                        }
-                    }
-                    if (data.favoriteItems != null && !data.favoriteItems.isEmpty()) {
-                        playerFavoriteItems.put(uuid, new LinkedHashSet<>(data.favoriteItems));
-                    }
-                    if (data.searchHistoryItems != null && !data.searchHistoryItems.isEmpty()) {
-                        LinkedList<String> history = new LinkedList<>();
-                        for (String itemId : data.searchHistoryItems) {
-                            if (itemId == null || itemId.isEmpty() || history.contains(itemId)) {
-                                continue;
-                            }
-                            history.add(itemId);
-                            if (history.size() >= MAX_SEARCH_HISTORY_ITEMS) {
-                                break;
-                            }
-                        }
-                        if (!history.isEmpty()) {
-                            playerSearchHistoryItems.put(uuid, history);
-                        }
-                    }
-                    if (data.lastViewedItem != null && !data.lastViewedItem.isEmpty()) {
-                        playerLastViewedItems.put(uuid, data.lastViewedItem);
-                    }
-                    if (data.lastViewedTab != null && !data.lastViewedTab.isEmpty()) {
-                        playerLastViewedTabs.put(uuid, data.lastViewedTab);
-                    }
-                    if (data.browserFilters != null) {
-                        playerBrowserFilters.put(uuid, data.browserFilters.copy());
+                data = GSON.fromJson(reader, PlayerData.class);
+            } catch (IOException | RuntimeException e) {
+                quarantineCorruptFile(playerFile, e);
+                return;
+            }
+            applyLoadedData(uuid, data);
+        }
+    }
+
+    private void quarantineCorruptFile(Path playerFile, Exception cause) {
+        Path backup = playerFile.resolveSibling(playerFile.getFileName() + ".corrupt-" + System.currentTimeMillis());
+        System.err.println("[Hytems] Could not read " + playerFile.getFileName() + " (" + cause.getMessage()
+                + "), moved it to " + backup.getFileName() + " and starting with empty data");
+        try {
+            Files.move(playerFile, backup, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void applyLoadedData(UUID uuid, PlayerData data) {
+        if (data != null) {
+            if (data.pinnedItems != null && !data.pinnedItems.isEmpty()) {
+                playerPinnedItems.put(uuid, new LinkedHashSet<>(data.pinnedItems));
+            }
+            if (data.pinnedRecipeIndexes != null && data.pinnedItems != null) {
+                Map<String, Integer> recipeIndexes = new ConcurrentHashMap<>();
+                for (Map.Entry<String, Integer> entry : data.pinnedRecipeIndexes.entrySet()) {
+                    if (entry.getKey() != null && data.pinnedItems.contains(entry.getKey())
+                            && entry.getValue() != null && entry.getValue() >= 0) {
+                        recipeIndexes.put(entry.getKey(), entry.getValue());
                     }
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
+                if (!recipeIndexes.isEmpty()) {
+                    playerPinnedRecipeIndexes.put(uuid, recipeIndexes);
+                }
+            }
+            if (data.favoriteItems != null && !data.favoriteItems.isEmpty()) {
+                playerFavoriteItems.put(uuid, new LinkedHashSet<>(data.favoriteItems));
+            }
+            if (data.searchHistoryItems != null && !data.searchHistoryItems.isEmpty()) {
+                LinkedList<String> history = new LinkedList<>();
+                for (String itemId : data.searchHistoryItems) {
+                    if (itemId == null || itemId.isEmpty() || history.contains(itemId)) {
+                        continue;
+                    }
+                    history.add(itemId);
+                    if (history.size() >= MAX_SEARCH_HISTORY_ITEMS) {
+                        break;
+                    }
+                }
+                if (!history.isEmpty()) {
+                    playerSearchHistoryItems.put(uuid, history);
+                }
+            }
+            if (data.lastViewedItem != null && !data.lastViewedItem.isEmpty()) {
+                playerLastViewedItems.put(uuid, data.lastViewedItem);
+            }
+            if (data.lastViewedTab != null && !data.lastViewedTab.isEmpty()) {
+                playerLastViewedTabs.put(uuid, data.lastViewedTab);
+            }
+            if (data.browserFilters != null) {
+                playerBrowserFilters.put(uuid, data.browserFilters.copy());
             }
         }
     }
@@ -102,14 +140,26 @@ public class PlayerDataManager {
         if (dataDirectory == null) return;
         UUID uuid = playerRef.getUuid();
         if (loadedPlayers.contains(uuid)) {
-            saveDataForUuid(uuid);
+            queueSave(uuid, false);
         }
     }
 
-    private void saveDataForUuid(UUID uuid) {
+    private void queueSave(UUID uuid, boolean immediate) {
         if (dataDirectory == null) return;
         if (!loadedPlayers.contains(uuid)) return; // CRITICAL: Don't save if not loaded
 
+        boolean alreadyQueued = pendingWrites.put(uuid, snapshot(uuid)) != null;
+        ScheduledExecutorService executor = writer;
+        if (executor == null || executor.isShutdown()) {
+            flushPending(uuid);
+        } else if (immediate) {
+            executor.execute(() -> flushPending(uuid));
+        } else if (!alreadyQueued) {
+            executor.schedule(() -> flushPending(uuid), SAVE_DELAY_MS, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    private PlayerData snapshot(UUID uuid) {
         LinkedHashSet<String> pinned = playerPinnedItems.get(uuid);
         Map<String, Integer> pinnedRecipeIndexes = playerPinnedRecipeIndexes.get(uuid);
         LinkedHashSet<String> favorites = playerFavoriteItems.get(uuid);
@@ -118,20 +168,13 @@ public class PlayerDataManager {
         String lastViewedTab = playerLastViewedTabs.get(uuid);
         BrowserFilterSettings browserFilters = playerBrowserFilters.get(uuid);
 
-        Path playerFile = dataDirectory.resolve("players").resolve(uuid.toString() + ".json");
-
         if ((pinned == null || pinned.isEmpty())
                 && (favorites == null || favorites.isEmpty())
                 && (searchHistory == null || searchHistory.isEmpty())
                 && (lastViewedItem == null || lastViewedItem.isEmpty())
                 && (lastViewedTab == null || lastViewedTab.isEmpty())
                 && browserFilters == null) {
-            try {
-                Files.deleteIfExists(playerFile);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            return;
+            return DELETE_FILE;
         }
 
         PlayerData data = new PlayerData();
@@ -150,17 +193,54 @@ public class PlayerDataManager {
         data.lastViewedItem = lastViewedItem;
         data.lastViewedTab = lastViewedTab;
         data.browserFilters = browserFilters != null ? browserFilters.copy() : null;
-        
-        try (Writer writer = Files.newBufferedWriter(playerFile)) {
-            GSON.toJson(data, writer);
+        return data;
+    }
+
+    private void flushPending(UUID uuid) {
+        PlayerData data = pendingWrites.remove(uuid);
+        if (data != null) {
+            writeToDisk(uuid, data);
+        }
+    }
+
+    private void writeToDisk(UUID uuid, PlayerData data) {
+        Path playerFile = playerFile(uuid);
+        try {
+            if (data == DELETE_FILE) {
+                Files.deleteIfExists(playerFile);
+                return;
+            }
+            Path tempFile = playerFile.resolveSibling(playerFile.getFileName() + ".tmp");
+            try (Writer fileWriter = Files.newBufferedWriter(tempFile)) {
+                GSON.toJson(data, fileWriter);
+            }
+            try {
+                Files.move(tempFile, playerFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tempFile, playerFile, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    private Path playerFile(UUID uuid) {
+        return dataDirectory.resolve("players").resolve(uuid.toString() + ".json");
+    }
+
     public void saveAll() {
         if (dataDirectory == null) return;
-        loadedPlayers.forEach(this::saveDataForUuid);
+        ScheduledExecutorService executor = writer;
+        if (executor != null) {
+            executor.shutdownNow();
+            try {
+                executor.awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        loadedPlayers.forEach(uuid -> pendingWrites.put(uuid, snapshot(uuid)));
+        new ArrayList<>(pendingWrites.keySet()).forEach(this::flushPending);
     }
     
     public boolean togglePin(PlayerRef playerRef, String itemId) {
@@ -378,7 +458,7 @@ public class PlayerDataManager {
 
     public void cleanup(PlayerRef playerRef) {
         UUID uuid = playerRef.getUuid();
-        saveDataForUuid(uuid);
+        queueSave(uuid, true);
         playerPinnedItems.remove(uuid);
         playerPinnedRecipeIndexes.remove(uuid);
         playerFavoriteItems.remove(uuid);

@@ -70,12 +70,12 @@ public final class ItemUiSupport {
     }
 
     public static String translatedDescription(@Nonnull PlayerRef playerRef, Item item) {
-        if (item == null || item.getDescriptionTranslationKey() == null
-                || item.getDescriptionTranslationKey().isEmpty()) return "";
+        if (item == null) return "";
+        boolean hasDescription = item.getDescriptionTranslationKey() != null
+                && !item.getDescriptionTranslationKey().isEmpty();
+        if (!hasDescription && item.getEffectsTooltip() == null) return "";
         try {
-            String translated = I18nModule.get().getMessage(playerRef.getLanguage(), item.getDescriptionTranslationKey());
-            return translated == null || translated.equals(item.getDescriptionTranslationKey())
-                    ? "" : sanitizeDescription(translated);
+            return sanitizeDescription(ItemDescriptionResolver.resolveDescription(playerRef.getLanguage(), item));
         } catch (Exception ignored) {
             return "";
         }

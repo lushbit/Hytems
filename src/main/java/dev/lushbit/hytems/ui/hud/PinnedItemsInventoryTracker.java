@@ -17,14 +17,17 @@ import dev.lushbit.hytems.HytemsPlugin;
 import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class PinnedItemsInventoryTracker {
     
     private static final long UPDATE_THROTTLE = 250L;
     private static final Map<UUID, Long> updateTimestamps = new ConcurrentHashMap<>();
     private static final Map<UUID, Map<String, Integer>> cachedInventories = new ConcurrentHashMap<>();
+    private static final Set<UUID> pendingRefreshes = ConcurrentHashMap.newKeySet();
     
     public static void onInventoryChange(int entityId, ArchetypeChunk<EntityStore> chunk, Store<EntityStore> store, CommandBuffer<EntityStore> buffer, InventoryChangeEvent event) {
         Ref<EntityStore> ref = chunk.getReferenceTo(entityId);
@@ -37,21 +40,46 @@ public class PinnedItemsInventoryTracker {
         if (HytemsPlugin.playerDataManager.getPinnedCount(playerRef) == 0) return;
         
         UUID playerId = playerRef.getUuid();
-        if (!shouldUpdate(playerId)) return;
-        
+        long waitMs = remainingThrottle(playerId);
+        if (waitMs > 0) {
+            scheduleTrailingRefresh(playerRef, store, ref, waitMs);
+            return;
+        }
+
+        refreshIfChanged(playerRef, store, ref);
+    }
+
+    private static void refreshIfChanged(PlayerRef playerRef, Store<EntityStore> store, Ref<EntityStore> ref) {
+        UUID playerId = playerRef.getUuid();
         Map<String, Integer> current = scanPlayerInventory(store, ref);
         Map<String, Integer> cached = cachedInventories.get(playerId);
-        
+
         if (cached == null || !current.equals(cached)) {
             updateTimestamps.put(playerId, System.currentTimeMillis());
             cachedInventories.put(playerId, current);
             refreshHud(playerRef, store, ref);
         }
     }
-    
-    private static boolean shouldUpdate(UUID playerId) {
+
+    private static void scheduleTrailingRefresh(PlayerRef playerRef, Store<EntityStore> store,
+                                                Ref<EntityStore> ref, long delayMs) {
+        UUID playerId = playerRef.getUuid();
+        if (!pendingRefreshes.add(playerId)) return;
+        try {
+            store.getExternalData().getWorld().scheduleAfter(() -> {
+                pendingRefreshes.remove(playerId);
+                if (!ref.isValid() || HytemsPlugin.playerDataManager.getPinnedCount(playerRef) == 0) return;
+                refreshIfChanged(playerRef, store, ref);
+            }, delayMs, TimeUnit.MILLISECONDS);
+        } catch (RuntimeException e) {
+            pendingRefreshes.remove(playerId);
+        }
+    }
+
+    private static long remainingThrottle(UUID playerId) {
         Long lastUpdate = updateTimestamps.get(playerId);
-        return lastUpdate == null || (System.currentTimeMillis() - lastUpdate) >= UPDATE_THROTTLE;
+        if (lastUpdate == null) return 0L;
+        return Math.max(0L, UPDATE_THROTTLE - (System.currentTimeMillis() - lastUpdate));
     }
     
     public static Map<String, Integer> scanPlayerInventory(@Nonnull Store<EntityStore> store, @Nonnull Ref<EntityStore> ref) {
@@ -101,6 +129,7 @@ public class PinnedItemsInventoryTracker {
     public static void clearCache(UUID playerId) {
         updateTimestamps.remove(playerId);
         cachedInventories.remove(playerId);
+        pendingRefreshes.remove(playerId);
     }
 }
 

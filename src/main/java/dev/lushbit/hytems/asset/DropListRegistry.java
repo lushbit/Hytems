@@ -7,7 +7,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -15,22 +14,35 @@ import java.util.Map;
 import java.util.Set;
 
 public class DropListRegistry {
-    private final Map<String, ItemDropList> dropLists = new LinkedHashMap<>();
-    private final Map<String, Set<String>> itemDropSources = new HashMap<>();
+    private volatile Map<String, ItemDropList> pendingDropLists;
+    private volatile Map<String, Set<String>> itemDropSources = Map.of();
+    private volatile int dropListCount;
+    private Map<String, Set<String>> buildingSources;
 
     public void reload(Map<String, ItemDropList> newDropLists) {
-        this.dropLists.clear();
-        this.itemDropSources.clear();
+        this.pendingDropLists = newDropLists;
+        this.dropListCount = newDropLists.size();
+    }
 
-        for (Map.Entry<String, ItemDropList> entry : newDropLists.entrySet()) {
-            String dropListId = entry.getKey();
-            ItemDropList dropList = entry.getValue();
-            this.dropLists.put(dropListId, dropList);
-            indexDropListContents(dropList, dropListId);
+    private Map<String, Set<String>> index() {
+        if (pendingDropLists != null) {
+            synchronized (this) {
+                Map<String, ItemDropList> newDropLists = pendingDropLists;
+                if (newDropLists != null) {
+                    buildingSources = new HashMap<>();
+                    for (Map.Entry<String, ItemDropList> entry : newDropLists.entrySet()) {
+                        indexDropListContents(entry.getValue(), entry.getKey());
+                    }
+                    itemDropSources = buildingSources;
+                    buildingSources = null;
+                    pendingDropLists = null;
+
+                    System.out.println("[Hytems] Indexed " + newDropLists.size() + " drop lists");
+                    System.out.println("[Hytems] Found " + itemDropSources.size() + " items with drop sources");
+                }
+            }
         }
-
-        System.out.println("[Hytems] Indexed " + this.dropLists.size() + " drop lists");
-        System.out.println("[Hytems] Found " + this.itemDropSources.size() + " items with drop sources");
+        return itemDropSources;
     }
 
     private void indexDropListContents(ItemDropList dropList, String dropListId) {
@@ -57,7 +69,7 @@ public class DropListRegistry {
                 for (Object item : items) {
                     String itemId = extractItemIdFromDrop(item);
                     if (itemId != null && !shouldIgnoreDroppedItem(itemId)) {
-                        itemDropSources.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(dropListId);
+                        buildingSources.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(dropListId);
                     }
                 }
             } else if (container.getClass().isArray()) {
@@ -65,7 +77,7 @@ public class DropListRegistry {
                 for (Object item : items) {
                     String itemId = extractItemIdFromDrop(item);
                     if (itemId != null && !shouldIgnoreDroppedItem(itemId)) {
-                        itemDropSources.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(dropListId);
+                        buildingSources.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(dropListId);
                     }
                 }
             } else {
@@ -107,7 +119,7 @@ public class DropListRegistry {
                 for (Object drop : drops) {
                     String itemId = extractItemIdFromDrop(drop);
                     if (itemId != null && !shouldIgnoreDroppedItem(itemId)) {
-                        itemDropSources.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(dropListId);
+                        buildingSources.computeIfAbsent(itemId, k -> new LinkedHashSet<>()).add(dropListId);
                     }
                 }
             }
@@ -117,16 +129,17 @@ public class DropListRegistry {
     }
 
     public List<String> getDropSourcesForItem(String itemId) {
-        Set<String> sources = itemDropSources.get(itemId);
+        Set<String> sources = index().get(itemId);
         return sources != null ? new ArrayList<>(sources) : Collections.emptyList();
     }
 
     public boolean hasDropSources(String itemId) {
-        return itemDropSources.containsKey(itemId) && !itemDropSources.get(itemId).isEmpty();
+        Set<String> sources = index().get(itemId);
+        return sources != null && !sources.isEmpty();
     }
 
     public int size() {
-        return dropLists.size();
+        return dropListCount;
     }
 
     private boolean shouldIgnoreDropSource(String dropListId) {

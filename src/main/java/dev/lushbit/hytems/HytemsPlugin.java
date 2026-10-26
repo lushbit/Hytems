@@ -82,6 +82,8 @@ public class HytemsPlugin extends JavaPlugin {
                     MobMetadataRegistry.knownMobIds().size(), MobMetadataRegistry.mappedDropListCount());
             this.getLogger().at(Level.INFO).log("Discovered %d bosses for Hytems: %s", BossRegistry.all().size(),
                     BossRegistry.all().stream().map(BossRegistry.BossInfo::key).collect(java.util.stream.Collectors.joining(", ")));
+            recipeManager.getCraftingRecipes("");
+            dropListRegistry.hasDropSources("");
         });
 
         this.getEventRegistry().register(PlayerConnectEvent.class, event -> {

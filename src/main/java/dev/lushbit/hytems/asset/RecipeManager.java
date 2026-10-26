@@ -6,32 +6,49 @@ import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import java.util.*;
 
 public class RecipeManager {
-    private final Map<String, CraftingRecipe> allRecipes = new HashMap<>();
-    private final Map<String, List<CraftingRecipe>> outputRecipes = new HashMap<>();
+    private volatile Map<String, CraftingRecipe> pendingRecipes;
+    private volatile Map<String, List<CraftingRecipe>> outputRecipes = Map.of();
+    private volatile int totalRecipeCount;
 
     public void initialize(Map<String, CraftingRecipe> recipes) {
-        allRecipes.clear();
-        outputRecipes.clear();
+        pendingRecipes = recipes;
+        totalRecipeCount = recipes.size();
+    }
 
+    private Map<String, List<CraftingRecipe>> index() {
+        if (pendingRecipes != null) {
+            synchronized (this) {
+                Map<String, CraftingRecipe> recipes = pendingRecipes;
+                if (recipes != null) {
+                    outputRecipes = build(recipes);
+                    pendingRecipes = null;
+                }
+            }
+        }
+        return outputRecipes;
+    }
+
+    private static Map<String, List<CraftingRecipe>> build(Map<String, CraftingRecipe> recipes) {
+        Map<String, List<CraftingRecipe>> byOutput = new HashMap<>();
         for (Map.Entry<String, CraftingRecipe> entry : recipes.entrySet()) {
-            allRecipes.put(entry.getKey(), entry.getValue());
             MaterialQuantity[] outputs = entry.getValue().getOutputs();
 
             if (outputs != null) {
                 for (MaterialQuantity output : outputs) {
                     if (output != null && output.getItemId() != null) {
-                        outputRecipes.computeIfAbsent(output.getItemId(), k -> new ArrayList<>()).add(entry.getValue());
+                        byOutput.computeIfAbsent(output.getItemId(), k -> new ArrayList<>()).add(entry.getValue());
                     }
                 }
             }
         }
+        return byOutput;
     }
 
     public List<CraftingRecipe> getCraftingRecipes(String itemId) {
-        return outputRecipes.getOrDefault(itemId, Collections.emptyList());
+        return index().getOrDefault(itemId, Collections.emptyList());
     }
 
     public int getTotalRecipeCount() {
-        return allRecipes.size();
+        return totalRecipeCount;
     }
 }
